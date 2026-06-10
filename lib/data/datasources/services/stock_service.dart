@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/money_helper.dart';
@@ -17,7 +18,8 @@ class StockService {
   /// إدراج تحويل مخزني وتحديث المخزون + تسجيل حركات المخزون
   Future<int> insertStockTransfer(Map<String, dynamic> transferMap) async {
     // H-12: تحقق من الفترة المالية قبل التحويل المخزني
-    final transferDate = transferMap['date'] as String? ?? DateTime.now().toIso8601String();
+    final transferDate =
+        transferMap['date'] as String? ?? DateTime.now().toIso8601String();
     await _dbHelper.journal.checkFiscalPeriodOpen(transferDate);
 
     final db = await _db;
@@ -42,17 +44,24 @@ class StockService {
       );
       double sourceAvgCost;
       if (sourceProductRow.isNotEmpty) {
-        final costingMethodStr = sourceProductRow.first['costing_method'] as String? ?? 'weighted_average';
+        final costingMethodStr =
+            sourceProductRow.first['costing_method'] as String? ??
+                'weighted_average';
         // A-09: For FIFO/LIFO products, use the costing engine for actual cost
         if (costingMethodStr != 'weighted_average') {
           try {
-            final avgCost = MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
-            sourceAvgCost = avgCost > 0 ? avgCost : MoneyHelper.readMoney(sourceProductRow.first['cost_price']);
+            final avgCost =
+                MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
+            sourceAvgCost = avgCost > 0
+                ? avgCost
+                : MoneyHelper.readMoney(sourceProductRow.first['cost_price']);
           } catch (_) {
-            sourceAvgCost = MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
+            sourceAvgCost =
+                MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
           }
         } else {
-          sourceAvgCost = MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
+          sourceAvgCost =
+              MoneyHelper.readMoney(sourceProductRow.first['average_cost']);
         }
       } else {
         sourceAvgCost = 0.0;
@@ -67,11 +76,13 @@ class StockService {
       );
 
       if (fromProducts.isNotEmpty) {
-        final currentStock = (fromProducts.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+        final currentStock =
+            (fromProducts.first['current_stock'] as num?)?.toDouble() ?? 0.0;
         await txn.update(
           'products',
           {
-            'current_stock': (currentStock - quantity).clamp(0.0, double.infinity),
+            'current_stock':
+                (currentStock - quantity).clamp(0.0, double.infinity),
             'updated_at': now,
           },
           where: 'id = ?',
@@ -109,17 +120,20 @@ class StockService {
         );
 
         if (toProduct.isNotEmpty) {
-          final currentStock = (toProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+          final currentStock =
+              (toProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
           final toProductId = toProduct.first['id'] as int;
           final newStock = currentStock + quantity;
 
           // ── W-05: إعادة حساب متوسط التكلفة المرجح في المستودع الوجهة ──
           // حسب IAS 2: تكلفة المخزون تشمل كل تكاليف الشراء
-          double toAvgCost = MoneyHelper.readMoney(toProduct.first['average_cost']);
+          double toAvgCost =
+              MoneyHelper.readMoney(toProduct.first['average_cost']);
           double newAvgCost;
           if (currentStock > 0 && toAvgCost > 0) {
             // المتوسط المرجح = (رصيد حالي × متوسط تكلفة حالي + كمية محولة × متوسط تكلفة مصدر) ÷ الرصيد الجديد
-            final totalValue = (currentStock * toAvgCost) + (quantity * sourceAvgCost);
+            final totalValue =
+                (currentStock * toAvgCost) + (quantity * sourceAvgCost);
             newAvgCost = totalValue / newStock;
           } else {
             // لا يوجد مخزون مسبق: نستخدم تكلفة المصدر
@@ -162,7 +176,8 @@ class StockService {
           if (newProduct['item_code'] != null) {
             newProduct['item_code'] = '${newProduct['item_code']}$whSuffix';
           }
-          if (newProduct['barcode'] != null && (newProduct['barcode'] as String).isNotEmpty) {
+          if (newProduct['barcode'] != null &&
+              (newProduct['barcode'] as String).isNotEmpty) {
             newProduct['barcode'] = '${newProduct['barcode']}$whSuffix';
           }
           final newProductId = await txn.insert('products', newProduct);
@@ -186,41 +201,53 @@ class StockService {
 
       if (transferValue.abs() >= 0.005) {
         final journalId = generateUniqueJournalId();
-        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final codeOffset =
+            transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
         final transferRate = await _getExchangeRate(txn, transferCurrency);
 
         // محاولة استخدام حساب المخزون المرتبط بالمستودع، أو الافتراضي
         int? fromInventoryAccountId;
         int? toInventoryAccountId;
 
-        final fromWarehouseRow = await txn.query('warehouses', where: 'id = ?', whereArgs: [fromWarehouseId], limit: 1);
+        final fromWarehouseRow = await txn.query('warehouses',
+            where: 'id = ?', whereArgs: [fromWarehouseId], limit: 1);
         if (fromWarehouseRow.isNotEmpty) {
-          fromInventoryAccountId = fromWarehouseRow.first['inventory_account_id'] as int?;
+          fromInventoryAccountId =
+              fromWarehouseRow.first['inventory_account_id'] as int?;
         }
-        fromInventoryAccountId ??= await _getDefaultInventoryAccountId(txn, codeOffset, transferCurrency);
+        fromInventoryAccountId ??= await _getDefaultInventoryAccountId(
+            txn, codeOffset, transferCurrency);
 
-        final toWarehouseRow = await txn.query('warehouses', where: 'id = ?', whereArgs: [toWarehouseId], limit: 1);
+        final toWarehouseRow = await txn.query('warehouses',
+            where: 'id = ?', whereArgs: [toWarehouseId], limit: 1);
         if (toWarehouseRow.isNotEmpty) {
-          toInventoryAccountId = toWarehouseRow.first['inventory_account_id'] as int?;
+          toInventoryAccountId =
+              toWarehouseRow.first['inventory_account_id'] as int?;
         }
-        toInventoryAccountId ??= await _getDefaultInventoryAccountId(txn, codeOffset, transferCurrency);
+        toInventoryAccountId ??= await _getDefaultInventoryAccountId(
+            txn, codeOffset, transferCurrency);
 
         // إذا كان المستودعان مرتبطين بنفس الحساب، لا حاجة لقيود تحويل
-        if (fromInventoryAccountId != null && toInventoryAccountId != null && fromInventoryAccountId != toInventoryAccountId) {
+        if (fromInventoryAccountId != null &&
+            toInventoryAccountId != null &&
+            fromInventoryAccountId != toInventoryAccountId) {
           // مدين: حساب المخزون الوجهة (زيادة أصول)
           await txn.insert('transactions', {
             'account_id': toInventoryAccountId,
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(transferValue),
             'credit': 0,
-            'description': 'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
+            'description':
+                'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
             'date': now,
             'created_at': now,
             'currency_code': transferCurrency,
             'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
-            'amount_base': (MoneyHelper.toCents(transferValue) * transferRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(transferValue) * transferRate).round(),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toInventoryAccountId, transferValue, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, toInventoryAccountId, transferValue, 0.0, now);
 
           // دائن: حساب المخزون المصدر (نقص أصول)
           await txn.insert('transactions', {
@@ -228,14 +255,17 @@ class StockService {
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(transferValue),
-            'description': 'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
+            'description':
+                'تحويل مخزني من مستودع #$fromWarehouseId إلى #$toWarehouseId - منتج #$productId',
             'date': now,
             'created_at': now,
             'currency_code': transferCurrency,
             'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
-            'amount_base': (MoneyHelper.toCents(transferValue) * transferRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(transferValue) * transferRate).round(),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromInventoryAccountId, 0.0, transferValue, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, fromInventoryAccountId, 0.0, transferValue, now);
         }
       }
 
@@ -248,22 +278,32 @@ class StockService {
   }
 
   /// Helper: Get default inventory account ID by code offset and currency
-  Future<int?> _getDefaultInventoryAccountId(Transaction txn, int codeOffset, String currency) async {
+  Future<int?> _getDefaultInventoryAccountId(
+      Transaction txn, int codeOffset, String currency) async {
     final accountCode = (1300 + codeOffset).toString();
-    final rows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [accountCode, currency], limit: 1);
+    final rows = await txn.query('accounts',
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [accountCode, currency],
+        limit: 1);
     return rows.isNotEmpty ? rows.first['id'] as int : null;
   }
 
   /// Helper: Look up exchange rate from currencies table for a given currency code.
   /// Returns 1.0 for YER, falls back to hardcoded rates if not found in DB.
-  Future<double> _getExchangeRate(DatabaseExecutor executor, String currency) async {
+  Future<double> _getExchangeRate(
+      DatabaseExecutor executor, String currency) async {
     if (currency == 'YER') return 1.0;
     try {
-      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      final rows = await executor.query('currencies',
+          where: 'code = ?', whereArgs: [currency], limit: 1);
       if (rows.isNotEmpty) {
         return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       }
-    } catch (_) {}
+    } catch (e) {
+      // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+      debugPrint(
+          'StockService._getExchangeRate($currency) فشل، استخدام السعر الاحتياطي: $e');
+    }
     // Fallback defaults
     if (currency == 'SAR') return 140.0;
     if (currency == 'USD') return 530.0;
@@ -312,9 +352,11 @@ class StockService {
   Future<void> completeStocktakingSession(int sessionId) async {
     final db = await _db;
     // Check if fiscal period is closed before completing stocktaking
-    final sessionRows = await db.query('stocktaking_sessions', where: 'id = ?', whereArgs: [sessionId], limit: 1);
+    final sessionRows = await db.query('stocktaking_sessions',
+        where: 'id = ?', whereArgs: [sessionId], limit: 1);
     if (sessionRows.isNotEmpty) {
-      final sessionDate = sessionRows.first['date'] as String? ?? DateTime.now().toIso8601String();
+      final sessionDate = sessionRows.first['date'] as String? ??
+          DateTime.now().toIso8601String();
       await _dbHelper.journal.checkFiscalPeriodOpen(sessionDate);
     }
 
@@ -409,7 +451,8 @@ class StockService {
       // تحديث المخزون لكل منتج بالكمية الفعلية + حساب وتسجيل الفرق + سجل التدقيق
       for (final item in items) {
         final productId = item['product_id'] as int;
-        final systemQuantity = (item['system_quantity'] as num?)?.toDouble() ?? 0.0;
+        final systemQuantity =
+            (item['system_quantity'] as num?)?.toDouble() ?? 0.0;
         final actualQuantity = (item['actual_quantity'] as num).toDouble();
         // ignore: unused_local_variable
         final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
@@ -488,7 +531,8 @@ class StockService {
           final productInventoryAccountId = productRows.isNotEmpty
               ? productRows.first['inventory_account_id'] as int?
               : null;
-          final effectiveInventoryAccountId = productInventoryAccountId ?? inventoryAccountId;
+          final effectiveInventoryAccountId =
+              productInventoryAccountId ?? inventoryAccountId;
           if (adjustmentAmount.abs() >= 0.005) {
             if (variance > 0) {
               // زيادة مخزون: مدين = المخزون، دائن = إيراد تفاوت الجرد
@@ -498,28 +542,32 @@ class StockService {
                   'journal_id': journalId,
                   'debit': MoneyHelper.toCents(adjustmentAmount),
                   'credit': 0,
-                  'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
+                  'description':
+                      'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
                   'currency_code': 'YER',
                   'exchange_rate': 1.0,
                   'amount_base': MoneyHelper.toCents(adjustmentAmount),
                 });
-                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, adjustmentAmount, 0.0, now);
+                await _dbHelper.journal.updateAccountBalanceWithJournal(txn,
+                    effectiveInventoryAccountId, adjustmentAmount, 0.0, now);
               }
               await txn.insert('transactions', {
                 'account_id': varianceIncomeAccountId,
                 'journal_id': journalId,
                 'debit': 0,
                 'credit': MoneyHelper.toCents(adjustmentAmount),
-                'description': 'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
+                'description':
+                    'تعديل جرد زيادة - منتج #$productId - جلسة #$sessionId',
                 'date': now,
                 'created_at': now,
                 'currency_code': 'YER',
                 'exchange_rate': 1.0,
                 'amount_base': MoneyHelper.toCents(adjustmentAmount),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
             } else {
               // نقص مخزون: مدين = خسارة تفاوت الجرد، دائن = المخزون
               final lossAmount = adjustmentAmount.abs();
@@ -528,28 +576,32 @@ class StockService {
                 'journal_id': journalId,
                 'debit': MoneyHelper.toCents(lossAmount),
                 'credit': 0,
-                'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
+                'description':
+                    'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
                 'date': now,
                 'created_at': now,
                 'currency_code': 'YER',
                 'exchange_rate': 1.0,
                 'amount_base': MoneyHelper.toCents(lossAmount),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, lossAmount, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, varianceLossAccountId, lossAmount, 0.0, now);
               if (effectiveInventoryAccountId != null) {
                 await txn.insert('transactions', {
                   'account_id': effectiveInventoryAccountId,
                   'journal_id': journalId,
                   'debit': 0,
                   'credit': MoneyHelper.toCents(lossAmount),
-                  'description': 'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
+                  'description':
+                      'تعديل جرد نقص - منتج #$productId - جلسة #$sessionId',
                   'date': now,
                   'created_at': now,
                   'currency_code': 'YER',
                   'exchange_rate': 1.0,
                   'amount_base': MoneyHelper.toCents(lossAmount),
                 });
-                await _dbHelper.journal.updateAccountBalanceWithJournal(txn, effectiveInventoryAccountId, 0.0, lossAmount, now);
+                await _dbHelper.journal.updateAccountBalanceWithJournal(
+                    txn, effectiveInventoryAccountId, 0.0, lossAmount, now);
               }
             }
           }
@@ -615,7 +667,8 @@ class StockService {
     List<Map<String, dynamic>> items,
   ) async {
     // Check if fiscal period is closed before creating inventory voucher
-    final ivDate = voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
+    final ivDate =
+        voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
     await _dbHelper.journal.checkFiscalPeriodOpen(ivDate);
 
     final db = await _db;
@@ -629,11 +682,15 @@ class StockService {
     int voucherId = 0;
     await db.transaction((txn) async {
       // Insert voucher header
-      voucherId = await txn.insert('inventory_vouchers', MoneyHelper.toCentsMap({
-        ...voucherMap,
-        'created_at': voucherMap['created_at'] as String? ?? now,
-        'updated_at': voucherMap['updated_at'] as String? ?? now,
-      }, ['total_value']));
+      voucherId = await txn.insert(
+          'inventory_vouchers',
+          MoneyHelper.toCentsMap({
+            ...voucherMap,
+            'created_at': voucherMap['created_at'] as String? ?? now,
+            'updated_at': voucherMap['updated_at'] as String? ?? now,
+          }, [
+            'total_value'
+          ]));
 
       double totalIncreaseValue = 0.0;
       double totalDecreaseValue = 0.0;
@@ -648,8 +705,10 @@ class StockService {
         await txn.insert('inventory_voucher_items', {
           'voucher_id': voucherId,
           'product_id': productId,
-          'system_quantity': (item['system_quantity'] as num?)?.toDouble() ?? 0.0,
-          'actual_quantity': (item['actual_quantity'] as num?)?.toDouble() ?? 0.0,
+          'system_quantity':
+              (item['system_quantity'] as num?)?.toDouble() ?? 0.0,
+          'actual_quantity':
+              (item['actual_quantity'] as num?)?.toDouble() ?? 0.0,
           'difference': difference,
           'unit_cost': MoneyHelper.toCents(unitCost),
           'total_value': MoneyHelper.toCents(totalValue),
@@ -658,13 +717,19 @@ class StockService {
 
         // Only update product stock when voucher is approved
         if (applyStockAndJournal) {
-          final product = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+          final product = await txn.query('products',
+              where: 'id = ?', whereArgs: [productId], limit: 1);
           if (product.isNotEmpty) {
-            final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
-            await txn.update('products', {
-              'current_stock': currentStock + difference,
-              'updated_at': now,
-            }, where: 'id = ?', whereArgs: [productId]);
+            final currentStock =
+                (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+            await txn.update(
+                'products',
+                {
+                  'current_stock': currentStock + difference,
+                  'updated_at': now,
+                },
+                where: 'id = ?',
+                whereArgs: [productId]);
           }
 
           // Log stock movement
@@ -688,10 +753,15 @@ class StockService {
       }
 
       // ── M-09: تحديث إجمالي قيمة السند بالفرق الصافي بدل المجموع ──
-      await txn.update('inventory_vouchers', {
-        'total_value': MoneyHelper.toCents(totalIncreaseValue - totalDecreaseValue),
-        'updated_at': now,
-      }, where: 'id = ?', whereArgs: [voucherId]);
+      await txn.update(
+          'inventory_vouchers',
+          {
+            'total_value':
+                MoneyHelper.toCents(totalIncreaseValue - totalDecreaseValue),
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: [voucherId]);
 
       // Only create journal entries when voucher is approved
       if (applyStockAndJournal) {
@@ -705,7 +775,8 @@ class StockService {
         final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
 
         // حساب المخزون (1300+offset)
-        final inventoryAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '1300', currency);
+        final inventoryAccount = await _dbHelper.journal
+            .findAccountByCodeAndCurrency(txn, '1300', currency);
 
         // حساب إيراد تفاوت الجرد (4400+offset)
         final varianceIncomeCode = (4400 + codeOffset).toString();
@@ -763,78 +834,89 @@ class StockService {
           });
         }
 
-      // C-05: قيود زيادة المخزون — مدين المخزون / دائن إيراد تفاوت الجرد
-      if (totalIncreaseValue > 0) {
-        if (inventoryAccount != null) {
-          final invAccId = inventoryAccount['id'] as int;
+        // C-05: قيود زيادة المخزون — مدين المخزون / دائن إيراد تفاوت الجرد
+        if (totalIncreaseValue > 0) {
+          if (inventoryAccount != null) {
+            final invAccId = inventoryAccount['id'] as int;
+            await txn.insert('transactions', {
+              'account_id': invAccId,
+              'journal_id': journalId,
+              'debit': MoneyHelper.toCents(totalIncreaseValue),
+              'credit': 0,
+              'description': 'سند جرد - زيادة مخزون',
+              'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+              'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+              'amount_base':
+                  (MoneyHelper.toCents(totalIncreaseValue) * voucherRate)
+                      .round(),
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, invAccId, totalIncreaseValue, 0.0, now);
+          }
           await txn.insert('transactions', {
-            'account_id': invAccId,
+            'account_id': varianceIncomeAccountId,
             'journal_id': journalId,
-            'debit': MoneyHelper.toCents(totalIncreaseValue),
-            'credit': 0,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(totalIncreaseValue),
             'description': 'سند جرد - زيادة مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
-            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
         }
-        await txn.insert('transactions', {
-          'account_id': varianceIncomeAccountId,
-          'journal_id': journalId,
-          'debit': 0,
-          'credit': MoneyHelper.toCents(totalIncreaseValue),
-          'description': 'سند جرد - زيادة مخزون',
-          'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-          'created_at': now,
-          'currency_code': currency,
-          'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
-          'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
-        });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
-      }
 
-      // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
-      if (totalDecreaseValue > 0) {
-        await txn.insert('transactions', {
-          'account_id': varianceLossAccountId,
-          'journal_id': journalId,
-          'debit': MoneyHelper.toCents(totalDecreaseValue),
-          'credit': 0,
-          'description': 'سند جرد - نقص مخزون',
-          'date': voucherMap['date'] as String? ?? now.substring(0, 10),
-          'created_at': now,
-          'currency_code': currency,
-          'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
-          'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
-        });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
-        if (inventoryAccount != null) {
-          final invAccId = inventoryAccount['id'] as int;
+        // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
+        if (totalDecreaseValue > 0) {
           await txn.insert('transactions', {
-            'account_id': invAccId,
+            'account_id': varianceLossAccountId,
             'journal_id': journalId,
-            'debit': 0,
-            'credit': MoneyHelper.toCents(totalDecreaseValue),
+            'debit': MoneyHelper.toCents(totalDecreaseValue),
+            'credit': 0,
             'description': 'سند جرد - نقص مخزون',
             'date': voucherMap['date'] as String? ?? now.substring(0, 10),
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
-            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
+          if (inventoryAccount != null) {
+            final invAccId = inventoryAccount['id'] as int;
+            await txn.insert('transactions', {
+              'account_id': invAccId,
+              'journal_id': journalId,
+              'debit': 0,
+              'credit': MoneyHelper.toCents(totalDecreaseValue),
+              'description': 'سند جرد - نقص مخزون',
+              'date': voucherMap['date'] as String? ?? now.substring(0, 10),
+              'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
+              'amount_base':
+                  (MoneyHelper.toCents(totalDecreaseValue) * voucherRate)
+                      .round(),
+            });
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, invAccId, 0.0, totalDecreaseValue, now);
+          }
         }
-      }
       } // end if (applyStockAndJournal)
     });
 
     return voucherId;
   }
 
-  Future<List<Map<String, dynamic>>> getInventoryVouchers({String? searchQuery}) async {
+  Future<List<Map<String, dynamic>>> getInventoryVouchers(
+      {String? searchQuery}) async {
     final db = await _db;
     String query = '''
       SELECT iv.*, w.name as warehouse_name
@@ -843,7 +925,8 @@ class StockService {
     ''';
     List<dynamic> args = [];
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      query += ' WHERE iv.voucher_number LIKE ? OR iv.description LIKE ? OR w.name LIKE ?';
+      query +=
+          ' WHERE iv.voucher_number LIKE ? OR iv.description LIKE ? OR w.name LIKE ?';
       final likeQuery = '%$searchQuery%';
       args = [likeQuery, likeQuery, likeQuery];
     }
@@ -851,7 +934,8 @@ class StockService {
     return await db.rawQuery(query, args);
   }
 
-  Future<Map<String, dynamic>?> getInventoryVoucherDetails(int voucherId) async {
+  Future<Map<String, dynamic>?> getInventoryVoucherDetails(
+      int voucherId) async {
     final db = await _db;
     final voucherResult = await db.rawQuery('''
       SELECT iv.*, w.name as warehouse_name
@@ -902,7 +986,8 @@ class StockService {
     final now = DateTime.now().toIso8601String();
 
     // Pre-check: verify the inventory voucher's date is not in a closed fiscal period
-    final ivPreCheck = await db.query('inventory_vouchers', where: 'id = ?', whereArgs: [id], limit: 1);
+    final ivPreCheck = await db.query('inventory_vouchers',
+        where: 'id = ?', whereArgs: [id], limit: 1);
     if (ivPreCheck.isNotEmpty) {
       final preCheckDate = ivPreCheck.first['date'] as String? ?? now;
       await _dbHelper.journal.checkFiscalPeriodOpen(preCheckDate);
@@ -941,7 +1026,8 @@ class StockService {
             limit: 1,
           );
           if (product.isNotEmpty) {
-            final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+            final currentStock =
+                (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
             await txn.update(
               'products',
               {
@@ -968,8 +1054,10 @@ class StockService {
 
         // ── W-08: عكس القيود بدقة باستخدام رقم السند ──
         // البحث عن القيود المرتبطة برقم السند بالضبط بدل التاريخ والوصف
-        final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
-        final deleteCurrency = voucherRows.first['currency'] as String? ?? 'YER';
+        final voucherNumber =
+            voucherRows.first['voucher_number'] as String? ?? '';
+        final deleteCurrency =
+            voucherRows.first['currency'] as String? ?? 'YER';
         final deleteRate = await _getExchangeRate(txn, deleteCurrency);
 
         final relatedTxns = await txn.rawQuery(
@@ -997,11 +1085,13 @@ class StockService {
             'created_at': now,
             'currency_code': deleteCurrency,
             'exchange_rate': deleteCurrency == 'YER' ? 1.0 : deleteRate,
-            'amount_base': (MoneyHelper.toCents(reversalAmount) * deleteRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(reversalAmount) * deleteRate).round(),
           });
 
           // Reverse the account balance
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accId, credit, debit, now);
+          await _dbHelper.journal
+              .updateAccountBalanceWithJournal(txn, accId, credit, debit, now);
         }
       }
 
@@ -1043,12 +1133,14 @@ class StockService {
 
       final currentStatus = voucherRows.first['status'] as String?;
       if (currentStatus != 'draft') {
-        throw Exception('لا يمكن تأكيد سند جرد بحالة "$currentStatus" — يجب أن يكون مسودة');
+        throw Exception(
+            'لا يمكن تأكيد سند جرد بحالة "$currentStatus" — يجب أن يكون مسودة');
       }
 
       final currency = voucherRows.first['currency'] as String? ?? 'YER';
       final confirmRate = await _getExchangeRate(txn, currency);
-      final voucherDate = voucherRows.first['date'] as String? ?? now.substring(0, 10);
+      final voucherDate =
+          voucherRows.first['date'] as String? ?? now.substring(0, 10);
 
       // Fetch items
       final items = await txn.query(
@@ -1074,7 +1166,8 @@ class StockService {
           limit: 1,
         );
         if (product.isNotEmpty) {
-          final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+          final currentStock =
+              (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
           await txn.update(
             'products',
             {
@@ -1109,7 +1202,8 @@ class StockService {
       final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
 
       // حساب المخزون (1300+offset)
-      final inventoryAccount = await _dbHelper.journal.findAccountByCodeAndCurrency(txn, '1300', currency);
+      final inventoryAccount = await _dbHelper.journal
+          .findAccountByCodeAndCurrency(txn, '1300', currency);
 
       // حساب إيراد تفاوت الجرد (4400+offset)
       final varianceIncomeCode = (4400 + codeOffset).toString();
@@ -1165,7 +1259,8 @@ class StockService {
         });
       }
 
-      final voucherNumber = voucherRows.first['voucher_number'] as String? ?? '';
+      final voucherNumber =
+          voucherRows.first['voucher_number'] as String? ?? '';
 
       // C-05: قيود زيادة المخزون — مدين المخزون / دائن إيراد تفاوت الجرد
       if (totalIncreaseValue > 0) {
@@ -1181,9 +1276,11 @@ class StockService {
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
-            'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, totalIncreaseValue, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, invAccId, totalIncreaseValue, 0.0, now);
         }
         await txn.insert('transactions', {
           'account_id': varianceIncomeAccountId,
@@ -1195,9 +1292,11 @@ class StockService {
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
-          'amount_base': (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
+          'amount_base':
+              (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
       }
 
       // C-05: قيود نقص المخزون — مدين خسارة تفاوت الجرد / دائن المخزون
@@ -1212,9 +1311,11 @@ class StockService {
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
-          'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
+          'amount_base':
+              (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         if (inventoryAccount != null) {
           final invAccId = inventoryAccount['id'] as int;
           await txn.insert('transactions', {
@@ -1227,9 +1328,11 @@ class StockService {
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
-            'amount_base': (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccId, 0.0, totalDecreaseValue, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, invAccId, 0.0, totalDecreaseValue, now);
         }
       }
 

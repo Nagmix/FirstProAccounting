@@ -19,28 +19,36 @@ class CashBoxService {
 
   Future<int> insertCashBox(Map<String, dynamic> cashBoxMap) async {
     final db = await _db;
-    return await db.insert('cash_boxes', MoneyHelper.toCentsMap(cashBoxMap, MoneyHelper.cashBoxMoneyFields));
+    return await db.insert('cash_boxes',
+        MoneyHelper.toCentsMap(cashBoxMap, MoneyHelper.cashBoxMoneyFields));
   }
 
   Future<List<Map<String, dynamic>>> getAllCashBoxes() async {
     final db = await _db;
-    return await db.query('cash_boxes', where: 'is_active = ?', whereArgs: [1], orderBy: 'type ASC, name ASC');
+    return await db.query('cash_boxes',
+        where: 'is_active = ?', whereArgs: [1], orderBy: 'type ASC, name ASC');
   }
 
   Future<List<Map<String, dynamic>>> getCashBoxesByType(String type) async {
     final db = await _db;
-    return await db.query('cash_boxes', where: 'type = ? AND is_active = ?', whereArgs: [type, 1], orderBy: 'name ASC');
+    return await db.query('cash_boxes',
+        where: 'type = ? AND is_active = ?',
+        whereArgs: [type, 1],
+        orderBy: 'name ASC');
   }
 
   Future<Map<String, dynamic>?> getCashBoxById(int id) async {
     final db = await _db;
-    final results = await db.query('cash_boxes', where: 'id = ?', whereArgs: [id], limit: 1);
+    final results = await db.query('cash_boxes',
+        where: 'id = ?', whereArgs: [id], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<int> updateCashBox(int id, Map<String, dynamic> cashBoxMap) async {
     final db = await _db;
-    return await db.update('cash_boxes', MoneyHelper.toCentsMap(cashBoxMap, MoneyHelper.cashBoxMoneyFields), where: 'id = ?', whereArgs: [id]);
+    return await db.update('cash_boxes',
+        MoneyHelper.toCentsMap(cashBoxMap, MoneyHelper.cashBoxMoneyFields),
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteCashBox(int id) async {
@@ -56,28 +64,33 @@ class CashBoxService {
 
     // 1. Invoices linked to this cash box
     final invoiceCount = await db.rawQuery(
-      'SELECT COUNT(*) AS cnt FROM invoices WHERE cash_box_id = ?', [id]);
-    dependentChecks['invoices'] = (invoiceCount.first['cnt'] as num?)?.toInt() ?? 0;
+        'SELECT COUNT(*) AS cnt FROM invoices WHERE cash_box_id = ?', [id]);
+    dependentChecks['invoices'] =
+        (invoiceCount.first['cnt'] as num?)?.toInt() ?? 0;
 
     // 2. Vouchers linked to this cash box
     try {
       final voucherCount = await db.rawQuery(
-        'SELECT COUNT(*) AS cnt FROM vouchers WHERE cash_box_id = ?', [id]);
-      dependentChecks['vouchers'] = (voucherCount.first['cnt'] as num?)?.toInt() ?? 0;
+          'SELECT COUNT(*) AS cnt FROM vouchers WHERE cash_box_id = ?', [id]);
+      dependentChecks['vouchers'] =
+          (voucherCount.first['cnt'] as num?)?.toInt() ?? 0;
     } catch (_) {
       dependentChecks['vouchers'] = 0;
     }
 
     // 3. Expenses linked to this cash box
     final expenseCount = await db.rawQuery(
-      'SELECT COUNT(*) AS cnt FROM expenses WHERE cash_box_id = ?', [id]);
-    dependentChecks['expenses'] = (expenseCount.first['cnt'] as num?)?.toInt() ?? 0;
+        'SELECT COUNT(*) AS cnt FROM expenses WHERE cash_box_id = ?', [id]);
+    dependentChecks['expenses'] =
+        (expenseCount.first['cnt'] as num?)?.toInt() ?? 0;
 
     // 4. Cash transfers from/to this cash box
     try {
       final transferCount = await db.rawQuery(
-        'SELECT COUNT(*) AS cnt FROM cash_transfers WHERE from_cash_box_id = ? OR to_cash_box_id = ?', [id, id]);
-      dependentChecks['cash_transfers'] = (transferCount.first['cnt'] as num?)?.toInt() ?? 0;
+          'SELECT COUNT(*) AS cnt FROM cash_transfers WHERE from_cash_box_id = ? OR to_cash_box_id = ?',
+          [id, id]);
+      dependentChecks['cash_transfers'] =
+          (transferCount.first['cnt'] as num?)?.toInt() ?? 0;
     } catch (_) {
       dependentChecks['cash_transfers'] = 0;
     }
@@ -85,22 +98,26 @@ class CashBoxService {
     // 5. Currency exchanges from/to this cash box
     try {
       final exchangeCount = await db.rawQuery(
-        'SELECT COUNT(*) AS cnt FROM currency_exchanges WHERE from_cash_box_id = ? OR to_cash_box_id = ?', [id, id]);
-      dependentChecks['currency_exchanges'] = (exchangeCount.first['cnt'] as num?)?.toInt() ?? 0;
+          'SELECT COUNT(*) AS cnt FROM currency_exchanges WHERE from_cash_box_id = ? OR to_cash_box_id = ?',
+          [id, id]);
+      dependentChecks['currency_exchanges'] =
+          (exchangeCount.first['cnt'] as num?)?.toInt() ?? 0;
     } catch (_) {
       dependentChecks['currency_exchanges'] = 0;
     }
 
     // 6. Shifts linked to this cash box
     final shiftCount = await db.rawQuery(
-      'SELECT COUNT(*) AS cnt FROM shifts WHERE cash_box_id = ?', [id]);
+        'SELECT COUNT(*) AS cnt FROM shifts WHERE cash_box_id = ?', [id]);
     dependentChecks['shifts'] = (shiftCount.first['cnt'] as num?)?.toInt() ?? 0;
 
     // 7. Bank reconciliations linked to this cash box
     try {
       final reconCount = await db.rawQuery(
-        'SELECT COUNT(*) AS cnt FROM bank_reconciliations WHERE cash_box_id = ?', [id]);
-      dependentChecks['bank_reconciliations'] = (reconCount.first['cnt'] as num?)?.toInt() ?? 0;
+          'SELECT COUNT(*) AS cnt FROM bank_reconciliations WHERE cash_box_id = ?',
+          [id]);
+      dependentChecks['bank_reconciliations'] =
+          (reconCount.first['cnt'] as num?)?.toInt() ?? 0;
     } catch (_) {
       dependentChecks['bank_reconciliations'] = 0;
     }
@@ -133,7 +150,8 @@ class CashBoxService {
 
   Future<double> getTotalCashBalance() async {
     final db = await _db;
-    final result = await db.rawQuery("SELECT CAST(COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS INTEGER) AS total FROM cash_boxes WHERE is_active = 1");
+    final result = await db.rawQuery(
+        "SELECT CAST(COALESCE(SUM(CASE WHEN balance_type = 'credit' THEN balance ELSE -balance END), 0) AS INTEGER) AS total FROM cash_boxes WHERE is_active = 1");
     return MoneyHelper.readCalculatedMoney(result.first['total']);
   }
 
@@ -152,7 +170,8 @@ class CashBoxService {
 
   /// جلب الصناديق حسب العملة
   /// Get cash boxes filtered by currency (via linked account currency).
-  Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(String currency) async {
+  Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(
+      String currency) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT cb.* FROM cash_boxes cb
@@ -171,7 +190,8 @@ class CashBoxService {
   /// Cash boxes are currency-agnostic, so a single cash box can have
   /// balances in multiple currencies. This method computes the balance
   /// for one specific currency.
-  Future<double> getCashBoxBalanceForCurrency(int cashBoxId, String currency) async {
+  Future<double> getCashBoxBalanceForCurrency(
+      int cashBoxId, String currency) async {
     final db = await _db;
     double balance = 0.0;
 
@@ -243,7 +263,8 @@ class CashBoxService {
       SELECT COALESCE(SUM(paid_amount), 0) AS total FROM invoices
       WHERE cash_box_id = ? AND type = 'purchase' AND currency = ? AND is_return = 1
     ''', [cashBoxId, currency]);
-    balance += MoneyHelper.readCalculatedMoney(purchaseReturnPaid.first['total']);
+    balance +=
+        MoneyHelper.readCalculatedMoney(purchaseReturnPaid.first['total']);
 
     // 11. Opening balance transactions for this cash box in this currency.
     //     First try to find by reference_id (new data), then fall back to
@@ -263,8 +284,9 @@ class CashBoxService {
           AND a.account_code LIKE '11%'
           AND a.currency = ?
       ''', ['cash_box_$cashBoxId', currency]);
-      obBalance += MoneyHelper.readCalculatedMoney(obByRef.first['total_debit'])
-                 - MoneyHelper.readCalculatedMoney(obByRef.first['total_credit']);
+      obBalance +=
+          MoneyHelper.readCalculatedMoney(obByRef.first['total_debit']) -
+              MoneyHelper.readCalculatedMoney(obByRef.first['total_credit']);
     }
 
     // 11b. Fallback: if no reference_id match, skip legacy fallback for per-cash-box
@@ -293,7 +315,8 @@ class CashBoxService {
     // 1. Vouchers linked to this cash box
     try {
       final voucherFilter = currency != null ? 'AND v.currency = ?' : '';
-      final voucherArgs = currency != null ? [cashBoxId, currency] : [cashBoxId];
+      final voucherArgs =
+          currency != null ? [cashBoxId, currency] : [cashBoxId];
       final vouchers = await db.rawQuery('''
         SELECT v.* FROM vouchers v
         WHERE v.cash_box_id = ? $voucherFilter
@@ -304,7 +327,9 @@ class CashBoxService {
         final voucherType = v['voucher_type'] as String? ?? '';
         final totalAmount = MoneyHelper.readMoney(v['total_amount']);
         final curr = v['currency'] as String? ?? 'YER';
-        final dateStr = v['date'] as String? ?? v['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr = v['date'] as String? ??
+            v['created_at'] as String? ??
+            DateTime.now().toIso8601String();
 
         String typeAr;
         IconData icon;
@@ -315,27 +340,57 @@ class CashBoxService {
 
         switch (voucherType) {
           case 'receipt':
-            typeAr = 'سند قبض'; icon = Icons.assignment_turned_in; color = AppColors.success;
-            credit = totalAmount; filterKey = 'receipt_voucher'; break;
+            typeAr = 'سند قبض';
+            icon = Icons.assignment_turned_in;
+            color = AppColors.success;
+            credit = totalAmount;
+            filterKey = 'receipt_voucher';
+            break;
           case 'payment':
-            typeAr = 'سند صرف'; icon = Icons.assignment_return; color = AppColors.error;
-            debit = totalAmount; filterKey = 'payment_voucher'; break;
+            typeAr = 'سند صرف';
+            icon = Icons.assignment_return;
+            color = AppColors.error;
+            debit = totalAmount;
+            filterKey = 'payment_voucher';
+            break;
           case 'settlement':
-            typeAr = 'قيد تسوية'; icon = Icons.balance; color = AppColors.info;
-            credit = totalAmount; filterKey = 'settlement'; break;
+            typeAr = 'قيد تسوية';
+            icon = Icons.balance;
+            color = AppColors.info;
+            credit = totalAmount;
+            filterKey = 'settlement';
+            break;
           case 'compound':
-            typeAr = 'قيد متعدد'; icon = Icons.dynamic_feed; color = AppColors.accentBlue;
-            debit = totalAmount; filterKey = 'compound_entry'; break;
+            typeAr = 'قيد متعدد';
+            icon = Icons.dynamic_feed;
+            color = AppColors.accentBlue;
+            debit = totalAmount;
+            filterKey = 'compound_entry';
+            break;
           default:
-            typeAr = 'سند'; icon = Icons.description; color = AppColors.textSecondary;
-            debit = totalAmount; filterKey = 'all';
+            typeAr = 'سند';
+            icon = Icons.description;
+            color = AppColors.textSecondary;
+            debit = totalAmount;
+            filterKey = 'all';
         }
 
-        final description = v['description'] as String? ?? '$typeAr - ${v['voucher_number'] ?? ''}';
+        final description = v['description'] as String? ??
+            '$typeAr - ${v['voucher_number'] ?? ''}';
         movements.add({
-          'id': 'v_${v['id']}', 'date': dateStr, 'type': voucherType, 'type_ar': typeAr,
-          'filter_key': filterKey, 'icon': icon, 'color': color, 'description': description,
-          'debit': debit, 'credit': credit, 'currency': curr, 'source': 'voucher', 'voucher_type': voucherType,
+          'id': 'v_${v['id']}',
+          'date': dateStr,
+          'type': voucherType,
+          'type_ar': typeAr,
+          'filter_key': filterKey,
+          'icon': icon,
+          'color': color,
+          'description': description,
+          'debit': debit,
+          'credit': credit,
+          'currency': curr,
+          'source': 'voucher',
+          'voucher_type': voucherType,
           'created_at': v['created_at'] as String? ?? dateStr,
         });
       }
@@ -346,7 +401,9 @@ class CashBoxService {
     // 2. Cash transfers involving this cash box
     try {
       final transferFilter = currency != null ? 'AND ct.currency = ?' : '';
-      final transferArgs = currency != null ? [cashBoxId, currency, cashBoxId, currency] : [cashBoxId, cashBoxId];
+      final transferArgs = currency != null
+          ? [cashBoxId, currency, cashBoxId, currency]
+          : [cashBoxId, cashBoxId];
       final transfers = await db.rawQuery('''
         SELECT ct.*, from_cb.name AS from_cash_box_name, to_cb.name AS to_cash_box_name
         FROM cash_transfers ct
@@ -359,21 +416,28 @@ class CashBoxService {
       for (final t in transfers) {
         final amount = MoneyHelper.readMoney(t['amount']);
         final curr = t['currency'] as String? ?? 'YER';
-        final dateStr = t['date'] as String? ?? t['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr = t['date'] as String? ??
+            t['created_at'] as String? ??
+            DateTime.now().toIso8601String();
         final isOutgoing = t['from_cash_box_id'] == cashBoxId;
         final fromName = t['from_cash_box_name'] as String? ?? '';
         final toName = t['to_cash_box_name'] as String? ?? '';
 
         movements.add({
-          'id': 't_${t['id']}', 'date': dateStr,
+          'id': 't_${t['id']}',
+          'date': dateStr,
           'type': isOutgoing ? 'outgoing_transfer' : 'incoming_transfer',
           'type_ar': isOutgoing ? 'تحويل صادر' : 'تحويل وارد',
           'filter_key': isOutgoing ? 'outgoing_transfer' : 'incoming_transfer',
           'icon': isOutgoing ? Icons.outbox : Icons.inbox,
           'color': isOutgoing ? AppColors.warning : AppColors.accentBlue,
-          'description': isOutgoing ? 'تحويل إلى $toName' : 'تحويل من $fromName',
-          'debit': isOutgoing ? amount : 0.0, 'credit': isOutgoing ? 0.0 : amount,
-          'currency': curr, 'source': 'transfer', 'voucher_type': null,
+          'description':
+              isOutgoing ? 'تحويل إلى $toName' : 'تحويل من $fromName',
+          'debit': isOutgoing ? amount : 0.0,
+          'credit': isOutgoing ? 0.0 : amount,
+          'currency': curr,
+          'source': 'transfer',
+          'voucher_type': null,
           'created_at': t['created_at'] as String? ?? dateStr,
         });
       }
@@ -383,8 +447,12 @@ class CashBoxService {
 
     // 3. Currency exchanges involving this cash box
     try {
-      final exchangeFilter = currency != null ? 'AND (ce.from_currency = ? OR ce.to_currency = ?)' : '';
-      final exchangeArgs = currency != null ? [cashBoxId, cashBoxId, currency, currency] : [cashBoxId, cashBoxId];
+      final exchangeFilter = currency != null
+          ? 'AND (ce.from_currency = ? OR ce.to_currency = ?)'
+          : '';
+      final exchangeArgs = currency != null
+          ? [cashBoxId, cashBoxId, currency, currency]
+          : [cashBoxId, cashBoxId];
       final exchanges = await db.rawQuery('''
         SELECT ce.*, from_cb.name AS from_cash_box_name, to_cb.name AS to_cash_box_name
         FROM currency_exchanges ce
@@ -399,7 +467,9 @@ class CashBoxService {
         final toAmount = MoneyHelper.readMoney(e['to_amount']);
         final fromCurrency = e['from_currency'] as String? ?? 'YER';
         final toCurrency = e['to_currency'] as String? ?? 'YER';
-        final dateStr = e['date'] as String? ?? e['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr = e['date'] as String? ??
+            e['created_at'] as String? ??
+            DateTime.now().toIso8601String();
         final isSource = e['from_cash_box_id'] == cashBoxId;
 
         if (currency != null) {
@@ -410,13 +480,19 @@ class CashBoxService {
         final amount = isSource ? fromAmount : toAmount;
         final curr = isSource ? fromCurrency : toCurrency;
         movements.add({
-          'id': 'e_${e['id']}', 'date': dateStr,
+          'id': 'e_${e['id']}',
+          'date': dateStr,
           'type': isSource ? 'exchange_out' : 'exchange_in',
           'type_ar': isSource ? 'صرافة (صادر)' : 'صرافة (وارد)',
-          'filter_key': 'exchange', 'icon': Icons.currency_exchange, 'color': AppColors.secondary,
+          'filter_key': 'exchange',
+          'icon': Icons.currency_exchange,
+          'color': AppColors.secondary,
           'description': 'صرافة: $fromCurrency → $toCurrency',
-          'debit': isSource ? amount : 0.0, 'credit': isSource ? 0.0 : amount,
-          'currency': curr, 'source': 'exchange', 'voucher_type': null,
+          'debit': isSource ? amount : 0.0,
+          'credit': isSource ? 0.0 : amount,
+          'currency': curr,
+          'source': 'exchange',
+          'voucher_type': null,
           'created_at': e['created_at'] as String? ?? dateStr,
         });
       }
@@ -427,7 +503,8 @@ class CashBoxService {
     // 4. Invoices linked to this cash box
     try {
       final invoiceFilter = currency != null ? 'AND i.currency = ?' : '';
-      final invoiceArgs = currency != null ? [cashBoxId, currency] : [cashBoxId];
+      final invoiceArgs =
+          currency != null ? [cashBoxId, currency] : [cashBoxId];
       final invoices = await db.rawQuery('''
         SELECT i.* FROM invoices i
         WHERE i.cash_box_id = ? $invoiceFilter
@@ -441,7 +518,10 @@ class CashBoxService {
         // Also handle is_return as num (not just int) to avoid type-cast failures.
         final rawType = inv['type'] as String? ?? 'sale';
         final rawIsReturn = inv['is_return'];
-        final isReturn = (rawIsReturn is num ? rawIsReturn.toInt() : (rawIsReturn as int? ?? 0)) == 1;
+        final isReturn = (rawIsReturn is num
+                ? rawIsReturn.toInt()
+                : (rawIsReturn as int? ?? 0)) ==
+            1;
 
         // Normalize: determine the base type and whether this is a return
         // 'sale_return' / 'purchase_return' are effective types that may be
@@ -461,31 +541,51 @@ class CashBoxService {
 
         final paidAmount = MoneyHelper.readMoney(inv['paid_amount']);
         final curr = inv['currency'] as String? ?? 'YER';
-        final dateStr = inv['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr =
+            inv['created_at'] as String? ?? DateTime.now().toIso8601String();
 
-        String typeAr; String filterKey; double debit = 0.0; double credit = 0.0;
+        String typeAr;
+        String filterKey;
+        double debit = 0.0;
+        double credit = 0.0;
         final isSaleOrPos = baseType == 'sale' || baseType == 'pos';
         if (isSaleOrPos && !effectiveIsReturn) {
           typeAr = baseType == 'pos' ? 'فاتورة نقطة بيع' : 'فاتورة مبيعات';
-          filterKey = 'sales'; credit = paidAmount;
+          filterKey = 'sales';
+          credit = paidAmount;
         } else if (isSaleOrPos && effectiveIsReturn) {
           typeAr = baseType == 'pos' ? 'مرتجع نقطة بيع' : 'مرتجع مبيعات';
-          filterKey = 'returns'; debit = paidAmount;
+          filterKey = 'returns';
+          debit = paidAmount;
         } else if (baseType == 'purchase' && !effectiveIsReturn) {
-          typeAr = 'فاتورة مشتريات'; filterKey = 'purchases'; debit = paidAmount;
+          typeAr = 'فاتورة مشتريات';
+          filterKey = 'purchases';
+          debit = paidAmount;
         } else if (baseType == 'purchase' && effectiveIsReturn) {
-          typeAr = 'مرتجع مشتريات'; filterKey = 'returns'; credit = paidAmount;
+          typeAr = 'مرتجع مشتريات';
+          filterKey = 'returns';
+          credit = paidAmount;
         } else {
-          typeAr = 'فاتورة'; filterKey = 'sales'; credit = paidAmount;
+          typeAr = 'فاتورة';
+          filterKey = 'sales';
+          credit = paidAmount;
         }
 
         movements.add({
-          'id': 'i_${inv['id']}', 'date': dateStr, 'type': rawType, 'type_ar': typeAr,
+          'id': 'i_${inv['id']}',
+          'date': dateStr,
+          'type': rawType,
+          'type_ar': typeAr,
           'filter_key': filterKey,
           'icon': isSaleOrPos ? Icons.receipt_long : Icons.shopping_cart,
           'color': isSaleOrPos ? AppColors.primary : AppColors.secondary,
-          'description': '$typeAr - ${inv['invoice_number'] ?? inv['id'] ?? ''}',
-          'debit': debit, 'credit': credit, 'currency': curr, 'source': 'invoice', 'voucher_type': null,
+          'description':
+              '$typeAr - ${inv['invoice_number'] ?? inv['id'] ?? ''}',
+          'debit': debit,
+          'credit': credit,
+          'currency': curr,
+          'source': 'invoice',
+          'voucher_type': null,
           'created_at': inv['created_at'] as String? ?? dateStr,
         });
       }
@@ -510,16 +610,25 @@ class CashBoxService {
 
         final debit = MoneyHelper.readMoney(ob['debit']);
         final credit = MoneyHelper.readMoney(ob['credit']);
-        final dateStr = ob['date'] as String? ?? ob['created_at'] as String? ?? DateTime.now().toIso8601String();
+        final dateStr = ob['date'] as String? ??
+            ob['created_at'] as String? ??
+            DateTime.now().toIso8601String();
         final description = ob['description'] as String? ?? 'رصيد افتتاحي';
 
         movements.add({
-          'id': 'ob_${ob['id']}', 'date': dateStr, 'type': 'opening_balance', 'type_ar': 'رصيد افتتاحي',
-          'filter_key': 'opening_balance', 'icon': Icons.account_balance_wallet, 'color': AppColors.accentBlue,
+          'id': 'ob_${ob['id']}',
+          'date': dateStr,
+          'type': 'opening_balance',
+          'type_ar': 'رصيد افتتاحي',
+          'filter_key': 'opening_balance',
+          'icon': Icons.account_balance_wallet,
+          'color': AppColors.accentBlue,
           'description': description,
           'debit': credit > 0 ? credit : 0.0,
           'credit': debit > 0 ? debit : 0.0,
-          'currency': obCurrency, 'source': 'opening_balance', 'voucher_type': null,
+          'currency': obCurrency,
+          'source': 'opening_balance',
+          'voucher_type': null,
           'created_at': ob['created_at'] as String? ?? dateStr,
         });
       }
@@ -533,7 +642,8 @@ class CashBoxService {
       final dateB = b['date'] as String;
       final cmp = dateA.compareTo(dateB);
       if (cmp != 0) return cmp;
-      return ((a['created_at'] as String?) ?? '').compareTo((b['created_at'] as String?) ?? '');
+      return ((a['created_at'] as String?) ?? '')
+          .compareTo((b['created_at'] as String?) ?? '');
     });
 
     return movements;
@@ -662,22 +772,24 @@ class CashBoxService {
         WHERE cash_box_id = ?
       )
     ''', [
-      cashBoxId,   // 1
-      cashBoxId,   // 2
-      cashBoxId,   // 3
-      cashBoxId,   // 4
-      cashBoxId,   // 5
-      cashBoxId,   // 6
-      cashBoxId,   // 7
-      cashBoxId,   // 8
-      cashBoxId,   // 9
-      cashBoxId,   // 10
-      cashBoxId,   // 11
-      cashBoxId,   // 12
+      cashBoxId, // 1
+      cashBoxId, // 2
+      cashBoxId, // 3
+      cashBoxId, // 4
+      cashBoxId, // 5
+      cashBoxId, // 6
+      cashBoxId, // 7
+      cashBoxId, // 8
+      cashBoxId, // 9
+      cashBoxId, // 10
+      cashBoxId, // 11
+      cashBoxId, // 12
     ]);
 
-    final totalInflows = MoneyHelper.readCalculatedMoney(result.first['total_inflows']);
-    final totalOutflows = MoneyHelper.readCalculatedMoney(result.first['total_outflows']);
+    final totalInflows =
+        MoneyHelper.readCalculatedMoney(result.first['total_inflows']);
+    final totalOutflows =
+        MoneyHelper.readCalculatedMoney(result.first['total_outflows']);
     final effectiveBalance = totalInflows - totalOutflows;
 
     return {
@@ -712,11 +824,14 @@ class CashBoxService {
       ORDER BY currency
     ''');
 
-    return results.map((row) => {
-      'currency': row['currency'] as String,
-      'total_balance': MoneyHelper.readCalculatedMoney(row['total_balance']),
-      'cash_box_count': row['cash_box_count'] as int,
-    }).toList();
+    return results
+        .map((row) => {
+              'currency': row['currency'] as String,
+              'total_balance':
+                  MoneyHelper.readCalculatedMoney(row['total_balance']),
+              'cash_box_count': row['cash_box_count'] as int,
+            })
+        .toList();
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -725,7 +840,8 @@ class CashBoxService {
 
   Future<int> insertCurrencyExchange(Map<String, dynamic> exchangeMap) async {
     // Check if fiscal period is closed before currency exchange
-    final exchangeDate = exchangeMap['date'] as String? ?? DateTime.now().toIso8601String();
+    final exchangeDate =
+        exchangeMap['date'] as String? ?? DateTime.now().toIso8601String();
     await _dbHelper.journal.checkFiscalPeriodOpen(exchangeDate);
 
     final db = await _db;
@@ -735,37 +851,47 @@ class CashBoxService {
     final toAmount = MoneyHelper.readMoney(exchangeMap['to_amount']);
     final gainLoss = MoneyHelper.readMoney(exchangeMap['gain_loss']);
     final gainLossType = (exchangeMap['gain_loss_type'] as String?) ?? '';
-    final fromCashBoxId = (exchangeMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
+    final fromCashBoxId =
+        (exchangeMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
     final toCashBoxId = (exchangeMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
     final now = DateTime.now().toIso8601String();
 
     late int exchangeId;
     await db.transaction((txn) async {
       // إدراج سجل الصرافة
-      exchangeId = await txn.insert('currency_exchanges', MoneyHelper.toCentsMap(exchangeMap, ['from_amount', 'to_amount', 'gain_loss']));
+      exchangeId = await txn.insert(
+          'currency_exchanges',
+          MoneyHelper.toCentsMap(
+              exchangeMap, ['from_amount', 'to_amount', 'gain_loss']));
 
       // القيود المحاسبية
       final journalId = generateUniqueJournalId();
 
       // حساب الصناديق والبنوك للعملة المستلمة (مدين)
-      final toCodeOffset = toCurrency == 'SAR' ? 1 : (toCurrency == 'USD' ? 2 : 0);
+      final toCodeOffset =
+          toCurrency == 'SAR' ? 1 : (toCurrency == 'USD' ? 2 : 0);
       final toCashBanksAccount = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ?',
         whereArgs: [(1100 + toCodeOffset).toString(), toCurrency],
         limit: 1,
       );
-      final toCashBanksAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
+      final toCashBanksAccountId = toCashBanksAccount.isNotEmpty
+          ? toCashBanksAccount.first['id'] as int
+          : null;
 
       // حساب الصناديق والبنوك للعملة المرسلة (دائن)
-      final fromCodeOffset = fromCurrency == 'SAR' ? 1 : (fromCurrency == 'USD' ? 2 : 0);
+      final fromCodeOffset =
+          fromCurrency == 'SAR' ? 1 : (fromCurrency == 'USD' ? 2 : 0);
       final fromCashBanksAccount = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ?',
         whereArgs: [(1100 + fromCodeOffset).toString(), fromCurrency],
         limit: 1,
       );
-      final fromCashBanksAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
+      final fromCashBanksAccountId = fromCashBanksAccount.isNotEmpty
+          ? fromCashBanksAccount.first['id'] as int
+          : null;
 
       // Look up exchange rates for currency conversion
       final toRate = await _getExchangeRate(txn, toCurrency);
@@ -778,14 +904,16 @@ class CashBoxService {
           'journal_id': journalId,
           'debit': MoneyHelper.toCents(toAmount),
           'credit': 0,
-          'description': 'صرافة: استلام $toCurrency - ${exchangeMap['exchange_number']}',
+          'description':
+              'صرافة: استلام $toCurrency - ${exchangeMap['exchange_number']}',
           'date': now,
           'created_at': now,
           'currency_code': toCurrency,
           'exchange_rate': toCurrency == 'YER' ? 1.0 : toRate,
           'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toCashBanksAccountId, toAmount, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, toCashBanksAccountId, toAmount, 0.0, now);
       }
 
       // دائن: حساب الصناديق والبنوك للعملة المرسلة
@@ -795,14 +923,16 @@ class CashBoxService {
           'journal_id': journalId,
           'debit': 0,
           'credit': MoneyHelper.toCents(fromAmount),
-          'description': 'صرافة: صرف $fromCurrency - ${exchangeMap['exchange_number']}',
+          'description':
+              'صرافة: صرف $fromCurrency - ${exchangeMap['exchange_number']}',
           'date': now,
           'created_at': now,
           'currency_code': fromCurrency,
           'exchange_rate': fromCurrency == 'YER' ? 1.0 : fromRate,
           'amount_base': (MoneyHelper.toCents(fromAmount) * fromRate).round(),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromCashBanksAccountId, 0.0, fromAmount, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, fromCashBanksAccountId, 0.0, fromAmount, now);
       }
 
       // ── C-04: معالجة أرباح/خسائر الصرافة باستخدام حساب فروقات الصرف ──
@@ -810,7 +940,8 @@ class CashBoxService {
       if (gainLoss > 0) {
         // Use separate gain/loss accounts: 4700 for gains (REVENUE), 5300 for losses (EXPENSE)
         final isGain = gainLossType == 'gain';
-        final exchangeAccountId = await _dbHelper.journal.getOrCreateExchangeAccount(isGain: isGain);
+        final exchangeAccountId =
+            await _dbHelper.journal.getOrCreateExchangeAccount(isGain: isGain);
 
         if (gainLossType == 'gain') {
           // أرباح صرافة: دائن حساب فروقات الصرف (إيراد)
@@ -826,7 +957,8 @@ class CashBoxService {
             'exchange_rate': 1.0,
             'amount_base': MoneyHelper.toCents(gainLoss),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, exchangeAccountId, 0.0, gainLoss, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, exchangeAccountId, 0.0, gainLoss, now);
         } else if (gainLossType == 'loss') {
           // خسائر صرافة: مدين حساب فروقات الصرف (مصروف)
           await txn.insert('transactions', {
@@ -841,24 +973,39 @@ class CashBoxService {
             'exchange_rate': 1.0,
             'amount_base': MoneyHelper.toCents(gainLoss),
           });
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, exchangeAccountId, gainLoss, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, exchangeAccountId, gainLoss, 0.0, now);
         }
       }
 
       // تحديث أرصدة الصناديق (مع مراعاة نوع الرصيد)
-      final exFromBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
-      final exFromBalanceType = exFromBox.isNotEmpty ? (exFromBox.first['balance_type'] as String? ?? 'credit') : 'credit';
+      final exFromBox = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
+      final exFromBalanceType = exFromBox.isNotEmpty
+          ? (exFromBox.first['balance_type'] as String? ?? 'credit')
+          : 'credit';
       if (exFromBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(fromAmount), now, fromCashBoxId]);
       }
-      final exToBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
-      final exToBalanceType = exToBox.isNotEmpty ? (exToBox.first['balance_type'] as String? ?? 'credit') : 'credit';
+      final exToBox = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
+      final exToBalanceType = exToBox.isNotEmpty
+          ? (exToBox.first['balance_type'] as String? ?? 'credit')
+          : 'credit';
       if (exToBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(toAmount), now, toCashBoxId]);
       }
     });
 
@@ -866,7 +1013,8 @@ class CashBoxService {
   }
 
   /// جلب جميع عمليات الصرافة
-  Future<List<Map<String, dynamic>>> getAllCurrencyExchanges({String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllCurrencyExchanges(
+      {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT ce.*,
@@ -898,11 +1046,13 @@ class CashBoxService {
 
   Future<int> insertCashTransfer(Map<String, dynamic> transferMap) async {
     // Check if fiscal period is closed before cash transfer
-    final transferDate = transferMap['date'] as String? ?? DateTime.now().toIso8601String();
+    final transferDate =
+        transferMap['date'] as String? ?? DateTime.now().toIso8601String();
     await _dbHelper.journal.checkFiscalPeriodOpen(transferDate);
 
     final db = await _db;
-    final fromCashBoxId = (transferMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
+    final fromCashBoxId =
+        (transferMap['from_cash_box_id'] as num?)?.toInt() ?? 0;
     final toCashBoxId = (transferMap['to_cash_box_id'] as num?)?.toInt() ?? 0;
     final amount = MoneyHelper.readMoney(transferMap['amount']);
     final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
@@ -911,14 +1061,16 @@ class CashBoxService {
     late int transferId;
     await db.transaction((txn) async {
       // إدراج سجل التحويل
-      transferId = await txn.insert('cash_transfers', MoneyHelper.toCentsMap(transferMap, ['amount']));
+      transferId = await txn.insert(
+          'cash_transfers', MoneyHelper.toCentsMap(transferMap, ['amount']));
 
       // القيود المحاسبية
       final journalId = generateUniqueJournalId();
 
       // الحصول على حساب الصندوق المصدر (المرتبط أو الافتراضي)
       int? fromAccountId;
-      final fromCashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
+      final fromCashBox = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
       if (fromCashBox.isNotEmpty) {
         final linkedId = fromCashBox.first['linked_account_id'] as int?;
         if (linkedId != null) {
@@ -926,19 +1078,23 @@ class CashBoxService {
         }
       }
       if (fromAccountId == null) {
-        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final codeOffset =
+            transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
         final fromCashBanksAccount = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',
           whereArgs: [(1100 + codeOffset).toString(), transferCurrency],
           limit: 1,
         );
-        fromAccountId = fromCashBanksAccount.isNotEmpty ? fromCashBanksAccount.first['id'] as int : null;
+        fromAccountId = fromCashBanksAccount.isNotEmpty
+            ? fromCashBanksAccount.first['id'] as int
+            : null;
       }
 
       // الحصول على حساب الصندوق الوجهة (المرتبط أو الافتراضي)
       int? toAccountId;
-      final toCashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
+      final toCashBox = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
       if (toCashBox.isNotEmpty) {
         final linkedId = toCashBox.first['linked_account_id'] as int?;
         if (linkedId != null) {
@@ -946,14 +1102,17 @@ class CashBoxService {
         }
       }
       if (toAccountId == null) {
-        final codeOffset = transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final codeOffset =
+            transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
         final toCashBanksAccount = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',
           whereArgs: [(1100 + codeOffset).toString(), transferCurrency],
           limit: 1,
         );
-        toAccountId = toCashBanksAccount.isNotEmpty ? toCashBanksAccount.first['id'] as int : null;
+        toAccountId = toCashBanksAccount.isNotEmpty
+            ? toCashBanksAccount.first['id'] as int
+            : null;
       }
 
       // Look up exchange rate for transfer currency
@@ -966,14 +1125,16 @@ class CashBoxService {
           'journal_id': journalId,
           'debit': MoneyHelper.toCents(amount),
           'credit': 0,
-          'description': 'تحويل: استلام من صندوق آخر - ${transferMap['transfer_number']}',
+          'description':
+              'تحويل: استلام من صندوق آخر - ${transferMap['transfer_number']}',
           'date': now,
           'created_at': now,
           'currency_code': transferCurrency,
           'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
           'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, toAccountId, amount, 0.0, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, toAccountId, amount, 0.0, now);
       }
 
       // دائن: حساب الصناديق والبنوك للمصدر
@@ -983,30 +1144,46 @@ class CashBoxService {
           'journal_id': journalId,
           'debit': 0,
           'credit': MoneyHelper.toCents(amount),
-          'description': 'تحويل: صرف إلى صندوق آخر - ${transferMap['transfer_number']}',
+          'description':
+              'تحويل: صرف إلى صندوق آخر - ${transferMap['transfer_number']}',
           'date': now,
           'created_at': now,
           'currency_code': transferCurrency,
           'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
           'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
         });
-        await _dbHelper.journal.updateAccountBalanceWithJournal(txn, fromAccountId, 0.0, amount, now);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+            txn, fromAccountId, 0.0, amount, now);
       }
 
       // تحديث أرصدة الصناديق (مع مراعاة نوع الرصيد)
-      final fromBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
-      final fromBalanceType = fromBox.isNotEmpty ? (fromBox.first['balance_type'] as String? ?? 'credit') : 'credit';
+      final fromBox = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [fromCashBoxId], limit: 1);
+      final fromBalanceType = fromBox.isNotEmpty
+          ? (fromBox.first['balance_type'] as String? ?? 'credit')
+          : 'credit';
       if (fromBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, fromCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(amount), now, fromCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, fromCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(amount), now, fromCashBoxId]);
       }
-      final toBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
-      final toBalanceType = toBox.isNotEmpty ? (toBox.first['balance_type'] as String? ?? 'credit') : 'credit';
+      final toBox = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [toCashBoxId], limit: 1);
+      final toBalanceType = toBox.isNotEmpty
+          ? (toBox.first['balance_type'] as String? ?? 'credit')
+          : 'credit';
       if (toBalanceType == 'credit') {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, toCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(amount), now, toCashBoxId]);
       } else {
-        await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(amount), now, toCashBoxId]);
+        await txn.rawUpdate(
+            'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+            [MoneyHelper.toCents(amount), now, toCashBoxId]);
       }
     });
 
@@ -1014,7 +1191,8 @@ class CashBoxService {
   }
 
   /// جلب جميع عمليات التحويل بين الصناديق
-  Future<List<Map<String, dynamic>>> getAllCashTransfers({String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllCashTransfers(
+      {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT ct.*,
@@ -1045,16 +1223,21 @@ class CashBoxService {
   // ══════════════════════════════════════════════════════════════
 
   /// إدراج سند مع بنوده وإنشاء قيود يومية
-  Future<int> insertVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
+  Future<int> insertVoucher(
+      Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
     // ── التحقق من توازن القيد: مجموع المدين يجب أن يساوي مجموع الدائن ──
-    final totalDebit = items.fold(0.0, (sum, item) => sum + MoneyHelper.readMoney(item['debit']));
-    final totalCredit = items.fold(0.0, (sum, item) => sum + MoneyHelper.readMoney(item['credit']));
+    final totalDebit = items.fold(
+        0.0, (sum, item) => sum + MoneyHelper.readMoney(item['debit']));
+    final totalCredit = items.fold(
+        0.0, (sum, item) => sum + MoneyHelper.readMoney(item['credit']));
     if ((totalDebit - totalCredit).abs() > 0.01) {
-      throw Exception('القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit');
+      throw Exception(
+          'القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit');
     }
 
     // ── التحقق من قفل الفترة المحاسبية ──
-    final voucherDate = voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
+    final voucherDate =
+        voucherMap['date'] as String? ?? DateTime.now().toIso8601String();
     await _dbHelper.journal.checkFiscalPeriodOpen(voucherDate);
 
     final db = await _db;
@@ -1064,7 +1247,8 @@ class CashBoxService {
     int voucherId = 0;
     await db.transaction((txn) async {
       // إدراج السند
-      voucherId = await txn.insert('vouchers', MoneyHelper.toCentsMap(voucherMap, MoneyHelper.voucherMoneyFields));
+      voucherId = await txn.insert('vouchers',
+          MoneyHelper.toCentsMap(voucherMap, MoneyHelper.voucherMoneyFields));
 
       // Look up voucher currency exchange rate
       final voucherCurrency = (voucherMap['currency'] as String?) ?? 'YER';
@@ -1075,7 +1259,10 @@ class CashBoxService {
         final itemMap = Map<String, dynamic>.from(item);
         itemMap['voucher_id'] = voucherId;
         itemMap['created_at'] = now;
-        await txn.insert('voucher_items', MoneyHelper.toCentsMap(itemMap, MoneyHelper.transactionMoneyFields));
+        await txn.insert(
+            'voucher_items',
+            MoneyHelper.toCentsMap(
+                itemMap, MoneyHelper.transactionMoneyFields));
 
         // إنشاء قيد يومي لكل بند
         final accountId = (item['account_id'] as num?)?.toInt();
@@ -1088,37 +1275,56 @@ class CashBoxService {
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(debit),
             'credit': MoneyHelper.toCents(credit),
-            'description': item['description'] ?? voucherMap['description'] ?? 'سند ${voucherMap['voucher_number']}',
+            'description': item['description'] ??
+                voucherMap['description'] ??
+                'سند ${voucherMap['voucher_number']}',
             'date': voucherMap['date'],
             'created_at': now,
             'currency_code': voucherCurrency,
             'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
-            'amount_base': (MoneyHelper.toCents(itemAmount) * voucherRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(itemAmount) * voucherRate).round(),
           });
 
           // تحديث رصيد الحساب باستخدام منطق balance_type
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, debit, credit, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, accountId, debit, credit, now);
         }
       }
 
       // تحديث رصيد الصندوق إذا كان مرتبطاً بالسند (مع مراعاة balance_type)
       final cashBoxId = voucherMap['cash_box_id'];
       if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        final cashBox = await txn.query('cash_boxes',
+            where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
         if (cashBox.isNotEmpty) {
-          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
-          final cashBoxBalanceType = cashBox.first['balance_type'] as String? ?? 'credit';
+          final currentBalance =
+              MoneyHelper.readMoney(cashBox.first['balance']);
+          final cashBoxBalanceType =
+              cashBox.first['balance_type'] as String? ?? 'credit';
           final totalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
-          final voucherType = voucherMap['voucher_type'] as String? ?? 'receipt';
+          final voucherType =
+              voucherMap['voucher_type'] as String? ?? 'receipt';
           // قبض: النقدية تدخل الصندوق | صرف: النقدية تخرج
           final isCashIn = voucherType == 'receipt';
           double newCashBalance;
           if (cashBoxBalanceType == 'credit') {
-            newCashBalance = isCashIn ? currentBalance + totalAmount : currentBalance - totalAmount;
+            newCashBalance = isCashIn
+                ? currentBalance + totalAmount
+                : currentBalance - totalAmount;
           } else {
-            newCashBalance = isCashIn ? currentBalance - totalAmount : currentBalance + totalAmount;
+            newCashBalance = isCashIn
+                ? currentBalance - totalAmount
+                : currentBalance + totalAmount;
           }
-          await txn.update('cash_boxes', {'balance': MoneyHelper.toCents(newCashBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+          await txn.update(
+              'cash_boxes',
+              {
+                'balance': MoneyHelper.toCents(newCashBalance),
+                'updated_at': now
+              },
+              where: 'id = ?',
+              whereArgs: [cashBoxId]);
         }
       }
 
@@ -1139,11 +1345,17 @@ class CashBoxService {
       if (customerId != null && totalAmount > 0) {
         if (voucherType == 'receipt') {
           await EntityBalanceHelper.customerReceipt(
-            txn: txn, customerId: customerId as int, amount: totalAmount, now: now,
+            txn: txn,
+            customerId: customerId as int,
+            amount: totalAmount,
+            now: now,
           );
         } else if (voucherType == 'payment') {
           await EntityBalanceHelper.customerPayment(
-            txn: txn, customerId: customerId as int, amount: totalAmount, now: now,
+            txn: txn,
+            customerId: customerId as int,
+            amount: totalAmount,
+            now: now,
           );
         }
       }
@@ -1151,11 +1363,17 @@ class CashBoxService {
       if (supplierId != null && totalAmount > 0) {
         if (voucherType == 'payment') {
           await EntityBalanceHelper.supplierPayment(
-            txn: txn, supplierId: supplierId as int, amount: totalAmount, now: now,
+            txn: txn,
+            supplierId: supplierId as int,
+            amount: totalAmount,
+            now: now,
           );
         } else if (voucherType == 'receipt') {
           await EntityBalanceHelper.supplierReceipt(
-            txn: txn, supplierId: supplierId as int, amount: totalAmount, now: now,
+            txn: txn,
+            supplierId: supplierId as int,
+            amount: totalAmount,
+            now: now,
           );
         }
       }
@@ -1164,12 +1382,20 @@ class CashBoxService {
         if (voucherType == 'receipt') {
           // Receipt from employee: credit effect (employee's credit position increases)
           await EntityBalanceHelper.applyEmployeeBalanceChange(
-            txn: txn, employeeId: employeeId as int, creditEffect: totalAmount, debitEffect: 0, now: now,
+            txn: txn,
+            employeeId: employeeId as int,
+            creditEffect: totalAmount,
+            debitEffect: 0,
+            now: now,
           );
         } else if (voucherType == 'payment') {
           // Payment to employee: debit effect (employee's debit position increases)
           await EntityBalanceHelper.applyEmployeeBalanceChange(
-            txn: txn, employeeId: employeeId as int, creditEffect: 0, debitEffect: totalAmount, now: now,
+            txn: txn,
+            employeeId: employeeId as int,
+            creditEffect: 0,
+            debitEffect: totalAmount,
+            now: now,
           );
         }
       }
@@ -1178,10 +1404,12 @@ class CashBoxService {
   }
 
   /// جلب جميع السندات مع فلتر اختياري حسب النوع
-  Future<List<Map<String, dynamic>>> getAllVouchers({String? type, String orderBy = 'created_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllVouchers(
+      {String? type, String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     if (type != null) {
-      return await db.query('vouchers', where: 'voucher_type = ?', whereArgs: [type], orderBy: orderBy);
+      return await db.query('vouchers',
+          where: 'voucher_type = ?', whereArgs: [type], orderBy: orderBy);
     }
     return await db.query('vouchers', orderBy: orderBy);
   }
@@ -1189,7 +1417,8 @@ class CashBoxService {
   /// جلب بنود سند معين
   Future<List<Map<String, dynamic>>> getVoucherItems(int voucherId) async {
     final db = await _db;
-    return await db.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
+    return await db.query('voucher_items',
+        where: 'voucher_id = ?', whereArgs: [voucherId]);
   }
 
   /// حذف سند وعكس القيود اليومية
@@ -1198,7 +1427,8 @@ class CashBoxService {
     final now = DateTime.now().toIso8601String();
 
     // Pre-check: verify the voucher's date is not in a closed fiscal period
-    final voucherPreCheck = await db.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
+    final voucherPreCheck = await db.query('vouchers',
+        where: 'id = ?', whereArgs: [voucherId], limit: 1);
     if (voucherPreCheck.isNotEmpty) {
       final preCheckDate = voucherPreCheck.first['date'] as String? ?? now;
       await _dbHelper.journal.checkFiscalPeriodOpen(preCheckDate);
@@ -1206,7 +1436,8 @@ class CashBoxService {
 
     await db.transaction((txn) async {
       // جلب بيانات السند
-      final voucher = await txn.query('vouchers', where: 'id = ?', whereArgs: [voucherId], limit: 1);
+      final voucher = await txn.query('vouchers',
+          where: 'id = ?', whereArgs: [voucherId], limit: 1);
       if (voucher.isEmpty) return;
 
       final voucherData = voucher.first;
@@ -1221,7 +1452,8 @@ class CashBoxService {
       final voucherRate = await _getExchangeRate(txn, voucherCurrency);
 
       // جلب بنود السند وعكس القيود
-      final items = await txn.query('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
+      final items = await txn.query('voucher_items',
+          where: 'voucher_id = ?', whereArgs: [voucherId]);
       for (final item in items) {
         final accountId = (item['account_id'] as num?)?.toInt();
         final debit = MoneyHelper.readMoney(item['debit']);
@@ -1239,29 +1471,45 @@ class CashBoxService {
             'created_at': now,
             'currency_code': voucherCurrency,
             'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
-            'amount_base': (MoneyHelper.toCents(reversalAmount) * voucherRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(reversalAmount) * voucherRate).round(),
           });
 
           // تحديث رصيد الحساب (عكس) باستخدام منطق balance_type
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, accountId, credit, debit, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, accountId, credit, debit, now);
         }
       }
 
       // عكس تأثير الصندوق (مع مراعاة balance_type)
       if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+        final cashBox = await txn.query('cash_boxes',
+            where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
         if (cashBox.isNotEmpty) {
-          final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
-          final cashBoxBalanceType = cashBox.first['balance_type'] as String? ?? 'credit';
+          final currentBalance =
+              MoneyHelper.readMoney(cashBox.first['balance']);
+          final cashBoxBalanceType =
+              cashBox.first['balance_type'] as String? ?? 'credit';
           // عكس: قبض (كان أدخل) → نخرج | صرف (كان أخرج) → ندخل
           final isReverseCashOut = voucherType == 'receipt';
           double newCashBalance;
           if (cashBoxBalanceType == 'credit') {
-            newCashBalance = isReverseCashOut ? currentBalance - totalAmount : currentBalance + totalAmount;
+            newCashBalance = isReverseCashOut
+                ? currentBalance - totalAmount
+                : currentBalance + totalAmount;
           } else {
-            newCashBalance = isReverseCashOut ? currentBalance + totalAmount : currentBalance - totalAmount;
+            newCashBalance = isReverseCashOut
+                ? currentBalance + totalAmount
+                : currentBalance - totalAmount;
           }
-          await txn.update('cash_boxes', {'balance': MoneyHelper.toCents(newCashBalance), 'updated_at': now}, where: 'id = ?', whereArgs: [cashBoxId]);
+          await txn.update(
+              'cash_boxes',
+              {
+                'balance': MoneyHelper.toCents(newCashBalance),
+                'updated_at': now
+              },
+              where: 'id = ?',
+              whereArgs: [cashBoxId]);
         }
       }
 
@@ -1273,12 +1521,18 @@ class CashBoxService {
         if (voucherType == 'receipt') {
           // Original receipt: credit effect → reversal is debit effect
           await EntityBalanceHelper.customerPayment(
-            txn: txn, customerId: voucherCustomerId as int, amount: totalAmount, now: now,
+            txn: txn,
+            customerId: voucherCustomerId as int,
+            amount: totalAmount,
+            now: now,
           );
         } else if (voucherType == 'payment') {
           // Original payment: debit effect → reversal is credit effect
           await EntityBalanceHelper.customerReceipt(
-            txn: txn, customerId: voucherCustomerId as int, amount: totalAmount, now: now,
+            txn: txn,
+            customerId: voucherCustomerId as int,
+            amount: totalAmount,
+            now: now,
           );
         }
       }
@@ -1286,18 +1540,25 @@ class CashBoxService {
         if (voucherType == 'payment') {
           // Original payment: debit effect → reversal is credit effect
           await EntityBalanceHelper.supplierPurchaseOnCredit(
-            txn: txn, supplierId: voucherSupplierId as int, amount: totalAmount, now: now,
+            txn: txn,
+            supplierId: voucherSupplierId as int,
+            amount: totalAmount,
+            now: now,
           );
         } else if (voucherType == 'receipt') {
           // Original receipt: debit effect → reversal is credit effect
           await EntityBalanceHelper.supplierPurchaseReturn(
-            txn: txn, supplierId: voucherSupplierId as int, amount: totalAmount, now: now,
+            txn: txn,
+            supplierId: voucherSupplierId as int,
+            amount: totalAmount,
+            now: now,
           );
         }
       }
 
       // حذف بنود السند ثم السند نفسه
-      await txn.delete('voucher_items', where: 'voucher_id = ?', whereArgs: [voucherId]);
+      await txn.delete('voucher_items',
+          where: 'voucher_id = ?', whereArgs: [voucherId]);
       await txn.delete('vouchers', where: 'id = ?', whereArgs: [voucherId]);
     });
     return 1;
@@ -1306,7 +1567,8 @@ class CashBoxService {
   /// جلب سند برقمه
   Future<Map<String, dynamic>?> getVoucherByNumber(String number) async {
     final db = await _db;
-    final result = await db.query('vouchers', where: 'voucher_number = ?', whereArgs: [number], limit: 1);
+    final result = await db.query('vouchers',
+        where: 'voucher_number = ?', whereArgs: [number], limit: 1);
     return result.isNotEmpty ? result.first : null;
   }
 
@@ -1341,9 +1603,13 @@ class CashBoxService {
     // for atomicity (eliminates race condition from read-then-write).
     await db.transaction((txn) async {
       // Look up the linked account's currency for currency_code / exchange_rate / amount_base
-      final linkedAccountRow = await txn.query('accounts', where: 'id = ?', whereArgs: [linkedAccountId], limit: 1);
-      final linkedAccountCurrency = linkedAccountRow.isNotEmpty ? (linkedAccountRow.first['currency'] as String? ?? 'YER') : 'YER';
-      final linkedAccountRate = await _getExchangeRate(txn, linkedAccountCurrency);
+      final linkedAccountRow = await txn.query('accounts',
+          where: 'id = ?', whereArgs: [linkedAccountId], limit: 1);
+      final linkedAccountCurrency = linkedAccountRow.isNotEmpty
+          ? (linkedAccountRow.first['currency'] as String? ?? 'YER')
+          : 'YER';
+      final linkedAccountRate =
+          await _getExchangeRate(txn, linkedAccountCurrency);
 
       if (balanceType == 'credit') {
         // له — Safe has money: Debit Cash & Banks, Credit Opening Balance Equity
@@ -1358,8 +1624,10 @@ class CashBoxService {
           'reference_type': 'opening_balance',
           'reference_id': referenceId,
           'currency_code': linkedAccountCurrency,
-          'exchange_rate': linkedAccountCurrency == 'YER' ? 1.0 : linkedAccountRate,
-          'amount_base': (MoneyHelper.toCents(openingBalance) * linkedAccountRate).round(),
+          'exchange_rate':
+              linkedAccountCurrency == 'YER' ? 1.0 : linkedAccountRate,
+          'amount_base':
+              (MoneyHelper.toCents(openingBalance) * linkedAccountRate).round(),
         });
         await txn.insert('transactions', {
           'account_id': openingBalanceAccountId,
@@ -1376,10 +1644,18 @@ class CashBoxService {
           'amount_base': MoneyHelper.toCents(openingBalance),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
-          txn, linkedAccountId, openingBalance, 0.0, now,
+          txn,
+          linkedAccountId,
+          openingBalance,
+          0.0,
+          now,
         );
         await _dbHelper.journal.updateAccountBalanceWithJournal(
-          txn, openingBalanceAccountId, 0.0, openingBalance, now,
+          txn,
+          openingBalanceAccountId,
+          0.0,
+          openingBalance,
+          now,
         );
       } else {
         // عليه — Safe owes money: Credit Cash & Banks, Debit Opening Balance Equity
@@ -1394,8 +1670,10 @@ class CashBoxService {
           'reference_type': 'opening_balance',
           'reference_id': referenceId,
           'currency_code': linkedAccountCurrency,
-          'exchange_rate': linkedAccountCurrency == 'YER' ? 1.0 : linkedAccountRate,
-          'amount_base': (MoneyHelper.toCents(openingBalance) * linkedAccountRate).round(),
+          'exchange_rate':
+              linkedAccountCurrency == 'YER' ? 1.0 : linkedAccountRate,
+          'amount_base':
+              (MoneyHelper.toCents(openingBalance) * linkedAccountRate).round(),
         });
         await txn.insert('transactions', {
           'account_id': openingBalanceAccountId,
@@ -1412,10 +1690,18 @@ class CashBoxService {
           'amount_base': MoneyHelper.toCents(openingBalance),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
-          txn, linkedAccountId, 0.0, openingBalance, now,
+          txn,
+          linkedAccountId,
+          0.0,
+          openingBalance,
+          now,
         );
         await _dbHelper.journal.updateAccountBalanceWithJournal(
-          txn, openingBalanceAccountId, openingBalance, 0.0, now,
+          txn,
+          openingBalanceAccountId,
+          openingBalance,
+          0.0,
+          now,
         );
       }
     });
@@ -1423,14 +1709,20 @@ class CashBoxService {
 
   /// Look up the exchange rate for a currency from the currencies table.
   /// Falls back to hardcoded rates for SAR/USD if the table is unavailable.
-  Future<double> _getExchangeRate(DatabaseExecutor executor, String currency) async {
+  Future<double> _getExchangeRate(
+      DatabaseExecutor executor, String currency) async {
     if (currency == 'YER') return 1.0;
     try {
-      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      final rows = await executor.query('currencies',
+          where: 'code = ?', whereArgs: [currency], limit: 1);
       if (rows.isNotEmpty) {
         return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       }
-    } catch (_) {}
+    } catch (e) {
+      // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+      debugPrint(
+          'CashBoxService._getExchangeRate($currency) فشل، استخدام السعر الاحتياطي: $e');
+    }
     // Fallback defaults
     if (currency == 'SAR') return 140.0;
     if (currency == 'USD') return 530.0;

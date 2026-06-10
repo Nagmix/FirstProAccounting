@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../core/utils/money_helper.dart';
 import '../../../core/utils/journal_id_helper.dart';
@@ -14,8 +15,7 @@ class BankReconciliationService {
   Future<String> getNextReconciliationNumber() async {
     final db = await _db;
     final now = DateTime.now();
-    final prefix =
-        'BR-${now.year}${now.month.toString().padLeft(2, '0')}';
+    final prefix = 'BR-${now.year}${now.month.toString().padLeft(2, '0')}';
     final result = await db.rawQuery(
       "SELECT COALESCE(MAX(CAST(SUBSTR(reconciliation_number, 10) AS INTEGER)), 0) + 1 AS next_num FROM bank_reconciliations WHERE reconciliation_number LIKE ?",
       ['$prefix%'],
@@ -33,15 +33,15 @@ class BankReconciliationService {
   /// Get all bank-type cash boxes
   Future<List<Map<String, dynamic>>> getBankCashBoxes() async {
     final db = await _db;
-    return await db
-        .query('cash_boxes', where: "type = 'bank' AND is_active = 1", orderBy: 'name');
+    return await db.query('cash_boxes',
+        where: "type = 'bank' AND is_active = 1", orderBy: 'name');
   }
 
   /// Get book balance for a bank cash box (from linked account)
   Future<double> getBookBalance(int cashBoxId) async {
     final db = await _db;
-    final cashBox = await db
-        .query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+    final cashBox = await db.query('cash_boxes',
+        where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
     if (cashBox.isEmpty) return 0.0;
 
     final linkedAccountId = cashBox.first['linked_account_id'] as int?;
@@ -50,8 +50,8 @@ class BankReconciliationService {
       return MoneyHelper.readMoney(cashBox.first['balance']);
     }
 
-    final account = await db
-        .query('accounts', where: 'id = ?', whereArgs: [linkedAccountId], limit: 1);
+    final account = await db.query('accounts',
+        where: 'id = ?', whereArgs: [linkedAccountId], limit: 1);
     if (account.isEmpty) return 0.0;
 
     return MoneyHelper.readMoney(account.first['balance']);
@@ -61,8 +61,8 @@ class BankReconciliationService {
   Future<List<Map<String, dynamic>>> getBookTransactions(
       int cashBoxId, DateTime startDate, DateTime endDate) async {
     final db = await _db;
-    final cashBox = await db
-        .query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+    final cashBox = await db.query('cash_boxes',
+        where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
     if (cashBox.isEmpty) return [];
 
     final linkedAccountId = cashBox.first['linked_account_id'] as int?;
@@ -152,8 +152,7 @@ class BankReconciliationService {
 
     for (final line in unmatchedLines) {
       final lineAmount = MoneyHelper.readMoney(line['amount']);
-      final lineDate =
-          DateTime.parse(line['transaction_date'] as String);
+      final lineDate = DateTime.parse(line['transaction_date'] as String);
       final lineType = line['transaction_type'] as String;
       final lineCashBoxId = line['cash_box_id'] as int;
 
@@ -161,8 +160,7 @@ class BankReconciliationService {
       final cashBox = await db.query('cash_boxes',
           where: 'id = ?', whereArgs: [lineCashBoxId], limit: 1);
       if (cashBox.isEmpty) continue;
-      final linkedAccountId =
-          cashBox.first['linked_account_id'] as int?;
+      final linkedAccountId = cashBox.first['linked_account_id'] as int?;
       if (linkedAccountId == null) continue;
 
       // For bank: debit = withdrawal (credit in books), credit = deposit (debit in books)
@@ -171,13 +169,11 @@ class BankReconciliationService {
       final searchCredit = isDebit ? MoneyHelper.toCents(lineAmount) : 0;
 
       // Search for matching transactions within date tolerance
-      final startDate =
-          lineDate.subtract(Duration(days: dateToleranceDays));
+      final startDate = lineDate.subtract(Duration(days: dateToleranceDays));
       final endDate = lineDate.add(Duration(days: dateToleranceDays));
 
       final candidates = await db.query('transactions',
-          where:
-              '''account_id = ? 
+          where: '''account_id = ? 
           AND ((debit = ? AND credit = 0) OR (credit = ? AND debit = 0))
           AND date >= ? AND date <= ?
           AND id NOT IN (SELECT matched_transaction_id FROM bank_statement_lines WHERE matched_transaction_id IS NOT NULL)''',
@@ -213,44 +209,34 @@ class BankReconciliationService {
     final db = await _db;
 
     // Calculate unmatched deposits in transit (book debit entries not matched to bank)
-    final unmatchedDeposits = await db.rawQuery(
-        '''
+    final unmatchedDeposits = await db.rawQuery('''
       SELECT COALESCE(SUM(amount), 0) as total FROM bank_statement_lines 
       WHERE reconciliation_id = ? AND is_book_entry = 1 AND transaction_type = 'debit' AND match_status = 'unmatched'
-    ''',
-        [recon.id]);
+    ''', [recon.id]);
 
     // Calculate unmatched outstanding checks (book credit entries not matched to bank)
-    final unmatchedChecks = await db.rawQuery(
-        '''
+    final unmatchedChecks = await db.rawQuery('''
       SELECT COALESCE(SUM(amount), 0) as total FROM bank_statement_lines 
       WHERE reconciliation_id = ? AND is_book_entry = 1 AND transaction_type = 'credit' AND match_status = 'unmatched'
-    ''',
-        [recon.id]);
+    ''', [recon.id]);
 
     // Calculate new bank entries (bank statement lines not in books)
-    final newBankCredits = await db.rawQuery(
-        '''
+    final newBankCredits = await db.rawQuery('''
       SELECT COALESCE(SUM(amount), 0) as total FROM bank_statement_lines 
       WHERE reconciliation_id = ? AND is_book_entry = 0 AND transaction_type = 'credit' AND match_status = 'unmatched'
-    ''',
-        [recon.id]);
+    ''', [recon.id]);
 
-    final newBankDebits = await db.rawQuery(
-        '''
+    final newBankDebits = await db.rawQuery('''
       SELECT COALESCE(SUM(amount), 0) as total FROM bank_statement_lines 
       WHERE reconciliation_id = ? AND is_book_entry = 0 AND transaction_type = 'debit' AND match_status = 'unmatched'
-    ''',
-        [recon.id]);
+    ''', [recon.id]);
 
     final depositsInTransit =
         MoneyHelper.readMoney(unmatchedDeposits.first['total']);
     final outstandingChecks =
         MoneyHelper.readMoney(unmatchedChecks.first['total']);
-    final interestEarned =
-        MoneyHelper.readMoney(newBankCredits.first['total']);
-    final bankCharges =
-        MoneyHelper.readMoney(newBankDebits.first['total']);
+    final interestEarned = MoneyHelper.readMoney(newBankCredits.first['total']);
+    final bankCharges = MoneyHelper.readMoney(newBankDebits.first['total']);
 
     final adjustedBankBalance =
         recon.statementBalance + depositsInTransit - outstandingChecks;
@@ -289,13 +275,11 @@ class BankReconciliationService {
       final cashBox = await txn.query('cash_boxes',
           where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
       if (cashBox.isEmpty) return;
-      final linkedAccountId =
-          cashBox.first['linked_account_id'] as int?;
+      final linkedAccountId = cashBox.first['linked_account_id'] as int?;
       if (linkedAccountId == null) return;
 
       final currency = cashBox.first['currency'] as String? ?? 'YER';
-      final codeOffset =
-          currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+      final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
       final exchangeRate = await _getExchangeRate(txn, currency);
 
       // Bank charges: Dr. Bank Charges Expense / Cr. Cash
@@ -311,7 +295,8 @@ class BankReconciliationService {
 
         // Prevent unbalanced entry if expense account not found
         if (expenseAccountId == null) {
-          throw Exception('لا يوجد حساب رسوم بنكية (5250) للعملة $currency. يرجى التأكد من إنشاء الحساب.');
+          throw Exception(
+              'لا يوجد حساب رسوم بنكية (5250) للعملة $currency. يرجى التأكد من إنشاء الحساب.');
         }
 
         await txn.insert('transactions', {
@@ -319,13 +304,14 @@ class BankReconciliationService {
           'journal_id': journalId,
           'debit': MoneyHelper.toCents(calculated.bankCharges),
           'credit': 0,
-          'description':
-              'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
+          'description': 'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
           'date': now,
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
-          'amount_base': (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate).round(),
+          'amount_base':
+              (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate)
+                  .round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, expenseAccountId, calculated.bankCharges, 0.0, now);
@@ -335,13 +321,14 @@ class BankReconciliationService {
           'journal_id': journalId,
           'debit': 0,
           'credit': MoneyHelper.toCents(calculated.bankCharges),
-          'description':
-              'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
+          'description': 'رسوم بنكية - تسوية ${recon.reconciliationNumber}',
           'date': now,
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
-          'amount_base': (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate).round(),
+          'amount_base':
+              (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate)
+                  .round(),
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, linkedAccountId, 0.0, calculated.bankCharges, now);
@@ -369,13 +356,14 @@ class BankReconciliationService {
             'journal_id': journalId,
             'debit': MoneyHelper.toCents(calculated.interestEarned),
             'credit': 0,
-            'description':
-                'فوائد بنكية - تسوية ${recon.reconciliationNumber}',
+            'description': 'فوائد بنكية - تسوية ${recon.reconciliationNumber}',
             'date': now,
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
-            'amount_base': (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate)
+                    .round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, linkedAccountId, calculated.interestEarned, 0.0, now);
@@ -385,13 +373,14 @@ class BankReconciliationService {
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(calculated.interestEarned),
-            'description':
-                'فوائد بنكية - تسوية ${recon.reconciliationNumber}',
+            'description': 'فوائد بنكية - تسوية ${recon.reconciliationNumber}',
             'date': now,
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
-            'amount_base': (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate).round(),
+            'amount_base':
+                (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate)
+                    .round(),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, revenueAccountId, 0.0, calculated.interestEarned, now);
@@ -412,8 +401,7 @@ class BankReconciliationService {
             'outstanding_checks':
                 MoneyHelper.toCents(calculated.outstandingChecks),
             'bank_charges': MoneyHelper.toCents(calculated.bankCharges),
-            'interest_earned':
-                MoneyHelper.toCents(calculated.interestEarned),
+            'interest_earned': MoneyHelper.toCents(calculated.interestEarned),
             'adjusted_bank_balance':
                 MoneyHelper.toCents(calculated.adjustedBankBalance),
             'adjusted_book_balance':
@@ -428,11 +416,8 @@ class BankReconciliationService {
   }
 
   /// Load book transactions as statement lines for a reconciliation
-  Future<void> loadBookTransactionsAsStatementLines(
-      int reconciliationId,
-      int cashBoxId,
-      DateTime startDate,
-      DateTime endDate) async {
+  Future<void> loadBookTransactionsAsStatementLines(int reconciliationId,
+      int cashBoxId, DateTime startDate, DateTime endDate) async {
     final db = await _db;
     final bookTransactions =
         await getBookTransactions(cashBoxId, startDate, endDate);
@@ -515,11 +500,16 @@ class BankReconciliationService {
   Future<double> _getExchangeRate(dynamic executor, String currency) async {
     if (currency == 'YER') return 1.0;
     try {
-      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      final rows = await executor.query('currencies',
+          where: 'code = ?', whereArgs: [currency], limit: 1);
       if (rows.isNotEmpty) {
         return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       }
-    } catch (_) {}
+    } catch (e) {
+      // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+      debugPrint(
+          'BankReconciliationService._getExchangeRate($currency) فشل، استخدام السعر الاحتياطي: $e');
+    }
     // Fallback defaults
     if (currency == 'SAR') return 140.0;
     if (currency == 'USD') return 530.0;
@@ -531,7 +521,6 @@ class BankReconciliationService {
     final db = await _db;
     await db.delete('bank_statement_lines',
         where: 'reconciliation_id = ?', whereArgs: [id]);
-    await db.delete('bank_reconciliations',
-        where: 'id = ?', whereArgs: [id]);
+    await db.delete('bank_reconciliations', where: 'id = ?', whereArgs: [id]);
   }
 }

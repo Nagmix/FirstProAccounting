@@ -80,9 +80,9 @@ class _FirstProAppState extends State<FirstProApp> {
         onTimeout: () => (null, 2),
       );
       await _licenseProvider.initialize().timeout(
-        const Duration(seconds: 8),
-        onTimeout: () {},
-      );
+            const Duration(seconds: 8),
+            onTimeout: () {},
+          );
 
       pinEnabled = settingsResult.$1;
       themeMode = settingsResult.$2;
@@ -118,7 +118,10 @@ class _FirstProAppState extends State<FirstProApp> {
         if (pinEnabled != null && pinEnabled.isNotEmpty) {
           try {
             await _secureStorage.write(key: 'pin_enabled', value: pinEnabled);
-          } catch (_) {}
+          } catch (e) {
+            // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+            debugPrint('تعذر ترحيل pin_enabled إلى التخزين الآمن: $e');
+          }
           await db.deleteSetting('pin_enabled');
         }
       } catch (e) {
@@ -136,7 +139,10 @@ class _FirstProAppState extends State<FirstProApp> {
       if (kDebugMode) debugPrint('FirstProApp: theme load failed: $e');
     }
 
-    return (pinEnabled == '1' ? true : (pinEnabled == '0' ? false : null), themeMode);
+    return (
+      pinEnabled == '1' ? true : (pinEnabled == '0' ? false : null),
+      themeMode
+    );
   }
 
   /// Whether we can transition away from the splash screen.
@@ -160,7 +166,6 @@ class _FirstProAppState extends State<FirstProApp> {
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
-
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -169,11 +174,9 @@ class _FirstProAppState extends State<FirstProApp> {
         ],
         locale: const Locale('ar'),
         supportedLocales: AppLocalizations.supportedLocales,
-
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: _getThemeMode(),
-
         home: _buildHome(),
         routes: AppRouter.routes,
       ),

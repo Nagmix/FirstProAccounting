@@ -242,7 +242,10 @@ class _SupplierDetailScreenState
                 break;
               }
             }
-          } catch (_) {}
+          } catch (e) {
+            // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+            debugPrint('تخطي سند غير مرتبط أثناء فحص بنوده: $e');
+          }
         }
       }
 

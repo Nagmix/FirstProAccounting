@@ -79,28 +79,36 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     // If editing, load existing expense data
     if (_isEditing && widget.expenseId != null) {
-      final expense = await locator<ExpenseRepository>().getExpenseById(widget.expenseId!);
+      final expense =
+          await locator<ExpenseRepository>().getExpenseById(widget.expenseId!);
       if (!mounted) return;
       if (expense != null) {
         setState(() {
           _existingExpense = expense;
           _titleController.text = expense['title'] as String? ?? '';
           _descriptionController.text = expense['description'] as String? ?? '';
-          _amountController.text = MoneyHelper.readMoney(expense['amount']).toStringAsFixed(2);
+          _amountController.text =
+              MoneyHelper.readMoney(expense['amount']).toStringAsFixed(2);
           _selectedCurrency = expense['currency'] as String? ?? 'YER';
-          _selectedExchangeRate = (expense['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+          _selectedExchangeRate =
+              (expense['exchange_rate'] as num?)?.toDouble() ?? 1.0;
           _amountBase = MoneyHelper.readMoney(expense['amount_base']);
           _selectedCashBoxId = expense['cash_box_id'] as int?;
           _beneficiaryController.text = expense['beneficiary'] as String? ?? '';
-          _referenceNumberController.text = expense['reference_number'] as String? ?? '';
+          _referenceNumberController.text =
+              expense['reference_number'] as String? ?? '';
           _notesController.text = expense['notes'] as String? ?? '';
           _isRecurring = (expense['is_recurring'] as int?) == 1;
           _recurringPeriod = expense['recurring_period'] as String?;
           _operationType = expense['operation_type'] as String? ?? 'صرف';
           _attachmentPath = expense['attachment_path'] as String?;
           try {
-            _selectedDate = DateTime.parse(expense['expense_date'] as String? ?? '');
-          } catch (_) {}
+            _selectedDate =
+                DateTime.parse(expense['expense_date'] as String? ?? '');
+          } catch (e) {
+            // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+            debugPrint('تاريخ مصروف غير صالح، استخدام التاريخ الحالي: $e');
+          }
         });
       }
     }
@@ -122,7 +130,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   void _syncExchangeRateFromCurrency(String code) {
     final currency = _currencies.where((c) => c['code'] == code).firstOrNull;
     if (currency != null) {
-      _selectedExchangeRate = (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      _selectedExchangeRate =
+          (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
     } else {
       _selectedExchangeRate = code == 'YER' ? 1.0 : 1.0;
     }
@@ -148,7 +157,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Future<void> _pickImageFromGallery() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final picked =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
       final savedPath = await _saveImageLocally(picked.path);
       if (savedPath != null) {
@@ -159,7 +169,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Future<void> _pickImageFromCamera() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    final picked =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
     if (picked != null) {
       final savedPath = await _saveImageLocally(picked.path);
       if (savedPath != null) {
@@ -173,7 +184,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       final dir = await getApplicationDocumentsDirectory();
       final attachmentsDir = p.join(dir.path, 'attachments');
       await Directory(attachmentsDir).create(recursive: true);
-      final fileName = 'expense_${DateTime.now().millisecondsSinceEpoch}${p.extension(sourcePath)}';
+      final fileName =
+          'expense_${DateTime.now().millisecondsSinceEpoch}${p.extension(sourcePath)}';
       final destPath = p.join(attachmentsDir, fileName);
       await File(sourcePath).copy(destPath);
       return destPath;
@@ -189,7 +201,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Future<int?> _lookupExpenseAccountId(String currency) async {
     final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
     final targetCode = (5000 + codeOffset).toString();
-    final expenseAccounts = await locator<AccountRepository>().getAccountsByType('EXPENSE');
+    final expenseAccounts =
+        await locator<AccountRepository>().getAccountsByType('EXPENSE');
     for (final acc in expenseAccounts) {
       if (acc['account_code'] == targetCode && acc['currency'] == currency) {
         return acc['id'] as int;
@@ -266,7 +279,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
       final expenseMap = <String, dynamic>{
         'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        'description': _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
         'amount': amount,
         'currency': _selectedCurrency,
         'exchange_rate': _selectedExchangeRate,
@@ -277,9 +292,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         'account_id': accountId,
         'expense_account_id': accountId,
         'expense_sub_account_id': widget.expenseSubAccountId,
-        'beneficiary': _beneficiaryController.text.trim().isEmpty ? null : _beneficiaryController.text.trim(),
-        'reference_number': _referenceNumberController.text.trim().isEmpty ? null : _referenceNumberController.text.trim(),
-        'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        'beneficiary': _beneficiaryController.text.trim().isEmpty
+            ? null
+            : _beneficiaryController.text.trim(),
+        'reference_number': _referenceNumberController.text.trim().isEmpty
+            ? null
+            : _referenceNumberController.text.trim(),
+        'notes': _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
         'is_recurring': _isRecurring ? 1 : 0,
         'recurring_period': _isRecurring ? _recurringPeriod : null,
         'attachment_path': _attachmentPath,
@@ -296,11 +317,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         );
       } else {
         expenseMap['created_at'] = now;
-        await locator<ExpenseRepository>().saveExpenseWithJournalEntry(expenseMap);
+        await locator<ExpenseRepository>()
+            .saveExpenseWithJournalEntry(expenseMap);
       }
 
       if (mounted) {
-        context.showSuccessSnackBar(_isEditing ? 'تم تحديث المصروف بنجاح' : 'تم حفظ المصروف بنجاح');
+        context.showSuccessSnackBar(
+            _isEditing ? 'تم تحديث المصروف بنجاح' : 'تم حفظ المصروف بنجاح');
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -403,7 +426,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   color: (iconColor ?? AppColors.primary).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, size: 18, color: iconColor ?? AppColors.primary),
+                child:
+                    Icon(icon, size: 18, color: iconColor ?? AppColors.primary),
               ),
               const SizedBox(width: 8),
               Text(
@@ -437,7 +461,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               prefixIcon: Icon(Icons.title),
               hintText: 'مثال: إيجار المحل',
             ),
-            validator: (v) => v == null || v.trim().isEmpty ? 'العنوان مطلوب' : null,
+            validator: (v) =>
+                v == null || v.trim().isEmpty ? 'العنوان مطلوب' : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -449,7 +474,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               alignLabelWithHint: true,
             ),
             maxLines: 2,
-            validator: (v) => v == null || v.trim().isEmpty ? 'البيان مطلوب' : null,
+            validator: (v) =>
+                v == null || v.trim().isEmpty ? 'البيان مطلوب' : null,
           ),
         ],
       ),
@@ -472,7 +498,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 flex: 2,
                 child: TextFormField(
                   controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
                     labelText: 'المبلغ *',
                     prefixIcon: Icon(Icons.attach_money),
@@ -497,7 +524,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   items: _currencies
                       .map((c) => DropdownMenuItem<String>(
                             value: c['code'] as String,
-                            child: Text(c['code'] as String, style: const TextStyle(fontSize: 13)),
+                            child: Text(c['code'] as String,
+                                style: const TextStyle(fontSize: 13)),
                           ))
                       .toList(),
                   onChanged: _onCurrencyChanged,
@@ -516,7 +544,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.swap_horiz, size: 18, color: AppColors.textSecondary),
+                Icon(Icons.swap_horiz,
+                    size: 18, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Text(
                   'سعر الصرف',
@@ -631,7 +660,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           : context.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _operationType == 'صرف' ? AppColors.error : context.dividerColor,
+                        color: _operationType == 'صرف'
+                            ? AppColors.error
+                            : context.dividerColor,
                         width: _operationType == 'صرف' ? 2 : 1,
                       ),
                     ),
@@ -640,22 +671,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         Icon(
                           Icons.north_west,
                           size: 22,
-                          color: _operationType == 'صرف' ? AppColors.error : AppColors.textHint,
+                          color: _operationType == 'صرف'
+                              ? AppColors.error
+                              : AppColors.textHint,
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'صرف',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: _operationType == 'صرف' ? FontWeight.w700 : FontWeight.w500,
-                            color: _operationType == 'صرف' ? AppColors.error : AppColors.textSecondary,
+                            fontWeight: _operationType == 'صرف'
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: _operationType == 'صرف'
+                                ? AppColors.error
+                                : AppColors.textSecondary,
                           ),
                         ),
                         Text(
                           '(عليه)',
                           style: TextStyle(
                             fontSize: 10,
-                            color: _operationType == 'صرف' ? AppColors.error : AppColors.textHint,
+                            color: _operationType == 'صرف'
+                                ? AppColors.error
+                                : AppColors.textHint,
                           ),
                         ),
                       ],
@@ -677,7 +716,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           : context.surfaceColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _operationType == 'قبض' ? AppColors.success : context.dividerColor,
+                        color: _operationType == 'قبض'
+                            ? AppColors.success
+                            : context.dividerColor,
                         width: _operationType == 'قبض' ? 2 : 1,
                       ),
                     ),
@@ -686,22 +727,30 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         Icon(
                           Icons.south_east,
                           size: 22,
-                          color: _operationType == 'قبض' ? AppColors.success : AppColors.textHint,
+                          color: _operationType == 'قبض'
+                              ? AppColors.success
+                              : AppColors.textHint,
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'قبض',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: _operationType == 'قبض' ? FontWeight.w700 : FontWeight.w500,
-                            color: _operationType == 'قبض' ? AppColors.success : AppColors.textSecondary,
+                            fontWeight: _operationType == 'قبض'
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: _operationType == 'قبض'
+                                ? AppColors.success
+                                : AppColors.textSecondary,
                           ),
                         ),
                         Text(
                           '(له)',
                           style: TextStyle(
                             fontSize: 10,
-                            color: _operationType == 'قبض' ? AppColors.success : AppColors.textHint,
+                            color: _operationType == 'قبض'
+                                ? AppColors.success
+                                : AppColors.textHint,
                           ),
                         ),
                       ],
@@ -745,7 +794,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             children: [
               Icon(Icons.event, color: AppColors.primary),
               const SizedBox(width: 10),
-              Text(dateStr, style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text(dateStr,
+                  style: context.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
               const Spacer(),
               Icon(Icons.arrow_back_ios, size: 16, color: AppColors.textHint),
             ],
@@ -811,7 +862,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             }),
             title: Text(
               'مصروف متكرر',
-              style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: context.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
@@ -833,7 +885,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 DropdownMenuItem(value: 'yearly', child: Text('سنوي')),
               ],
               onChanged: (val) => setState(() => _recurringPeriod = val),
-              validator: (v) => _isRecurring && v == null ? 'اختر فترة التكرار' : null,
+              validator: (v) =>
+                  _isRecurring && v == null ? 'اختر فترة التكرار' : null,
             ),
           ],
         ],
@@ -870,11 +923,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.insert_drive_file, size: 32, color: AppColors.textHint),
+                            const Icon(Icons.insert_drive_file,
+                                size: 32, color: AppColors.textHint),
                             const SizedBox(height: 8),
                             Text(
                               p.basename(_attachmentPath!),
-                              style: context.textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+                              style: context.textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textHint),
                             ),
                           ],
                         ),
@@ -893,7 +948,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           color: AppColors.error,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.close, color: Colors.white, size: 14),
+                        child: const Icon(Icons.close,
+                            color: Colors.white, size: 14),
                       ),
                     ),
                   ),
@@ -967,7 +1023,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.save),
                 label: Text(_isEditing ? 'تحديث' : 'حفظ'),

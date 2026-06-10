@@ -16,31 +16,45 @@ class ProductRepository {
 
   Future<int> insertProduct(Map<String, dynamic> productMap) async {
     final db = await _db;
-    return await db.insert('products', MoneyHelper.toCentsMap(productMap, MoneyHelper.productMoneyFields));
+    return await db.insert('products',
+        MoneyHelper.toCentsMap(productMap, MoneyHelper.productMoneyFields));
   }
 
-  Future<List<Map<String, dynamic>>> getAllProducts({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> getAllProducts(
+      {bool? activeOnly,
+      String orderBy = 'created_at DESC',
+      int? limit,
+      int offset = 0}) async {
     final db = await _db;
     if (activeOnly == true) {
-      return await db.query('products', where: 'is_active = ?', whereArgs: [1], orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
+      return await db.query('products',
+          where: 'is_active = ?',
+          whereArgs: [1],
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset > 0 ? offset : null);
     }
-    return await db.query('products', orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
+    return await db.query('products',
+        orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
   }
 
-  Future<List<Map<String, dynamic>>> searchProducts(String query, {int? warehouseId}) async {
+  Future<List<Map<String, dynamic>>> searchProducts(String query,
+      {int? warehouseId}) async {
     final db = await _db;
     final likeQuery = '%$query%';
     if (warehouseId != null) {
       return await db.query(
         'products',
-        where: '(name_ar LIKE ? OR name_en LIKE ? OR barcode LIKE ? OR item_code LIKE ?) AND (warehouse_id = ? OR warehouse_id IS NULL) AND is_active = 1',
+        where:
+            '(name_ar LIKE ? OR name_en LIKE ? OR barcode LIKE ? OR item_code LIKE ?) AND (warehouse_id = ? OR warehouse_id IS NULL) AND is_active = 1',
         whereArgs: [likeQuery, likeQuery, likeQuery, likeQuery, warehouseId],
         orderBy: 'created_at DESC',
       );
     }
     return await db.query(
       'products',
-      where: 'name_ar LIKE ? OR name_en LIKE ? OR barcode LIKE ? OR item_code LIKE ?',
+      where:
+          'name_ar LIKE ? OR name_en LIKE ? OR barcode LIKE ? OR item_code LIKE ?',
       whereArgs: [likeQuery, likeQuery, likeQuery, likeQuery],
       orderBy: 'created_at DESC',
     );
@@ -48,22 +62,27 @@ class ProductRepository {
 
   Future<Map<String, dynamic>?> getProductById(int id) async {
     final db = await _db;
-    final results = await db.query('products', where: 'id = ?', whereArgs: [id], limit: 1);
+    final results =
+        await db.query('products', where: 'id = ?', whereArgs: [id], limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<int> updateProduct(int id, Map<String, dynamic> productMap) async {
     final db = await _db;
-    return await db.update('products', MoneyHelper.toCentsMap(productMap, MoneyHelper.productMoneyFields), where: 'id = ?', whereArgs: [id]);
+    return await db.update('products',
+        MoneyHelper.toCentsMap(productMap, MoneyHelper.productMoneyFields),
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteProduct(int id) async {
     final db = await _db;
     // Check if product is referenced in invoice_items
-    final refs = await db.query('invoice_items', where: 'product_id = ?', whereArgs: [id], limit: 1);
+    final refs = await db.query('invoice_items',
+        where: 'product_id = ?', whereArgs: [id], limit: 1);
     if (refs.isNotEmpty) {
       // Soft-delete: product has history, cannot hard-delete
-      return await db.update('products', {'is_active': 0}, where: 'id = ?', whereArgs: [id]);
+      return await db.update('products', {'is_active': 0},
+          where: 'id = ?', whereArgs: [id]);
     }
     return await db.delete('products', where: 'id = ?', whereArgs: [id]);
   }
@@ -71,13 +90,17 @@ class ProductRepository {
   /// P-05: [DEPRECATED] Use inline SQL in invoice_repository.dart instead.
   /// This method is kept for reference but should not be called directly.
   /// Stock updates are handled within invoice transactions for atomicity.
-  @Deprecated('Use inline SQL in invoice_repository for atomic stock updates within transactions')
+  @Deprecated(
+      'Use inline SQL in invoice_repository for atomic stock updates within transactions')
   Future<void> decrementProductStock(int productId, double quantity) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
     // Check if product allows negative stock
-    final productRow = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
-    final allowNegative = productRow.isNotEmpty ? (productRow.first['allow_negative'] as int?) == 1 : false;
+    final productRow = await db.query('products',
+        where: 'id = ?', whereArgs: [productId], limit: 1);
+    final allowNegative = productRow.isNotEmpty
+        ? (productRow.first['allow_negative'] as int?) == 1
+        : false;
     if (allowNegative) {
       await db.rawUpdate(
         'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
@@ -94,7 +117,8 @@ class ProductRepository {
   /// P-05: [DEPRECATED] Use inline SQL in invoice_repository.dart instead.
   /// This method is kept for reference but should not be called directly.
   /// Stock updates are handled within invoice transactions for atomicity.
-  @Deprecated('Use inline SQL in invoice_repository for atomic stock updates within transactions')
+  @Deprecated(
+      'Use inline SQL in invoice_repository for atomic stock updates within transactions')
   Future<void> incrementProductStock(int productId, double quantity) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
@@ -176,7 +200,8 @@ class ProductRepository {
     return (result.first['cnt'] as num?)?.toInt() ?? 0;
   }
 
-  Future<double?> getProductStockInWarehouse(int productId, int warehouseId) async {
+  Future<double?> getProductStockInWarehouse(
+      int productId, int warehouseId) async {
     final db = await _db;
     final results = await db.query(
       'products',
@@ -189,24 +214,30 @@ class ProductRepository {
     return (results.first['current_stock'] as num?)?.toDouble() ?? 0.0;
   }
 
-  Future<void> updateWeightedAverageCost(int productId, double purchasedQty, double purchasedUnitCost) async {
+  Future<void> updateWeightedAverageCost(
+      int productId, double purchasedQty, double purchasedUnitCost) async {
     if (purchasedQty <= 0) return;
     final db = await _db;
-    final product = await db.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+    final product = await db.query('products',
+        where: 'id = ?', whereArgs: [productId], limit: 1);
     if (product.isEmpty) return;
 
-    final currentStock = (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+    final currentStock =
+        (product.first['current_stock'] as num?)?.toDouble() ?? 0.0;
     final currentAvgCost = MoneyHelper.readMoney(product.first['average_cost']);
 
-    final newTotalValue = (currentStock * currentAvgCost) + (purchasedQty * purchasedUnitCost);
+    final newTotalValue =
+        (currentStock * currentAvgCost) + (purchasedQty * purchasedUnitCost);
     final newTotalStock = currentStock + purchasedQty;
-    final newAvgCost = newTotalStock > 0 ? newTotalValue / newTotalStock : purchasedUnitCost;
+    final newAvgCost =
+        newTotalStock > 0 ? newTotalValue / newTotalStock : purchasedUnitCost;
 
     await db.update(
       'products',
       {
         'average_cost': MoneyHelper.toCents(newAvgCost),
-        'cost_price': MoneyHelper.toCents(newAvgCost),  // Keep cost_price in sync for backward compatibility
+        'cost_price': MoneyHelper.toCents(
+            newAvgCost), // Keep cost_price in sync for backward compatibility
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',
@@ -243,7 +274,8 @@ class ProductRepository {
   }
 
   /// Get stock movement history for a product
-  Future<List<Map<String, dynamic>>> getStockMovements(int productId, {int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> getStockMovements(int productId,
+      {int limit = 50}) async {
     final db = await _db;
     return await db.query(
       'stock_movements',
@@ -255,7 +287,9 @@ class ProductRepository {
   }
 
   /// Get stock movements by type (e.g., all sales today)
-  Future<List<Map<String, dynamic>>> getStockMovementsByType(String movementType, {DateTime? since}) async {
+  Future<List<Map<String, dynamic>>> getStockMovementsByType(
+      String movementType,
+      {DateTime? since}) async {
     final db = await _db;
     if (since != null) {
       return await db.query(
@@ -277,12 +311,18 @@ class ProductRepository {
   //  Typed getters (C-09: domain model alternatives to raw maps)
   // ══════════════════════════════════════════════════════════════
 
-  Future<List<Product>> getAllProductObjects({bool? activeOnly, String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
-    final maps = await getAllProducts(activeOnly: activeOnly, orderBy: orderBy, limit: limit, offset: offset);
+  Future<List<Product>> getAllProductObjects(
+      {bool? activeOnly,
+      String orderBy = 'created_at DESC',
+      int? limit,
+      int offset = 0}) async {
+    final maps = await getAllProducts(
+        activeOnly: activeOnly, orderBy: orderBy, limit: limit, offset: offset);
     return maps.map((m) => Product.fromMap(m)).toList();
   }
 
-  Future<List<Product>> searchProductObjects(String query, {int? warehouseId}) async {
+  Future<List<Product>> searchProductObjects(String query,
+      {int? warehouseId}) async {
     final maps = await searchProducts(query, warehouseId: warehouseId);
     return maps.map((m) => Product.fromMap(m)).toList();
   }
@@ -294,7 +334,8 @@ class ProductRepository {
 
   /// Check if any products reference a given category ID.
   /// Returns a list of matching products (up to [limit]).
-  Future<List<Map<String, dynamic>>> getProductsByCategoryId(int categoryId, {int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getProductsByCategoryId(int categoryId,
+      {int limit = 5}) async {
     final db = await _db;
     return await db.query(
       'products',
@@ -307,12 +348,14 @@ class ProductRepository {
 
   /// Check if any products reference a given unit ID (in any unit column).
   /// Returns a list of matching products (up to [limit]).
-  Future<List<Map<String, dynamic>>> getProductsByUnitId(int unitId, {int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getProductsByUnitId(int unitId,
+      {int limit = 5}) async {
     final db = await _db;
     return await db.query(
       'products',
       columns: ['id', 'name_ar'],
-      where: 'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
+      where:
+          'base_unit_id = ? OR purchase_unit_id = ? OR sale_unit_id = ? OR unit_id = ?',
       whereArgs: [unitId, unitId, unitId, unitId],
       limit: limit,
     );
@@ -350,19 +393,25 @@ class ProductRepository {
       // Remove 'id' so SQLite auto-generates it
       final map = Map<String, dynamic>.from(productMap);
       map.remove('id');
-      savedProductId = await txn.insert('products', MoneyHelper.toCentsMap(map, MoneyHelper.productMoneyFields));
+      savedProductId = await txn.insert('products',
+          MoneyHelper.toCentsMap(map, MoneyHelper.productMoneyFields));
 
       // Save unit conversions
       if (savedProductId != null && savedProductId! > 0) {
         for (final uc in unitConversions) {
           try {
-            await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-              'product_id': savedProductId,
-              ...uc,
-              'is_active': 1,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            }, ['sell_price', 'cost_price']));
+            await txn.insert(
+                'unit_conversions',
+                MoneyHelper.toCentsMap({
+                  'product_id': savedProductId,
+                  ...uc,
+                  'is_active': 1,
+                  'created_at': DateTime.now().toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                }, [
+                  'sell_price',
+                  'cost_price'
+                ]));
           } catch (e) {
             debugPrint('Unit conversion insert error (non-critical): $e');
             // Try without from_unit_id / to_unit_id in case DB schema is outdated
@@ -370,13 +419,18 @@ class ProductRepository {
               final fallbackUc = Map<String, dynamic>.from(uc);
               fallbackUc.remove('from_unit_id');
               fallbackUc.remove('to_unit_id');
-              await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-                'product_id': savedProductId,
-                ...fallbackUc,
-                'is_active': 1,
-                'created_at': DateTime.now().toIso8601String(),
-                'updated_at': DateTime.now().toIso8601String(),
-              }, ['sell_price', 'cost_price']));
+              await txn.insert(
+                  'unit_conversions',
+                  MoneyHelper.toCentsMap({
+                    'product_id': savedProductId,
+                    ...fallbackUc,
+                    'is_active': 1,
+                    'created_at': DateTime.now().toIso8601String(),
+                    'updated_at': DateTime.now().toIso8601String(),
+                  }, [
+                    'sell_price',
+                    'cost_price'
+                  ]));
             } catch (e2) {
               debugPrint('Unit conversion insert error (fallback): $e2');
             }
@@ -403,7 +457,8 @@ class ProductRepository {
           // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
           final totalValue = openingStock * baseCostPrice;
           if (totalValue > 0) {
-            final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+            final codeOffset =
+                currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
             final productExchangeRate = await _getExchangeRate(txn, currency);
 
             // Find inventory account (1300 + offset)
@@ -421,9 +476,11 @@ class ProductRepository {
               limit: 1,
             );
 
-            if (inventoryAccount.isNotEmpty && openingBalanceAccount.isNotEmpty) {
+            if (inventoryAccount.isNotEmpty &&
+                openingBalanceAccount.isNotEmpty) {
               final inventoryAccountId = inventoryAccount.first['id'] as int;
-              final openingBalanceAccountId = openingBalanceAccount.first['id'] as int;
+              final openingBalanceAccountId =
+                  openingBalanceAccount.first['id'] as int;
 
               // Journal entry: Debit Inventory / Credit Opening Balance
               await txn.insert('transactions', {
@@ -435,7 +492,9 @@ class ProductRepository {
                 'created_at': now,
                 'currency_code': currency,
                 'exchange_rate': currency == 'YER' ? 1.0 : productExchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalValue) * productExchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalValue) * productExchangeRate)
+                        .round(),
               });
               await txn.insert('transactions', {
                 'account_id': openingBalanceAccountId,
@@ -446,12 +505,16 @@ class ProductRepository {
                 'created_at': now,
                 'currency_code': currency,
                 'exchange_rate': currency == 'YER' ? 1.0 : productExchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalValue) * productExchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalValue) * productExchangeRate)
+                        .round(),
               });
 
               // Update account balances using JournalService
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalValue, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, openingBalanceAccountId, 0.0, totalValue, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, inventoryAccountId, totalValue, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, openingBalanceAccountId, 0.0, totalValue, now);
             }
           }
         } catch (e) {
@@ -471,11 +534,16 @@ class ProductRepository {
   Future<double> _getExchangeRate(dynamic executor, String currency) async {
     if (currency == 'YER') return 1.0;
     try {
-      final rows = await executor.query('currencies', where: 'code = ?', whereArgs: [currency], limit: 1);
+      final rows = await executor.query('currencies',
+          where: 'code = ?', whereArgs: [currency], limit: 1);
       if (rows.isNotEmpty) {
         return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       }
-    } catch (_) {}
+    } catch (e) {
+      // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+      debugPrint(
+          'ProductRepository._getExchangeRate($currency) فشل، استخدام السعر الاحتياطي: $e');
+    }
     // Fallback defaults
     if (currency == 'SAR') return 140.0;
     if (currency == 'USD') return 530.0;
@@ -506,29 +574,40 @@ class ProductRepository {
       );
 
       // Replace unit conversions: delete old, insert new
-      await txn.delete('unit_conversions', where: 'product_id = ?', whereArgs: [productId]);
+      await txn.delete('unit_conversions',
+          where: 'product_id = ?', whereArgs: [productId]);
       for (final uc in unitConversions) {
         try {
-          await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-            'product_id': productId,
-            ...uc,
-            'is_active': 1,
-            'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
-          }, ['sell_price', 'cost_price']));
+          await txn.insert(
+              'unit_conversions',
+              MoneyHelper.toCentsMap({
+                'product_id': productId,
+                ...uc,
+                'is_active': 1,
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              }, [
+                'sell_price',
+                'cost_price'
+              ]));
         } catch (e) {
           debugPrint('Unit conversion insert error (edit, non-critical): $e');
           try {
             final fallbackUc = Map<String, dynamic>.from(uc);
             fallbackUc.remove('from_unit_id');
             fallbackUc.remove('to_unit_id');
-            await txn.insert('unit_conversions', MoneyHelper.toCentsMap({
-              'product_id': productId,
-              ...fallbackUc,
-              'is_active': 1,
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            }, ['sell_price', 'cost_price']));
+            await txn.insert(
+                'unit_conversions',
+                MoneyHelper.toCentsMap({
+                  'product_id': productId,
+                  ...fallbackUc,
+                  'is_active': 1,
+                  'created_at': DateTime.now().toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                }, [
+                  'sell_price',
+                  'cost_price'
+                ]));
           } catch (e2) {
             debugPrint('Unit conversion insert error (edit, fallback): $e2');
           }

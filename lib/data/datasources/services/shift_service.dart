@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/entity_balance_helper.dart';
@@ -18,28 +19,38 @@ class ShiftService {
 
   Future<int> openShift(Map<String, dynamic> shiftMap) async {
     final db = await _db;
-    return await db.insert('shifts', MoneyHelper.toCentsMap(shiftMap, MoneyHelper.shiftMoneyFields));
+    return await db.insert('shifts',
+        MoneyHelper.toCentsMap(shiftMap, MoneyHelper.shiftMoneyFields));
   }
 
   Future<Map<String, dynamic>?> getActiveShift(int cashBoxId) async {
     final db = await _db;
-    final results = await db.query('shifts', where: 'cash_box_id = ? AND status = ?', whereArgs: [cashBoxId, 'open'], limit: 1);
+    final results = await db.query('shifts',
+        where: 'cash_box_id = ? AND status = ?',
+        whereArgs: [cashBoxId, 'open'],
+        limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<Map<String, dynamic>?> getActiveShiftForCashier(int? cashierId) async {
     final db = await _db;
     if (cashierId == null) return null;
-    final results = await db.query('shifts', where: 'cashier_id = ? AND status = ?', whereArgs: [cashierId, 'open'], limit: 1);
+    final results = await db.query('shifts',
+        where: 'cashier_id = ? AND status = ?',
+        whereArgs: [cashierId, 'open'],
+        limit: 1);
     return results.isNotEmpty ? results.first : null;
   }
 
   Future<int> closeShift(int shiftId, Map<String, dynamic> closeData) async {
     final db = await _db;
-    return await db.update('shifts', MoneyHelper.toCentsMap(closeData, MoneyHelper.shiftMoneyFields), where: 'id = ?', whereArgs: [shiftId]);
+    return await db.update('shifts',
+        MoneyHelper.toCentsMap(closeData, MoneyHelper.shiftMoneyFields),
+        where: 'id = ?', whereArgs: [shiftId]);
   }
 
-  Future<List<Map<String, dynamic>>> getAllShifts({String orderBy = 'opened_at DESC'}) async {
+  Future<List<Map<String, dynamic>>> getAllShifts(
+      {String orderBy = 'opened_at DESC'}) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT s.*, cb.name AS cash_box_name
@@ -61,7 +72,8 @@ class ShiftService {
     return '$prefix${nextNum.toString().padLeft(4, '0')}';
   }
 
-  Future<void> updateShiftTotals(int shiftId, double saleAmount, double returnAmount, double discountAmount) async {
+  Future<void> updateShiftTotals(int shiftId, double saleAmount,
+      double returnAmount, double discountAmount) async {
     final db = await _db;
     // Fix #2: Remove double-counting of saleAmount and discountAmount in expected_amount.
     // In SQLite SET clause, total_sales is updated FIRST (total_sales + saleAmount),
@@ -76,7 +88,13 @@ class ShiftService {
         expected_amount = opening_amount + total_sales - total_returns - total_discounts,
         updated_at = ?
       WHERE id = ?
-    ''', [MoneyHelper.toCents(saleAmount), MoneyHelper.toCents(returnAmount), MoneyHelper.toCents(discountAmount), DateTime.now().toIso8601String(), shiftId]);
+    ''', [
+      MoneyHelper.toCents(saleAmount),
+      MoneyHelper.toCents(returnAmount),
+      MoneyHelper.toCents(discountAmount),
+      DateTime.now().toIso8601String(),
+      shiftId
+    ]);
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -125,7 +143,8 @@ class ShiftService {
       final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
       final invoiceType = (invoice['type'] as String?) ?? 'sale';
       final isReturn = (invoice['is_return'] as int?) == 1;
-      final paymentMechanism = (invoice['payment_mechanism'] as String?) ?? 'cash';
+      final paymentMechanism =
+          (invoice['payment_mechanism'] as String?) ?? 'cash';
       final cashBoxId = invoice['cash_box_id'] as int?;
       final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
 
@@ -133,9 +152,15 @@ class ShiftService {
       final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
       final remainingAmount = MoneyHelper.readMoney(invoice['remaining']);
       // المبلغ المدفوع فعلياً: إذا كان cash واستلم جزئياً = paid_amount، إذا كان credit = 0
-      final effectivePaid = paymentMechanism == 'credit' ? 0.0 : (paidAmount > 0 ? paidAmount : total);
-      final effectiveRemaining = paymentMechanism == 'credit' ? total : (remainingAmount > 0 ? remainingAmount : 0.0);
-      final isPartialCash = paymentMechanism == 'cash' && effectivePaid > 0.005 && effectivePaid < total - 0.005;
+      final effectivePaid = paymentMechanism == 'credit'
+          ? 0.0
+          : (paidAmount > 0 ? paidAmount : total);
+      final effectiveRemaining = paymentMechanism == 'credit'
+          ? total
+          : (remainingAmount > 0 ? remainingAmount : 0.0);
+      final isPartialCash = paymentMechanism == 'cash' &&
+          effectivePaid > 0.005 &&
+          effectivePaid < total - 0.005;
 
       await db.transaction((txn) async {
         final journalId = generateUniqueJournalId();
@@ -144,7 +169,8 @@ class ShiftService {
         final exchangeRate = await _getExchangeRate(txn, invoiceCurrency);
 
         // تحديد إزاحة كود الحساب حسب العملة
-        final codeOffset = invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+        final codeOffset =
+            invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
 
         // جلب معرفات الحسابات (دفعة واحدة — H-10)
         final accountCodes = [
@@ -167,18 +193,26 @@ class ShiftService {
           if (code != null) accountByCode[code] = row;
         }
         final salesAccountId = accountByCode[accountCodes[0]]?['id'] as int?;
-        final purchasesAccountId = accountByCode[accountCodes[1]]?['id'] as int?;
-        final customersAccountId = accountByCode[accountCodes[2]]?['id'] as int?;
-        final suppliersAccountId = accountByCode[accountCodes[3]]?['id'] as int?;
-        final cashBanksAccountId = accountByCode[accountCodes[4]]?['id'] as int?;
+        final purchasesAccountId =
+            accountByCode[accountCodes[1]]?['id'] as int?;
+        final customersAccountId =
+            accountByCode[accountCodes[2]]?['id'] as int?;
+        final suppliersAccountId =
+            accountByCode[accountCodes[3]]?['id'] as int?;
+        final cashBanksAccountId =
+            accountByCode[accountCodes[4]]?['id'] as int?;
         final vatAccountId = accountByCode[accountCodes[5]]?['id'] as int?;
 
         // ── C-02: إنشاء القيود المحاسبية مع دعم الدفعات الجزئية ──
-        if (invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') {
+        if (invoiceType == 'sale' ||
+            invoiceType == 'sale_return' ||
+            invoiceType == 'pos') {
           if (isReturn) {
             // مرتجع مبيعات: مدين المبيعات / دائن النقدية أو العملاء
             final debitAccountId = salesAccountId;
-            final creditAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            final creditAccountId = paymentMechanism == 'credit'
+                ? customersAccountId
+                : cashBanksAccountId;
             if (debitAccountId != null && total > 0) {
               await txn.insert('transactions', {
                 'account_id': debitAccountId,
@@ -192,9 +226,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, debitAccountId, total, 0.0, now);
             }
             if (creditAccountId != null && total > 0) {
               await txn.insert('transactions', {
@@ -209,9 +245,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, creditAccountId, 0.0, total, now);
             }
           } else if (isPartialCash) {
             // C-02: دفع جزئي — مدين: نقدية (المدفوع) + عملاء (المتبقي) / دائن: مبيعات (الإجمالي)
@@ -228,9 +266,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(effectivePaid) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(effectivePaid) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, effectivePaid, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, cashBanksAccountId, effectivePaid, 0.0, now);
             }
             if (customersAccountId != null && effectiveRemaining > 0) {
               await txn.insert('transactions', {
@@ -245,9 +285,12 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(effectiveRemaining) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(effectiveRemaining) * exchangeRate)
+                        .round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, customersAccountId, effectiveRemaining, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, customersAccountId, effectiveRemaining, 0.0, now);
             }
             if (salesAccountId != null && total > 0) {
               await txn.insert('transactions', {
@@ -262,13 +305,17 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, salesAccountId, 0.0, total, now);
             }
           } else {
             // بيع عادي: كاش كامل أو آجل كامل
-            final debitAccountId = paymentMechanism == 'credit' ? customersAccountId : cashBanksAccountId;
+            final debitAccountId = paymentMechanism == 'credit'
+                ? customersAccountId
+                : cashBanksAccountId;
             if (debitAccountId != null && total > 0) {
               await txn.insert('transactions', {
                 'account_id': debitAccountId,
@@ -282,9 +329,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, debitAccountId, total, 0.0, now);
             }
             if (salesAccountId != null && total > 0) {
               await txn.insert('transactions', {
@@ -299,20 +348,29 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, total, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, salesAccountId, 0.0, total, now);
             }
           }
-        } else if (invoiceType == 'purchase' || invoiceType == 'purchase_return') {
+        } else if (invoiceType == 'purchase' ||
+            invoiceType == 'purchase_return') {
           if (isReturn) {
             // A-04: مرتجع مشتريات — مدين المورد/النقدية، دائن المخزون (وليس المشتريات)
             // في نظام الجرد المستمر، مرتجع المشتريات يقلل المخزون مباشرة
-            final debitAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            final debitAccountId = paymentMechanism == 'credit'
+                ? suppliersAccountId
+                : cashBanksAccountId;
             // Resolve inventory account for this currency
             final inventoryCode = (1300 + codeOffset).toString();
-            final invRows = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [inventoryCode, invoiceCurrency], limit: 1);
-            final returnInvAccountId = invRows.isNotEmpty ? invRows.first['id'] as int : null;
+            final invRows = await txn.query('accounts',
+                where: 'account_code = ? AND currency = ?',
+                whereArgs: [inventoryCode, invoiceCurrency],
+                limit: 1);
+            final returnInvAccountId =
+                invRows.isNotEmpty ? invRows.first['id'] as int : null;
 
             if (debitAccountId != null && total > 0) {
               await txn.insert('transactions', {
@@ -327,9 +385,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, debitAccountId, total, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, debitAccountId, total, 0.0, now);
             }
             if (returnInvAccountId != null && total > 0) {
               await txn.insert('transactions', {
@@ -344,9 +404,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, returnInvAccountId, 0.0, total, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, returnInvAccountId, 0.0, total, now);
             }
           } else if (isPartialCash) {
             // C-02: شراء بدفع جزئي — مدين: مشتريات (الإجمالي) / دائن: نقدية (المدفوع) + موردين (المتبقي)
@@ -363,9 +425,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, purchasesAccountId, total, 0.0, now);
             }
             if (cashBanksAccountId != null && effectivePaid > 0) {
               await txn.insert('transactions', {
@@ -380,9 +444,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(effectivePaid) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(effectivePaid) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashBanksAccountId, 0.0, effectivePaid, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, cashBanksAccountId, 0.0, effectivePaid, now);
             }
             if (suppliersAccountId != null && effectiveRemaining > 0) {
               await txn.insert('transactions', {
@@ -397,9 +463,12 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(effectiveRemaining) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(effectiveRemaining) * exchangeRate)
+                        .round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, suppliersAccountId, 0.0, effectiveRemaining, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, suppliersAccountId, 0.0, effectiveRemaining, now);
             }
           } else {
             // شراء عادي: كاش كامل أو آجل كامل
@@ -416,11 +485,15 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, total, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, purchasesAccountId, total, 0.0, now);
             }
-            final creditAccountId = paymentMechanism == 'credit' ? suppliersAccountId : cashBanksAccountId;
+            final creditAccountId = paymentMechanism == 'credit'
+                ? suppliersAccountId
+                : cashBanksAccountId;
             if (creditAccountId != null && total > 0) {
               await txn.insert('transactions', {
                 'account_id': creditAccountId,
@@ -434,16 +507,21 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(total) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(total) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, creditAccountId, 0.0, total, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, creditAccountId, 0.0, total, now);
             }
           }
         }
 
         // ── C-01: قيود ضريبة القيمة المضافة (VAT) في ترحيل الورديات ──
         if (taxAmount.abs() >= 0.005 && vatAccountId != null) {
-          if ((invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') && !isReturn) {
+          if ((invoiceType == 'sale' ||
+                  invoiceType == 'sale_return' ||
+                  invoiceType == 'pos') &&
+              !isReturn) {
             // مبيعات عليها ضريبة: مدين المبيعات (تخفيض الإيراد) / دائن ضريبة مستحقة
             if (salesAccountId != null) {
               await txn.insert('transactions', {
@@ -458,9 +536,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, taxAmount, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, salesAccountId, taxAmount, 0.0, now);
             }
             await txn.insert('transactions', {
               'account_id': vatAccountId,
@@ -474,10 +554,15 @@ class ShiftService {
               'reference_id': invoiceId,
               'currency_code': invoiceCurrency,
               'exchange_rate': exchangeRate,
-              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+              'amount_base':
+                  (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
-          } else if ((invoiceType == 'sale' || invoiceType == 'sale_return' || invoiceType == 'pos') && isReturn) {
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, vatAccountId, 0.0, taxAmount, now);
+          } else if ((invoiceType == 'sale' ||
+                  invoiceType == 'sale_return' ||
+                  invoiceType == 'pos') &&
+              isReturn) {
             // عكس ضريبة مرتجع مبيعات
             await txn.insert('transactions', {
               'account_id': vatAccountId,
@@ -491,9 +576,11 @@ class ShiftService {
               'reference_id': invoiceId,
               'currency_code': invoiceCurrency,
               'exchange_rate': exchangeRate,
-              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+              'amount_base':
+                  (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, vatAccountId, taxAmount, 0.0, now);
             if (salesAccountId != null) {
               await txn.insert('transactions', {
                 'account_id': salesAccountId,
@@ -507,11 +594,15 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, salesAccountId, 0.0, taxAmount, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, salesAccountId, 0.0, taxAmount, now);
             }
-          } else if ((invoiceType == 'purchase' || invoiceType == 'purchase_return') && !isReturn) {
+          } else if ((invoiceType == 'purchase' ||
+                  invoiceType == 'purchase_return') &&
+              !isReturn) {
             // مشتريات عليها ضريبة: مدين ضريبة مستحقة / دائن المشتريات (تخفيض التكلفة)
             await txn.insert('transactions', {
               'account_id': vatAccountId,
@@ -525,9 +616,11 @@ class ShiftService {
               'reference_id': invoiceId,
               'currency_code': invoiceCurrency,
               'exchange_rate': exchangeRate,
-              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+              'amount_base':
+                  (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, taxAmount, 0.0, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, vatAccountId, taxAmount, 0.0, now);
             if (purchasesAccountId != null) {
               await txn.insert('transactions', {
                 'account_id': purchasesAccountId,
@@ -541,11 +634,15 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, 0.0, taxAmount, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, purchasesAccountId, 0.0, taxAmount, now);
             }
-          } else if ((invoiceType == 'purchase' || invoiceType == 'purchase_return') && isReturn) {
+          } else if ((invoiceType == 'purchase' ||
+                  invoiceType == 'purchase_return') &&
+              isReturn) {
             // عكس ضريبة مرتجع مشتريات
             if (purchasesAccountId != null) {
               await txn.insert('transactions', {
@@ -560,9 +657,11 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchasesAccountId, taxAmount, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, purchasesAccountId, taxAmount, 0.0, now);
             }
             await txn.insert('transactions', {
               'account_id': vatAccountId,
@@ -576,28 +675,43 @@ class ShiftService {
               'reference_id': invoiceId,
               'currency_code': invoiceCurrency,
               'exchange_rate': exchangeRate,
-              'amount_base': (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
+              'amount_base':
+                  (MoneyHelper.toCents(taxAmount) * exchangeRate).round(),
             });
-            await _dbHelper.journal.updateAccountBalanceWithJournal(txn, vatAccountId, 0.0, taxAmount, now);
+            await _dbHelper.journal.updateAccountBalanceWithJournal(
+                txn, vatAccountId, 0.0, taxAmount, now);
           }
         }
 
         // ── COGS Journal Entries (تكلفة البضاعة المباعة) ──
         // P-01: Use product-specific account IDs when available
-        if ((invoiceType == 'sale' || invoiceType == 'pos' || invoiceType == 'sale_return')) {
-          final cogsAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final defaultCogsAccountId = cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
-          final defaultInventoryAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
+        if ((invoiceType == 'sale' ||
+            invoiceType == 'pos' ||
+            invoiceType == 'sale_return')) {
+          final cogsAccount = await txn.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(3200 + codeOffset).toString(), invoiceCurrency],
+              limit: 1);
+          final inventoryAccount = await txn.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency],
+              limit: 1);
+          final defaultCogsAccountId =
+              cogsAccount.isNotEmpty ? cogsAccount.first['id'] as int : null;
+          final defaultInventoryAccountId = inventoryAccount.isNotEmpty
+              ? inventoryAccount.first['id'] as int
+              : null;
 
           // Fetch invoice items to calculate COGS, grouped by account pair
-          final invoiceItems = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
+          final invoiceItems = await txn.query('invoice_items',
+              where: 'invoice_id = ?', whereArgs: [invoiceId]);
           final cogsGroups = <String, double>{};
           for (final item in invoiceItems) {
             final productId = (item['product_id'] as num?)?.toInt();
             final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
             // ignore: unused_local_variable
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+            final baseQuantity =
+                (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 
             // P-06 + W-07: Prefer stored unit_cost from invoice item (captured at sale time)
@@ -606,13 +720,22 @@ class ShiftService {
             double itemCogs;
             final storedUnitCost = MoneyHelper.readMoney(item['unit_cost']);
             // Check product's costing method
-            final costingMethodRow = await txn.query('products', columns: ['costing_method'], where: 'id = ?', whereArgs: [productId], limit: 1);
-            final costingMethodStr = costingMethodRow.isNotEmpty ? (costingMethodRow.first['costing_method'] as String? ?? 'weighted_average') : 'weighted_average';
+            final costingMethodRow = await txn.query('products',
+                columns: ['costing_method'],
+                where: 'id = ?',
+                whereArgs: [productId],
+                limit: 1);
+            final costingMethodStr = costingMethodRow.isNotEmpty
+                ? (costingMethodRow.first['costing_method'] as String? ??
+                    'weighted_average')
+                : 'weighted_average';
             final costingMethod = CostingMethodExt.fromValue(costingMethodStr);
-            
-            if (costingMethod != CostingMethod.weightedAverage && storedUnitCost <= 0) {
+
+            if (costingMethod != CostingMethod.weightedAverage &&
+                storedUnitCost <= 0) {
               // FIFO/LIFO: use costing engine for accurate COGS
-              itemCogs = await _dbHelper.costingEngine.calculateCOGSInTransaction(
+              itemCogs =
+                  await _dbHelper.costingEngine.calculateCOGSInTransaction(
                 txn,
                 productId: productId,
                 baseQuantity: baseQuantity,
@@ -623,19 +746,31 @@ class ShiftService {
               if (storedUnitCost > 0) {
                 effectiveCost = storedUnitCost;
               } else {
-                final productRow = await txn.query('products', where: 'id = ?', whereArgs: [productId], limit: 1);
+                final productRow = await txn.query('products',
+                    where: 'id = ?', whereArgs: [productId], limit: 1);
                 if (productRow.isEmpty) continue;
-                final averageCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-                effectiveCost = averageCost > 0 ? averageCost : MoneyHelper.readMoney(productRow.first['cost_price']);
+                final averageCost =
+                    MoneyHelper.readMoney(productRow.first['average_cost']);
+                effectiveCost = averageCost > 0
+                    ? averageCost
+                    : MoneyHelper.readMoney(productRow.first['cost_price']);
               }
               itemCogs = effectiveCost * baseQuantity;
             }
             if (itemCogs.abs() < 0.005) continue;
 
             // P-01: Resolve product-specific accounts
-            final productRow = await txn.query('products', columns: ['cogs_account_id', 'inventory_account_id'], where: 'id = ?', whereArgs: [productId], limit: 1);
-            final prodCogsId = productRow.isNotEmpty ? productRow.first['cogs_account_id'] as int? : null;
-            final prodInvId = productRow.isNotEmpty ? productRow.first['inventory_account_id'] as int? : null;
+            final productRow = await txn.query('products',
+                columns: ['cogs_account_id', 'inventory_account_id'],
+                where: 'id = ?',
+                whereArgs: [productId],
+                limit: 1);
+            final prodCogsId = productRow.isNotEmpty
+                ? productRow.first['cogs_account_id'] as int?
+                : null;
+            final prodInvId = productRow.isNotEmpty
+                ? productRow.first['inventory_account_id'] as int?
+                : null;
             final effectiveCogsId = prodCogsId ?? defaultCogsAccountId;
             final effectiveInvId = prodInvId ?? defaultInventoryAccountId;
             final key = '${effectiveCogsId}_${effectiveInvId}';
@@ -663,7 +798,8 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
@@ -677,10 +813,13 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, totalCogs, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, 0.0, totalCogs, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, cogsAccountId, totalCogs, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, inventoryAccountId, 0.0, totalCogs, now);
             } else {
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
@@ -694,7 +833,8 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
               await txn.insert('transactions', {
                 'account_id': cogsAccountId,
@@ -708,10 +848,13 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalCogs) * exchangeRate).round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, inventoryAccountId, totalCogs, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cogsAccountId, 0.0, totalCogs, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, inventoryAccountId, totalCogs, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, cogsAccountId, 0.0, totalCogs, now);
             }
           }
         }
@@ -719,18 +862,30 @@ class ShiftService {
         // ── Purchase Inventory Transfer Entries ──
         // P-01: Use product-specific account IDs when available
         if ((invoiceType == 'purchase' || invoiceType == 'purchase_return')) {
-          final inventoryAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final purchasesAccount = await txn.query('accounts', where: 'account_code = ? AND currency = ?', whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency], limit: 1);
-          final defaultInvAccountId = inventoryAccount.isNotEmpty ? inventoryAccount.first['id'] as int : null;
-          final defaultPurchAccountId = purchasesAccount.isNotEmpty ? purchasesAccount.first['id'] as int : null;
+          final inventoryAccount = await txn.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(1300 + codeOffset).toString(), invoiceCurrency],
+              limit: 1);
+          final purchasesAccount = await txn.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [(3100 + codeOffset).toString(), invoiceCurrency],
+              limit: 1);
+          final defaultInvAccountId = inventoryAccount.isNotEmpty
+              ? inventoryAccount.first['id'] as int
+              : null;
+          final defaultPurchAccountId = purchasesAccount.isNotEmpty
+              ? purchasesAccount.first['id'] as int
+              : null;
 
-          final invoiceItems = await txn.query('invoice_items', where: 'invoice_id = ?', whereArgs: [invoiceId]);
+          final invoiceItems = await txn.query('invoice_items',
+              where: 'invoice_id = ?', whereArgs: [invoiceId]);
           final purchGroups = <String, double>{};
           for (final item in invoiceItems) {
             final productId = (item['product_id'] as num?)?.toInt();
             final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
             // ignore: unused_local_variable
-            final baseQuantity = (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+            final baseQuantity =
+                (item['base_quantity'] as num?)?.toDouble() ?? quantity;
             if (productId == null) continue;
 
             // Fix #1 (shift): Use unit_price (actual purchase price) for inventory transfer
@@ -748,9 +903,17 @@ class ShiftService {
             if (itemCost.abs() < 0.005) continue;
 
             // P-01: Resolve product-specific accounts
-            final productRow = await txn.query('products', columns: ['inventory_account_id', 'purchase_account_id'], where: 'id = ?', whereArgs: [productId], limit: 1);
-            final prodInvId = productRow.isNotEmpty ? productRow.first['inventory_account_id'] as int? : null;
-            final prodPurchId = productRow.isNotEmpty ? productRow.first['purchase_account_id'] as int? : null;
+            final productRow = await txn.query('products',
+                columns: ['inventory_account_id', 'purchase_account_id'],
+                where: 'id = ?',
+                whereArgs: [productId],
+                limit: 1);
+            final prodInvId = productRow.isNotEmpty
+                ? productRow.first['inventory_account_id'] as int?
+                : null;
+            final prodPurchId = productRow.isNotEmpty
+                ? productRow.first['purchase_account_id'] as int?
+                : null;
             final effectiveInvId = prodInvId ?? defaultInvAccountId;
             final effectivePurchId = prodPurchId ?? defaultPurchAccountId;
             final key = '${effectiveInvId}_${effectivePurchId}';
@@ -778,7 +941,9 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalPurchaseCost) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalPurchaseCost) * exchangeRate)
+                        .round(),
               });
               await txn.insert('transactions', {
                 'account_id': purchAccountId,
@@ -792,10 +957,14 @@ class ShiftService {
                 'reference_id': invoiceId,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': (MoneyHelper.toCents(totalPurchaseCost) * exchangeRate).round(),
+                'amount_base':
+                    (MoneyHelper.toCents(totalPurchaseCost) * exchangeRate)
+                        .round(),
               });
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, invAccountId, totalPurchaseCost, 0.0, now);
-              await _dbHelper.journal.updateAccountBalanceWithJournal(txn, purchAccountId, 0.0, totalPurchaseCost, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, invAccountId, totalPurchaseCost, 0.0, now);
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, purchAccountId, 0.0, totalPurchaseCost, now);
             } else {
               // A-04: Purchase return inventory transfer now handled in main entry
               // (Debit Cash/Supplier, Credit Inventory directly). No separate transfer needed.
@@ -811,16 +980,26 @@ class ShiftService {
         // ── C-03 + M-03: Update customer/supplier balance with balance_type-aware logic ──
         if (invoice['customer_id'] != null) {
           final customerId = invoice['customer_id'] as int;
-          final isDebit = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'pos' && !isReturn) || (invoiceType == 'sale_return' && isReturn);
-          final customerAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
+          final isDebit = (invoiceType == 'sale' && !isReturn) ||
+              (invoiceType == 'pos' && !isReturn) ||
+              (invoiceType == 'sale_return' && isReturn);
+          final customerAmount = isPartialCash
+              ? effectiveRemaining
+              : (paymentMechanism == 'credit' ? total : 0.0);
           if (customerAmount.abs() >= 0.005) {
             if (isDebit) {
               await EntityBalanceHelper.customerSaleOnCredit(
-                txn: txn, customerId: customerId, amount: customerAmount, now: now,
+                txn: txn,
+                customerId: customerId,
+                amount: customerAmount,
+                now: now,
               );
             } else {
               await EntityBalanceHelper.customerSaleReturn(
-                txn: txn, customerId: customerId, amount: customerAmount, now: now,
+                txn: txn,
+                customerId: customerId,
+                amount: customerAmount,
+                now: now,
               );
             }
           }
@@ -828,16 +1007,25 @@ class ShiftService {
 
         if (invoice['supplier_id'] != null) {
           final supplierId = invoice['supplier_id'] as int;
-          final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) || (invoiceType == 'purchase_return' && isReturn);
-          final supplierAmount = isPartialCash ? effectiveRemaining : (paymentMechanism == 'credit' ? total : 0.0);
+          final isCreditToSupplier = (invoiceType == 'purchase' && !isReturn) ||
+              (invoiceType == 'purchase_return' && isReturn);
+          final supplierAmount = isPartialCash
+              ? effectiveRemaining
+              : (paymentMechanism == 'credit' ? total : 0.0);
           if (supplierAmount.abs() >= 0.005) {
             if (isCreditToSupplier) {
               await EntityBalanceHelper.supplierPurchaseOnCredit(
-                txn: txn, supplierId: supplierId, amount: supplierAmount, now: now,
+                txn: txn,
+                supplierId: supplierId,
+                amount: supplierAmount,
+                now: now,
               );
             } else {
               await EntityBalanceHelper.supplierPurchaseReturn(
-                txn: txn, supplierId: supplierId, amount: supplierAmount, now: now,
+                txn: txn,
+                supplierId: supplierId,
+                amount: supplierAmount,
+                now: now,
               );
             }
           }
@@ -845,20 +1033,29 @@ class ShiftService {
 
         // ── C-03: تحديث رصيد الصندوق بالمبلغ المدفوع فعلياً وليس الإجمالي ──
         if (cashBoxId != null) {
-          final isCashIn = (invoiceType == 'sale' && !isReturn) || (invoiceType == 'purchase' && isReturn) || (invoiceType == 'pos' && !isReturn);
+          final isCashIn = (invoiceType == 'sale' && !isReturn) ||
+              (invoiceType == 'purchase' && isReturn) ||
+              (invoiceType == 'pos' && !isReturn);
           // C-03: استخدام effectivePaid بدل total — لمنع تضخم الصندوق في حالات البيع الآجل
-          final cashAmount = paymentMechanism == 'credit' ? 0.0 : (isPartialCash ? effectivePaid : total);
+          final cashAmount = paymentMechanism == 'credit'
+              ? 0.0
+              : (isPartialCash ? effectivePaid : total);
           if (cashAmount.abs() >= 0.005) {
             if (isCashIn) {
-              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
+              await txn.rawUpdate(
+                  'UPDATE cash_boxes SET balance = balance + ?, updated_at = ? WHERE id = ?',
+                  [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
             } else {
-              await txn.rawUpdate('UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?', [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
+              await txn.rawUpdate(
+                  'UPDATE cash_boxes SET balance = balance - ?, updated_at = ? WHERE id = ?',
+                  [MoneyHelper.toCents(cashAmount), now, cashBoxId]);
             }
           }
         }
 
         // تحديث حالة الفاتورة إلى مرحلة
-        await txn.update('invoices', {'is_posted': 1}, where: 'id = ?', whereArgs: [invoiceId]);
+        await txn.update('invoices', {'is_posted': 1},
+            where: 'id = ?', whereArgs: [invoiceId]);
       });
 
       postedCount++;
@@ -873,13 +1070,17 @@ class ShiftService {
 
   Future<int> insertHeldOrder(Map<String, dynamic> order) async {
     final db = await _db;
-    return await db.insert('held_orders', MoneyHelper.toCentsMap(order, ['discount']));
+    return await db.insert(
+        'held_orders', MoneyHelper.toCentsMap(order, ['discount']));
   }
 
   Future<List<Map<String, dynamic>>> getHeldOrders({int? shiftId}) async {
     final db = await _db;
     if (shiftId != null) {
-      return await db.query('held_orders', where: 'shift_id = ?', whereArgs: [shiftId], orderBy: 'created_at DESC');
+      return await db.query('held_orders',
+          where: 'shift_id = ?',
+          whereArgs: [shiftId],
+          orderBy: 'created_at DESC');
     }
     return await db.query('held_orders', orderBy: 'created_at DESC');
   }
@@ -892,7 +1093,8 @@ class ShiftService {
   Future<void> clearHeldOrders({int? shiftId}) async {
     final db = await _db;
     if (shiftId != null) {
-      await db.delete('held_orders', where: 'shift_id = ?', whereArgs: [shiftId]);
+      await db
+          .delete('held_orders', where: 'shift_id = ?', whereArgs: [shiftId]);
     } else {
       await db.delete('held_orders');
     }
@@ -922,10 +1124,13 @@ class ShiftService {
       final exchangeRate = await _getExchangeRate(txn, currency);
 
       // ── 1. Update cash box balance ──
-      final cashBoxRow = await txn.query('cash_boxes', where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
+      final cashBoxRow = await txn.query('cash_boxes',
+          where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
       if (cashBoxRow.isNotEmpty) {
-        final currentBalance = MoneyHelper.readMoney(cashBoxRow.first['balance']);
-        final newBalance = isCashIn ? currentBalance + amount : currentBalance - amount;
+        final currentBalance =
+            MoneyHelper.readMoney(cashBoxRow.first['balance']);
+        final newBalance =
+            isCashIn ? currentBalance + amount : currentBalance - amount;
         await txn.update(
           'cash_boxes',
           MoneyHelper.toCentsMap({
@@ -987,8 +1192,10 @@ class ShiftService {
             'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
           });
           // Update account balances
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, amount, 0.0, now);
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccountId, 0.0, amount, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, cashAccountId, amount, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, expenseAccountId, 0.0, amount, now);
         } else {
           // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
           await txn.insert('transactions', {
@@ -1014,8 +1221,10 @@ class ShiftService {
             'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
           });
           // Update account balances
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, expenseAccountId, amount, 0.0, now);
-          await _dbHelper.journal.updateAccountBalanceWithJournal(txn, cashAccountId, 0.0, amount, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, expenseAccountId, amount, 0.0, now);
+          await _dbHelper.journal.updateAccountBalanceWithJournal(
+              txn, cashAccountId, 0.0, amount, now);
         }
       }
 
@@ -1023,7 +1232,8 @@ class ShiftService {
       await txn.update(
         'shifts',
         {
-          'transaction_count': (await _getShiftTransactionCount(txn, shiftId)) + 1,
+          'transaction_count':
+              (await _getShiftTransactionCount(txn, shiftId)) + 1,
           'updated_at': now,
         },
         where: 'id = ?',
@@ -1042,11 +1252,16 @@ class ShiftService {
   Future<double> _getExchangeRate(Transaction txn, String currencyCode) async {
     if (currencyCode == 'YER') return 1.0;
     try {
-      final rows = await txn.query('currencies', where: 'code = ?', whereArgs: [currencyCode], limit: 1);
+      final rows = await txn.query('currencies',
+          where: 'code = ?', whereArgs: [currencyCode], limit: 1);
       if (rows.isNotEmpty) {
         return (rows.first['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       }
-    } catch (_) {}
+    } catch (e) {
+      // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+      debugPrint(
+          'ShiftService._getExchangeRate($currencyCode) فشل، استخدام السعر الاحتياطي: $e');
+    }
     // Fallback rates
     if (currencyCode == 'SAR') return 140.0;
     if (currencyCode == 'USD') return 530.0;
@@ -1055,7 +1270,11 @@ class ShiftService {
 
   /// Helper to get current transaction count for a shift within a transaction.
   Future<int> _getShiftTransactionCount(Transaction txn, int shiftId) async {
-    final rows = await txn.query('shifts', columns: ['transaction_count'], where: 'id = ?', whereArgs: [shiftId], limit: 1);
+    final rows = await txn.query('shifts',
+        columns: ['transaction_count'],
+        where: 'id = ?',
+        whereArgs: [shiftId],
+        limit: 1);
     if (rows.isEmpty) return 0;
     return (rows.first['transaction_count'] as int?) ?? 0;
   }

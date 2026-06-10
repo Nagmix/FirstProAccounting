@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/utils/entity_balance_helper.dart';
@@ -56,8 +57,7 @@ class VoucherAutoMappingService {
 
     // العملاء (لا يوجد عمود is_active في جدول العملاء)
     try {
-      final customers = await db.query('customers',
-          orderBy: 'name ASC');
+      final customers = await db.query('customers', orderBy: 'name ASC');
       for (final c in customers) {
         entities.add({
           'id': c['id'],
@@ -75,8 +75,7 @@ class VoucherAutoMappingService {
 
     // الموردين (لا يوجد عمود is_active في جدول الموردين)
     try {
-      final suppliers = await db.query('suppliers',
-          orderBy: 'name ASC');
+      final suppliers = await db.query('suppliers', orderBy: 'name ASC');
       for (final s in suppliers) {
         entities.add({
           'id': s['id'],
@@ -130,7 +129,10 @@ class VoucherAutoMappingService {
           expenseCurrency = accRows.first['currency'] as String? ?? 'YER';
           expenseAccountId = accRows.first['id'] as int?;
         }
-      } catch (_) {}
+      } catch (e) {
+        // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+        debugPrint('تعذر تحميل حساب المصروفات الافتراضي: $e');
+      }
       for (final e in expenseSubAccounts) {
         entities.add({
           'id': e['id'],
@@ -157,8 +159,7 @@ class VoucherAutoMappingService {
     try {
       switch (type) {
         case entityCustomer:
-          final rows = await db.query('customers',
-              orderBy: 'name ASC');
+          final rows = await db.query('customers', orderBy: 'name ASC');
           for (final c in rows) {
             entities.add({
               'id': c['id'],
@@ -173,8 +174,7 @@ class VoucherAutoMappingService {
           break;
 
         case entitySupplier:
-          final rows = await db.query('suppliers',
-              orderBy: 'name ASC');
+          final rows = await db.query('suppliers', orderBy: 'name ASC');
           for (final s in rows) {
             entities.add({
               'id': s['id'],
@@ -226,7 +226,10 @@ class VoucherAutoMappingService {
                 expenseCurrency = accRows.first['currency'] as String? ?? 'YER';
                 expenseAccountId = accRows.first['id'] as int?;
               }
-            } catch (_) {}
+            } catch (e) {
+              // B-8: لا نبتلع الأخطاء بصمت في كود مالي — سجّل ثم تابع المسار الاحتياطي
+              debugPrint('تعذر تحميل حساب المصروفات الافتراضي: $e');
+            }
             entities.add({
               'id': e['id'],
               'name': e['name'] ?? '',
@@ -459,16 +462,19 @@ class VoucherAutoMappingService {
 
     // تحديد حسابات القيد
     final entityAccount = await _resolveEntityAccountId(
-      entityType, currency,
+      entityType,
+      currency,
       entityAccountId: entityAccountId,
     );
     final cashAccount = await _resolveCashAccountId(cashBoxId, currency);
 
     if (entityAccount == null) {
-      throw Exception('لم يتم العثور على حساب $entityType بالعملة $currency في شجرة الحسابات');
+      throw Exception(
+          'لم يتم العثور على حساب $entityType بالعملة $currency في شجرة الحسابات');
     }
     if (cashAccount == null) {
-      throw Exception('لم يتم العثور على حساب الصندوق بالعملة $currency في شجرة الحسابات');
+      throw Exception(
+          'لم يتم العثور على حساب الصندوق بالعملة $currency في شجرة الحسابات');
     }
 
     // توليد رقم السند
@@ -620,7 +626,8 @@ class VoucherAutoMappingService {
   }) async {
     // M-04: Validate that fromAmount == toAmount when currencies are the same
     if (fromCurrency == toCurrency && (fromAmount - toAmount).abs() >= 0.005) {
-      throw Exception('مبالغ القيد غير متوازنة: المبلغ من ($fromAmount) لا يساوي المبلغ إلى ($toAmount) مع نفس العملة');
+      throw Exception(
+          'مبالغ القيد غير متوازنة: المبلغ من ($fromAmount) لا يساوي المبلغ إلى ($toAmount) مع نفس العملة');
     }
     // التحقق من قفل الفترة المحاسبية
     await _dbHelper.journal.checkFiscalPeriodOpen(date);
@@ -631,11 +638,13 @@ class VoucherAutoMappingService {
 
     // تحديد حسابات القيد
     final fromAccount = await _resolveEntityAccountId(
-      fromEntityType, fromCurrency,
+      fromEntityType,
+      fromCurrency,
       entityAccountId: fromEntityAccountId,
     );
     final toAccount = await _resolveEntityAccountId(
-      toEntityType, toCurrency,
+      toEntityType,
+      toCurrency,
       entityAccountId: toEntityAccountId,
     );
 
@@ -749,8 +758,8 @@ class VoucherAutoMappingService {
         'exchange_rate': toRate,
         'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
       });
-      await _dbHelper.journal.updateAccountBalanceWithJournal(
-          txn, toAccount, toAmount, 0.0, now);
+      await _dbHelper.journal
+          .updateAccountBalanceWithJournal(txn, toAccount, toAmount, 0.0, now);
 
       // قيد يومي - دائن (حساب "من")
       await txn.insert('transactions', {
@@ -773,8 +782,14 @@ class VoucherAutoMappingService {
       // تحديث أرصدة الكيانات
       await _updateEntityBalanceForGeneralEntry(
         txn,
-        fromEntityType, fromEntityId, fromAmount, fromCurrency,
-        toEntityType, toEntityId, toAmount, toCurrency,
+        fromEntityType,
+        fromEntityId,
+        fromAmount,
+        fromCurrency,
+        toEntityType,
+        toEntityId,
+        toAmount,
+        toCurrency,
         now,
       );
     });
@@ -809,8 +824,8 @@ class VoucherAutoMappingService {
         tableName = 'customers';
     }
 
-    final rows =
-        await db.query(tableName, where: 'id = ?', whereArgs: [entityId], limit: 1);
+    final rows = await db.query(tableName,
+        where: 'id = ?', whereArgs: [entityId], limit: 1);
     if (rows.isNotEmpty) {
       return rows.first['name'] as String? ?? '';
     }
@@ -835,12 +850,12 @@ class VoucherAutoMappingService {
     if (cashBox.isEmpty) return;
 
     final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
-    final balanceType =
-        cashBox.first['balance_type'] as String? ?? 'credit';
+    final balanceType = cashBox.first['balance_type'] as String? ?? 'credit';
     final isCashIn = voucherType == 'receipt';
 
     // Convert to signed value: credit = +balance, debit = -balance
-    double signedBalance = balanceType == 'credit' ? currentBalance : -currentBalance;
+    double signedBalance =
+        balanceType == 'credit' ? currentBalance : -currentBalance;
 
     // Apply change: cash in increases credit (+), cash out decreases credit (-)
     signedBalance += isCashIn ? amount : -amount;
@@ -849,11 +864,15 @@ class VoucherAutoMappingService {
     final newBalance = signedBalance.abs();
     final newType = signedBalance >= 0 ? 'credit' : 'debit';
 
-    await txn.update('cash_boxes', {
-      'balance': MoneyHelper.toCents(newBalance),
-      'balance_type': newType,
-      'updated_at': now,
-    }, where: 'id = ?', whereArgs: [cashBoxId]);
+    await txn.update(
+        'cash_boxes',
+        {
+          'balance': MoneyHelper.toCents(newBalance),
+          'balance_type': newType,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [cashBoxId]);
   }
 
   /// تحديث رصيد الكيان حسب نوع السند
@@ -889,33 +908,53 @@ class VoucherAutoMappingService {
     if (entityType == entityCustomer) {
       if (voucherType == 'receipt') {
         await EntityBalanceHelper.customerReceipt(
-          txn: txn, customerId: entityId, amount: amount, now: now,
+          txn: txn,
+          customerId: entityId,
+          amount: amount,
+          now: now,
         );
       } else {
         await EntityBalanceHelper.customerPayment(
-          txn: txn, customerId: entityId, amount: amount, now: now,
+          txn: txn,
+          customerId: entityId,
+          amount: amount,
+          now: now,
         );
       }
     } else if (entityType == entitySupplier) {
       if (voucherType == 'payment') {
         await EntityBalanceHelper.supplierPayment(
-          txn: txn, supplierId: entityId, amount: amount, now: now,
+          txn: txn,
+          supplierId: entityId,
+          amount: amount,
+          now: now,
         );
       } else {
         await EntityBalanceHelper.supplierReceipt(
-          txn: txn, supplierId: entityId, amount: amount, now: now,
+          txn: txn,
+          supplierId: entityId,
+          amount: amount,
+          now: now,
         );
       }
     } else if (entityType == entityEmployee) {
       if (voucherType == 'receipt') {
         // Receipt for employee: credit effect (increases what we owe them)
         await EntityBalanceHelper.applyEmployeeBalanceChange(
-          txn: txn, employeeId: entityId, creditEffect: amount, debitEffect: 0, now: now,
+          txn: txn,
+          employeeId: entityId,
+          creditEffect: amount,
+          debitEffect: 0,
+          now: now,
         );
       } else {
         // Payment to employee: debit effect (increases what they owe us)
         await EntityBalanceHelper.applyEmployeeBalanceChange(
-          txn: txn, employeeId: entityId, creditEffect: 0, debitEffect: amount, now: now,
+          txn: txn,
+          employeeId: entityId,
+          creditEffect: 0,
+          debitEffect: amount,
+          now: now,
         );
       }
     }
@@ -924,8 +963,14 @@ class VoucherAutoMappingService {
   /// تحديث أرصدة الكيانات في القيد العام
   Future<void> _updateEntityBalanceForGeneralEntry(
     Transaction txn,
-    String fromEntityType, int fromEntityId, double fromAmount, String fromCurrency,
-    String toEntityType, int toEntityId, double toAmount, String toCurrency,
+    String fromEntityType,
+    int fromEntityId,
+    double fromAmount,
+    String fromCurrency,
+    String toEntityType,
+    int toEntityId,
+    double toAmount,
+    String toCurrency,
     String now,
   ) async {
     // القيد العام: من حساب (دائن) إلى حساب (مدين)
@@ -934,12 +979,22 @@ class VoucherAutoMappingService {
 
     // تحديث رصيد "من" (ينقص)
     await _updateEntityForGeneralEntry(
-      txn, fromEntityType, fromEntityId, fromAmount, isSource: true, now: now,
+      txn,
+      fromEntityType,
+      fromEntityId,
+      fromAmount,
+      isSource: true,
+      now: now,
     );
 
     // تحديث رصيد "إلى" (يزيد)
     await _updateEntityForGeneralEntry(
-      txn, toEntityType, toEntityId, toAmount, isSource: false, now: now,
+      txn,
+      toEntityType,
+      toEntityId,
+      toAmount,
+      isSource: false,
+      now: now,
     );
   }
 
@@ -969,36 +1024,56 @@ class VoucherAutoMappingService {
       if (isSource) {
         // "From" customer: credit effect (reduces what they owe us)
         await EntityBalanceHelper.customerReceipt(
-          txn: txn, customerId: entityId, amount: amount, now: now,
+          txn: txn,
+          customerId: entityId,
+          amount: amount,
+          now: now,
         );
       } else {
         // "To" customer: debit effect (increases what they owe us)
         await EntityBalanceHelper.customerPayment(
-          txn: txn, customerId: entityId, amount: amount, now: now,
+          txn: txn,
+          customerId: entityId,
+          amount: amount,
+          now: now,
         );
       }
     } else if (entityType == entitySupplier) {
       if (isSource) {
         // "From" supplier: debit effect (reduces what we owe them)
         await EntityBalanceHelper.supplierPayment(
-          txn: txn, supplierId: entityId, amount: amount, now: now,
+          txn: txn,
+          supplierId: entityId,
+          amount: amount,
+          now: now,
         );
       } else {
         // "To" supplier: credit effect (increases what we owe them)
         await EntityBalanceHelper.supplierPurchaseOnCredit(
-          txn: txn, supplierId: entityId, amount: amount, now: now,
+          txn: txn,
+          supplierId: entityId,
+          amount: amount,
+          now: now,
         );
       }
     } else if (entityType == entityEmployee) {
       if (isSource) {
         // "From" employee: credit effect (increases what we owe them)
         await EntityBalanceHelper.applyEmployeeBalanceChange(
-          txn: txn, employeeId: entityId, creditEffect: amount, debitEffect: 0, now: now,
+          txn: txn,
+          employeeId: entityId,
+          creditEffect: amount,
+          debitEffect: 0,
+          now: now,
         );
       } else {
         // "To" employee: debit effect (increases what they owe us)
         await EntityBalanceHelper.applyEmployeeBalanceChange(
-          txn: txn, employeeId: entityId, creditEffect: 0, debitEffect: amount, now: now,
+          txn: txn,
+          employeeId: entityId,
+          creditEffect: 0,
+          debitEffect: amount,
+          now: now,
         );
       }
     }
