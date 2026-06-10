@@ -12,6 +12,7 @@ import 'package:firstpro/data/datasources/repositories/order_repository.dart';
 import 'package:firstpro/data/datasources/repositories/voucher_repository.dart';
 import 'package:firstpro/data/datasources/repositories/employee_repository.dart';
 import 'package:firstpro/data/datasources/repositories/expense_sub_account_repository.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 import 'package:firstpro/data/datasources/services/journal_service.dart';
 import 'package:firstpro/data/datasources/services/stock_service.dart';
@@ -95,6 +96,9 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<VoucherAutoMappingService>(
     () => VoucherAutoMappingService(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<BaseCurrencyService>(
+    () => BaseCurrencyService(locator<DatabaseHelper>()),
   );
 
   // ── ViewModels (factory — fresh instance per screen, no stale state) ──

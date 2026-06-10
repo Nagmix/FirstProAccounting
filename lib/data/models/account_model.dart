@@ -14,6 +14,7 @@ class Account {
   final int? linkedCashBoxId;
   final double debtCeiling;
   final String balanceType; // 'credit' or 'debit'
+  final int? baseCode;
   final bool isActive;
   final bool isSystem;
   final DateTime createdAt;
@@ -32,6 +33,7 @@ class Account {
     this.isActive = true,
     this.debtCeiling = 0.0,
     this.balanceType = 'auto', // Will be derived from accountType if 'auto'
+    this.baseCode,
     this.isSystem = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -141,6 +143,7 @@ class Account {
       'is_active': isActive ? 1 : 0,
       'debt_ceiling': MoneyHelper.toCents(debtCeiling),
       'balance_type': effectiveBalanceType, // Always save derived value
+      'base_code': baseCode,
       'is_system': isSystem ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -170,6 +173,7 @@ class Account {
               ? 'credit'
               : 'debit'),
       isSystem: (map['is_system'] ?? 0) == 1,
+      baseCode: map['base_code'],
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
     );

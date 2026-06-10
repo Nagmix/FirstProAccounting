@@ -7,6 +7,7 @@ class Currency {
   final double exchangeRate;
   final bool isDefault;
   final bool isActive;
+  final int codeOffset;
   final DateTime createdAt;
 
   Currency({
@@ -18,6 +19,7 @@ class Currency {
     this.exchangeRate = 1.0,
     this.isDefault = false,
     this.isActive = true,
+    this.codeOffset = 0,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -31,6 +33,7 @@ class Currency {
       'exchange_rate': exchangeRate,
       'is_default': isDefault ? 1 : 0,
       'is_active': isActive ? 1 : 0,
+      'code_offset': codeOffset,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -45,6 +48,7 @@ class Currency {
       exchangeRate: (map['exchange_rate'] ?? 1.0).toDouble(),
       isDefault: (map['is_default'] ?? 0) == 1,
       isActive: (map['is_active'] ?? 1) == 1,
+      codeOffset: map['code_offset'] ?? 0,
       createdAt: DateTime.parse(map['created_at']),
     );
   }

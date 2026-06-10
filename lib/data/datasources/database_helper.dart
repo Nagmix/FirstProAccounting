@@ -20,6 +20,8 @@ import 'package:firstpro/data/datasources/services/report_service.dart';
 import 'package:firstpro/data/datasources/services/audit_service.dart';
 import 'package:firstpro/data/datasources/services/costing_engine_service.dart';
 import 'package:firstpro/data/datasources/services/bank_reconciliation_service.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
+import 'package:firstpro/data/datasources/services/voucher_auto_mapping_service.dart';
 import 'package:firstpro/data/datasources/migrations/schema.dart';
 import 'package:firstpro/data/datasources/migrations/migration_runner.dart';
 import 'package:firstpro/data/datasources/migrations/migration_helpers.dart';
@@ -93,11 +95,16 @@ class DatabaseHelper {
   ExpenseSubAccountRepository get expenseSubAccounts => _locatorReady
       ? locator<ExpenseSubAccountRepository>()
       : ExpenseSubAccountRepository(this);
+  VoucherAutoMappingService get voucherAutoMapping => _locatorReady
+      ? locator<VoucherAutoMappingService>()
+      : VoucherAutoMappingService(this);
+  BaseCurrencyService get baseCurrency =>
+      _locatorReady ? locator<BaseCurrencyService>() : BaseCurrencyService(this);
 
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 50;
+  static const int _databaseVersion = 51;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {

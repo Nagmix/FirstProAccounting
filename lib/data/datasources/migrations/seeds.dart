@@ -141,6 +141,7 @@ class DatabaseSeeds {
                   accountType == 'EXPENSE')
               ? 'debit'
               : 'credit',
+          'base_code': baseCode,
           'parent_id': parentId,
           'is_active': 1,
           'is_system': 1,
@@ -199,6 +200,7 @@ class DatabaseSeeds {
                 accountType == 'EXPENSE')
             ? 'debit'
             : 'credit',
+        'base_code': template[2] as int,
         'parent_id': parentId,
         'is_active': 1,
         'is_system': 1,

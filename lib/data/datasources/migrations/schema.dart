@@ -20,6 +20,7 @@ class DatabaseSchema {
         is_system INTEGER NOT NULL DEFAULT 0,
         debt_ceiling INTEGER NOT NULL DEFAULT 0,
         balance_type TEXT NOT NULL DEFAULT 'debit',
+        base_code INTEGER,
         -- Fix #9: Default 'debit' is correct for ASSET/EXPENSE which are the most common
         -- newly created accounts. LIABILITY/REVENUE/EQUITY accounts use 'credit' but
         -- those are typically seeded or set explicitly during creation.
@@ -323,6 +324,7 @@ class DatabaseSchema {
         exchange_rate REAL NOT NULL DEFAULT 1.0,
         is_default INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,
+        code_offset INTEGER DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');

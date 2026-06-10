@@ -2,6 +2,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/migrations/seeds.dart';
 
 class ReferenceDataRepository {
   final DatabaseHelper _dbHelper;
@@ -15,7 +16,31 @@ class ReferenceDataRepository {
 
   Future<int> insertCurrency(Map<String, dynamic> currencyMap) async {
     final db = await _db;
-    return await db.insert('currencies', currencyMap);
+    return await db.transaction((txn) async {
+      // 1. Determine next code_offset
+      final result = await txn.rawQuery('SELECT MAX(code_offset) as max_offset FROM currencies');
+      int nextOffset = 0;
+      if (result.isNotEmpty && result.first['max_offset'] != null) {
+        nextOffset = (result.first['max_offset'] as int) + 1;
+      }
+      
+      final Map<String, dynamic> finalCurrencyMap = Map.from(currencyMap);
+      finalCurrencyMap['code_offset'] = nextOffset;
+      finalCurrencyMap['created_at'] = DateTime.now().toIso8601String();
+
+      // 2. Insert currency
+      final id = await txn.insert('currencies', finalCurrencyMap);
+
+      // 3. Automatically seed chart of accounts for this currency
+      await DatabaseSeeds.seedAccountsForCurrency(
+        txn, 
+        finalCurrencyMap['code'] as String,
+        finalCurrencyMap['symbol'] as String,
+        nextOffset
+      );
+
+      return id;
+    });
   }
 
   Future<List<Map<String, dynamic>>> getAllCurrencies(
