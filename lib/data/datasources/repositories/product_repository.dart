@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class ProductRepository {
   final DatabaseHelper _dbHelper;
@@ -457,8 +459,7 @@ class ProductRepository {
           // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
           final totalValue = openingStock * baseCostPrice;
           if (totalValue > 0) {
-            final codeOffset =
-                currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+            final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
             final productExchangeRate = await _getExchangeRate(txn, currency);
 
             // Find inventory account (1300 + offset)

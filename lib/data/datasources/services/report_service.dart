@@ -1639,8 +1639,7 @@ class ReportService {
     // Find the customer's receivable account by code (12xx) and currency.
     // This is more reliable than searching by name, which breaks if the
     // account name does not exactly match the customer name.
-    final codeOffset =
-        customerCurrency == 'SAR' ? 1 : (customerCurrency == 'USD' ? 2 : 0);
+    final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(customerCurrency);
     final accountCode = '${1200 + codeOffset}';
     var acctRes = await db.rawQuery(
       "SELECT id FROM accounts WHERE account_code=? AND currency=? AND is_active=1 LIMIT 1",

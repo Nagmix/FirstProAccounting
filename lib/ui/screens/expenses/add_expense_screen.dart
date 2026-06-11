@@ -14,6 +14,7 @@ import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/repositories/account_repository.dart';
 import 'package:firstpro/data/datasources/repositories/expense_repository.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -197,9 +198,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   // ── Account lookup ───────────────────────────────────────────────
 
   /// Looks up the chart-of-accounts expense account for the given currency.
-  /// YER → code 5000, SAR → code 5001, USD → code 5002
+  /// Uses BaseCurrencyService to support dynamic currencies beyond YER/SAR/USD.
   Future<int?> _lookupExpenseAccountId(String currency) async {
-    final codeOffset = currency == 'SAR' ? 1 : (currency == 'USD' ? 2 : 0);
+    final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
     final targetCode = (5000 + codeOffset).toString();
     final expenseAccounts =
         await locator<AccountRepository>().getAccountsByType('EXPENSE');

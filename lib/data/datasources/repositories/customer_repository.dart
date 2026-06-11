@@ -218,8 +218,7 @@ class CustomerRepository {
 
         if (currencyChanged) {
           // Step 1: Reverse old opening balance in old currency
-          final oldCodeOffset =
-              oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
+          final oldCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(oldCurrency);
           final oldCustomersAccount = await db.query('accounts',
               where: 'account_code = ? AND currency = ?',
               whereArgs: [(1200 + oldCodeOffset).toString(), oldCurrency],

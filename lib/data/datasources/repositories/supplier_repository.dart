@@ -209,8 +209,7 @@ class SupplierRepository {
 
         if (currencyChanged) {
           // Step 1: Reverse old opening balance in old currency
-          final oldCodeOffset =
-              oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
+          final oldCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(oldCurrency);
           final oldSuppliersAccount = await db.query('accounts',
               where: 'account_code = ? AND currency = ?',
               whereArgs: [(2100 + oldCodeOffset).toString(), oldCurrency],
@@ -227,8 +226,7 @@ class SupplierRepository {
               : null;
 
           // Step 2: Create new opening balance in new currency
-          final newCodeOffset =
-              newCurrency == 'SAR' ? 1 : (newCurrency == 'USD' ? 2 : 0);
+          final newCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(newCurrency);
           final newSuppliersAccount = await db.query('accounts',
               where: 'account_code = ? AND currency = ?',
               whereArgs: [(2100 + newCodeOffset).toString(), newCurrency],

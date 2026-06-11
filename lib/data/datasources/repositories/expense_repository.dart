@@ -390,8 +390,7 @@ class ExpenseRepository {
       final oldCurrency = existingExpense['currency'] as String? ?? 'YER';
       final oldExchangeRate =
           (existingExpense['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-      final oldCodeOffset =
-          oldCurrency == 'SAR' ? 1 : (oldCurrency == 'USD' ? 2 : 0);
+      final oldCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(oldCurrency);
       final oldExpenseAccountId =
           (existingExpense['expense_account_id'] as int?) ??
               (existingExpense['account_id'] as int?);

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class CashBoxService {
   final DatabaseHelper _dbHelper;
@@ -868,8 +870,7 @@ class CashBoxService {
       final journalId = generateUniqueJournalId();
 
       // حساب الصناديق والبنوك للعملة المستلمة (مدين)
-      final toCodeOffset =
-          toCurrency == 'SAR' ? 1 : (toCurrency == 'USD' ? 2 : 0);
+      final toCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(toCurrency);
       final toCashBanksAccount = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ?',
@@ -881,8 +882,7 @@ class CashBoxService {
           : null;
 
       // حساب الصناديق والبنوك للعملة المرسلة (دائن)
-      final fromCodeOffset =
-          fromCurrency == 'SAR' ? 1 : (fromCurrency == 'USD' ? 2 : 0);
+      final fromCodeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(fromCurrency);
       final fromCashBanksAccount = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ?',
@@ -1078,8 +1078,7 @@ class CashBoxService {
         }
       }
       if (fromAccountId == null) {
-        final codeOffset =
-            transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(transferCurrency);
         final fromCashBanksAccount = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',
@@ -1102,8 +1101,7 @@ class CashBoxService {
         }
       }
       if (toAccountId == null) {
-        final codeOffset =
-            transferCurrency == 'SAR' ? 1 : (transferCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(transferCurrency);
         final toCashBanksAccount = await txn.query(
           'accounts',
           where: 'account_code = ? AND currency = ?',

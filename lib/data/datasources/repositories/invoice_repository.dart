@@ -391,11 +391,8 @@ class InvoiceRepository {
         final double journalEffectivePaid = effectivePaid;
         final double journalRemainingAmount = remainingAmount;
 
-        // Determine codeOffset based on currency (YER=0, SAR=1, USD=2)
-        // This ensures the entry goes to the correct currency-specific account.
-        final int codeOffset = (invoiceCurrency == 'SAR'
-            ? 1
-            : (invoiceCurrency == 'USD' ? 2 : 0));
+        // Determine codeOffset via BaseCurrencyService to support dynamic currencies.
+        final int codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
         final String journalCurrency = invoiceCurrency;
 
         // ── Discount, Transport & Tax amounts for journal ──
@@ -2298,8 +2295,7 @@ class InvoiceRepository {
 
         // 2. Create reversal journal entries
         final journalId = generateUniqueJournalId();
-        final codeOffset =
-            invoiceCurrency == 'SAR' ? 1 : (invoiceCurrency == 'USD' ? 2 : 0);
+        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
 
         final salesAccount = await txn.query('accounts',
             where: 'account_code = ? AND currency = ?',
