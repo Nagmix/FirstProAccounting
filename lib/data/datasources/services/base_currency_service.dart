@@ -11,6 +11,8 @@ class BaseCurrencyService {
   Map<String, int> _offsetCache = {};
 
   /// Get the functional (default) currency code of the system.
+  /// Reads from `currencies.is_default` first; falls back to `settings.default_currency`
+  /// and finally to hardcoded 'YER' if neither is configured.
   Future<String> getBaseCurrencyCode() async {
     if (_cachedBaseCurrencyCode != null) return _cachedBaseCurrencyCode!;
     
@@ -22,7 +24,16 @@ class BaseCurrencyService {
     if (result.isNotEmpty) {
       _cachedBaseCurrencyCode = result.first['code'] as String;
     } else {
-      _cachedBaseCurrencyCode = 'YER'; // Universal fallback
+      // Fallback 1: settings.default_currency (added in migration v53)
+      final settingsResult = await db.query('settings',
+          where: 'key = ?',
+          whereArgs: ['default_currency'],
+          limit: 1);
+      if (settingsResult.isNotEmpty) {
+        _cachedBaseCurrencyCode = settingsResult.first['value'] as String?;
+      }
+      // Fallback 2: universal hardcoded default
+      _cachedBaseCurrencyCode ??= 'YER';
     }
     return _cachedBaseCurrencyCode!;
   }
@@ -46,7 +57,7 @@ class BaseCurrencyService {
     
     int offset = 0;
     if (result.isNotEmpty) {
-      offset = result.first['code_offset'] as int;
+      offset = result.first['code_offset'] as int? ?? 0;
     } else {
       // Hardcoded fallback for known legacy currencies if record missing
       if (code == 'SAR') offset = 1;

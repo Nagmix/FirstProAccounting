@@ -14,6 +14,8 @@ class DatabaseSeeds {
         'exchange_rate': 1.0,
         'is_default': 1,
         'is_active': 1,
+        'code_offset': 0,
+        'vat_rate': 0.0,
         'created_at': now
       },
       {
@@ -24,6 +26,8 @@ class DatabaseSeeds {
         'exchange_rate': 140.0,
         'is_default': 0,
         'is_active': 1,
+        'code_offset': 1,
+        'vat_rate': 0.0,
         'created_at': now
       },
       {
@@ -34,6 +38,8 @@ class DatabaseSeeds {
         'exchange_rate': 530.0,
         'is_default': 0,
         'is_active': 1,
+        'code_offset': 2,
+        'vat_rate': 0.0,
         'created_at': now
       },
     ];
@@ -145,6 +151,7 @@ class DatabaseSeeds {
           'parent_id': parentId,
           'is_active': 1,
           'is_system': 1,
+          'debt_ceiling': 0,
           'created_at': now,
           'updated_at': now,
         });
@@ -204,6 +211,7 @@ class DatabaseSeeds {
         'parent_id': parentId,
         'is_active': 1,
         'is_system': 1,
+        'debt_ceiling': 0,
         'created_at': now,
         'updated_at': now,
       });

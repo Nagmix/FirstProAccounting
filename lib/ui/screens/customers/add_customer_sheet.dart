@@ -118,7 +118,21 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       map['opening_balance_currency'] = _currency;
     }
 
-    await locator<CustomerRepository>().insertCustomer(map);
+    try {
+      await locator<CustomerRepository>().insertCustomer(map);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      debugPrint('Customer save error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء الحفظ: $e'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _isSaving = false);

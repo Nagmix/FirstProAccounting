@@ -158,4 +158,34 @@
 | E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | ✅ منجزة (B-1.7 Phase 2 أزال ~20 استخدام في UI؛ تم إزالة آخر استخدام متبقي في `product_form_helpers.dart` وجعل `currencySymbol` إلزامياً في `ProductPriceField`) | `E-03` |
 
 ---
+
+# 🐛 القسم أ (متابعة): Fresh Install Hang Bug — **مُصلحة**
+**التاريخ:** 2026-06-12
+**الحالة:** ✅ منجزة (تطبيقات واقية + معالجة أخطاء UI)
+**الملفات المُعدَّلة:**
+- `lib/data/datasources/migrations/seeds.dart` (سطور 13-35): إضافة `code_offset` و `vat_rate` صريحين لكل عملة في `seedCurrencies`.
+- `lib/data/datasources/migrations/seeds.dart` (سطور ~110 و ~200): إضافة `debt_ceiling: 0` صريحاً في `seedDefaultAccounts` و `seedAccountsForCurrency`.
+- `lib/data/datasources/services/base_currency_service.dart` (سطر 37): إضافة `?? 0` بعد `as int?` في `getOffsetForCurrency`.
+- `lib/data/datasources/services/base_currency_service.dart` (سطور 20-39): إضافة fallback على `settings.default_currency` في `getBaseCurrencyCode()` (E-02 متابعة).
+- `lib/ui/screens/customers/add_customer_sheet.dart` (سطور ~78-95): تغليف `insertCustomer` في `try-catch-finally` مع إعادة تعيين `_isSaving = false`.
+- `lib/ui/screens/suppliers/add_supplier_sheet.dart` (سطور ~140-160): تغليف `insertSupplier`/`updateSupplier` في `try-catch-finally` مع إعادة تعيين `_isSaving = false`.
+- `lib/ui/screens/products/add_product_sheet.dart` (سطور ~220-270): تغليف `_loadDropdownData` في `try-catch` مع `SnackBar` تحذيري.
+- `lib/ui/screens/accounts/add_account_sheet.dart` (سطور ~107): تغليف `_save()` في `try-catch` لمنع التعليق.
+- `lib/ui/screens/warehouses/add_warehouse_sheet.dart` (سطور ~40): تغليف `_save()` في `try-catch` لمنع التعليق.
+
+**الأسباب الجذرية:**
+1. **جذر A:** `seedCurrencies` لم تُدرج `code_offset` صراحةً في خرائط الإدراج، مع الاعتماد على `DEFAULT 0` في `sqflite_sqlcipher` الذي قد لا يُطبَّق في بعض البنى، مما يترك `code_offset = null`.
+2. **جذر B:** `BaseCurrencyService.getOffsetForCurrency` استخدم `result.first['code_offset'] as int` بدون `?`، مما يرمي `TypeError` عند `null`.
+3. **جذر C:** `add_customer_sheet` و `add_supplier_sheet` لم يكونا يحيطان استدعاءات المستودعات بـ `try-catch`. عند رمي `TypeError` أثناء `_save()`، ظلّت `_isSaving = true` للأبد (مؤشر التحميل دائم الدوران).
+
+**لماذا كان إنشاء صندوق النقدية يُصلح المشكلة مؤقتًا:**
+- `add_cash_box_sheet.dart` يحيط `_save()` بالكامل بـ `try-catch`. حتى لو فشل `getOffsetForCurrency`، يتم إعادة تعيين `_isSaving` وعرض الخطأ. بعد ذلك، يميل المستخدم إلى إضافة سجلات برصيد افتتاحي = 0، وهو ما يتخطى مسار `getOffsetForCurrency` في `insertCustomer`/`insertSupplier`.
+
+**الفحوصات التي أُجريت:**
+- تم التحقق يدوياً من أن `seedDefaultAccounts` تُدرج جميع الأعمدة `NOT NULL` المطلوبة (`created_at`, `updated_at`, `balance`، `debt_ceiling`، إلخ).
+- تم التحقق من أن `LicenseService._getTotalRecordCount()` و `canAddRecord()` محمية بـ `try-catch` داخلية.
+- تم التحقق من أن `add_product_sheet` و `add_expense_screen` و `add_cash_box_sheet` و `AddEmployeeSheet` تحتوي بالفعل على `try-catch` حول منطق الحفظ.
+- تم إضافة `try-catch` وقائية في `add_account_sheet` و `add_warehouse_sheet` لمنع نفس نمط التعليق على أي استثناء غير متوقع.
+
+---
 **قاعدة دائمة:** يتم تحديث هذا الملف فور الانتهاء من أي ميزة أو إصلاح قبل الانتقال للمهمة التالية.

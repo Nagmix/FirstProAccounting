@@ -39,36 +39,47 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final now = DateTime.now().toIso8601String();
-    final warehouseMap = {
-      'name': _nameController.text.trim(),
-      'location': _locationController.text.trim().isEmpty
-          ? null
-          : _locationController.text.trim(),
-      'is_active': 1,
-      'updated_at': now,
-    };
+    try {
+      final now = DateTime.now().toIso8601String();
+      final warehouseMap = {
+        'name': _nameController.text.trim(),
+        'location': _locationController.text.trim().isEmpty
+            ? null
+            : _locationController.text.trim(),
+        'is_active': 1,
+        'updated_at': now,
+      };
 
-    final refRepo = locator<ReferenceDataRepository>();
-    if (_isEdit) {
-      await refRepo.updateWarehouse(
-          widget.existing!['id'] as int, warehouseMap);
-    } else {
-      warehouseMap['created_at'] = now;
-      await refRepo.insertWarehouse(warehouseMap);
+      final refRepo = locator<ReferenceDataRepository>();
+      if (_isEdit) {
+        await refRepo.updateWarehouse(
+            widget.existing!['id'] as int, warehouseMap);
+      } else {
+        warehouseMap['created_at'] = now;
+        await refRepo.insertWarehouse(warehouseMap);
+      }
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء الحفظ: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            'تم ${_isEdit ? 'تعديل' : 'إضافة'} "${_nameController.text}" بنجاح'),
-        backgroundColor: AppColors.success,
-      ),
-    );
-    Navigator.of(context).pop();
   }
 
   @override

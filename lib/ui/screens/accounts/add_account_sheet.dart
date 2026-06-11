@@ -106,45 +106,56 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final account = Account(
-      id: widget.existing?.id,
-      nameAr: _nameController.text.trim(),
-      nameEn: _nameController.text.trim(),
-      parentId: _selectedParentId,
-      accountCode: _codeController.text.trim(),
-      accountType: _selectedType,
-      currency: _currency,
-      balance: widget.existing?.balance ?? 0.0,
-      balanceType: widget.existing?.balanceType ??
-          (_selectedType == AccountType.ASSET ||
-                  _selectedType == AccountType.COST ||
-                  _selectedType == AccountType.EXPENSE
-              ? 'debit'
-              : 'credit'),
-      linkedCashBoxId: _selectedCashBoxId,
-      isSystem: widget.existing?.isSystem ?? false,
-      isActive: widget.existing?.isActive ?? true,
-      debtCeiling: widget.existing?.debtCeiling ?? 0.0,
-      createdAt: widget.existing?.createdAt ?? DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      final account = Account(
+        id: widget.existing?.id,
+        nameAr: _nameController.text.trim(),
+        nameEn: _nameController.text.trim(),
+        parentId: _selectedParentId,
+        accountCode: _codeController.text.trim(),
+        accountType: _selectedType,
+        currency: _currency,
+        balance: widget.existing?.balance ?? 0.0,
+        balanceType: widget.existing?.balanceType ??
+            (_selectedType == AccountType.ASSET ||
+                    _selectedType == AccountType.COST ||
+                    _selectedType == AccountType.EXPENSE
+                ? 'debit'
+                : 'credit'),
+        linkedCashBoxId: _selectedCashBoxId,
+        isSystem: widget.existing?.isSystem ?? false,
+        isActive: widget.existing?.isActive ?? true,
+        debtCeiling: widget.existing?.debtCeiling ?? 0.0,
+        createdAt: widget.existing?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-    if (_isEdit) {
-      await locator<AccountRepository>()
-          .updateAccount(account.id!, account.toMap());
-    } else {
-      await locator<AccountRepository>().insertAccount(account.toMap());
+      if (_isEdit) {
+        await locator<AccountRepository>()
+            .updateAccount(account.id!, account.toMap());
+      } else {
+        await locator<AccountRepository>().insertAccount(account.toMap());
+      }
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} الحساب بنجاح'),
+            backgroundColor: AppColors.success),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء الحفظ: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('تم ${_isEdit ? 'تعديل' : 'إضافة'} الحساب بنجاح'),
-          backgroundColor: AppColors.success),
-    );
-    Navigator.of(context).pop();
   }
 
   @override

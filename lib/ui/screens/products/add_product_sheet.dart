@@ -202,57 +202,70 @@ class _AddProductSheetState extends State<AddProductSheet> {
   // ── Load reference data ───────────────────────────────────────
 
   Future<void> _loadDropdownData() async {
-    final results = await Future.wait([
-      locator<ReferenceDataRepository>().getAllCategories(),
-      locator<ReferenceDataRepository>().getAllUnits(),
-      locator<SupplierRepository>().getAllSuppliers(),
-      locator<ReferenceDataRepository>().getAllWarehouses(),
-      locator<AccountRepository>().getAccountsByType('REVENUE'),
-      locator<AccountRepository>().getAccountsByType('COST'),
-      locator<AccountRepository>().getAccountsByType('ASSET'),
-      locator<AccountRepository>().getAccountsByType('LIABILITY'),
-    ]);
+    try {
+      final results = await Future.wait([
+        locator<ReferenceDataRepository>().getAllCategories(),
+        locator<ReferenceDataRepository>().getAllUnits(),
+        locator<SupplierRepository>().getAllSuppliers(),
+        locator<ReferenceDataRepository>().getAllWarehouses(),
+        locator<AccountRepository>().getAccountsByType('REVENUE'),
+        locator<AccountRepository>().getAccountsByType('COST'),
+        locator<AccountRepository>().getAccountsByType('ASSET'),
+        locator<AccountRepository>().getAccountsByType('LIABILITY'),
+      ]);
 
-    if (!mounted) return;
-    setState(() {
-      _categories = results[0];
-      _units = results[1];
-      _suppliers = results[2];
-      _warehouses = results[3];
-      _revenueAccounts = results[4];
-      _costAccounts = results[5];
-      _assetAccounts = results[6];
-      _liabilityAccounts = results[7];
-    });
+      if (!mounted) return;
+      setState(() {
+        _categories = results[0];
+        _units = results[1];
+        _suppliers = results[2];
+        _warehouses = results[3];
+        _revenueAccounts = results[4];
+        _costAccounts = results[5];
+        _assetAccounts = results[6];
+        _liabilityAccounts = results[7];
+      });
 
-    // Auto-select default accounts based on default currency
-    final defaultCurrency =
-        await locator<ReferenceDataRepository>().getDefaultCurrency();
-    if (defaultCurrency != null && !_isEditMode) {
-      final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
-      _defaultCurrencyCode = currencyCode;
-      final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currencyCode);
-      final vatRate = (defaultCurrency['vat_rate'] as num?)?.toDouble() ?? 0.0;
-      _taxRateController.text = vatRate.toStringAsFixed(0);
+      // Auto-select default accounts based on default currency
+      final defaultCurrency =
+          await locator<ReferenceDataRepository>().getDefaultCurrency();
+      if (defaultCurrency != null && !_isEditMode) {
+        final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
+        _defaultCurrencyCode = currencyCode;
+        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currencyCode);
+        final vatRate = (defaultCurrency['vat_rate'] as num?)?.toDouble() ?? 0.0;
+        _taxRateController.text = vatRate.toStringAsFixed(0);
 
+        if (mounted) {
+          setState(() {
+            // Sales account (4100 + offset)
+            _autoSelectAccount(_revenueAccounts, 4100 + codeOffset,
+                (id) => _selectedSalesAccountId = id);
+            // Purchases account (3100 + offset)
+            _autoSelectAccount(_costAccounts, 3100 + codeOffset,
+                (id) => _selectedPurchaseAccountId = id);
+            // Inventory account (1300 + offset)
+            _autoSelectAccount(_assetAccounts, 1300 + codeOffset,
+                (id) => _selectedInventoryAccountId = id);
+            // COGS account (3200 + offset)
+            _autoSelectAccount(_costAccounts, 3200 + codeOffset,
+                (id) => _selectedCogsAccountId = id);
+            // VAT account (2300 + offset)
+            _autoSelectAccount(_liabilityAccounts, 2300 + codeOffset,
+                (id) => _selectedVatAccountId = id);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Product sheet load dropdown error: $e');
       if (mounted) {
-        setState(() {
-          // Sales account (4100 + offset)
-          _autoSelectAccount(_revenueAccounts, 4100 + codeOffset,
-              (id) => _selectedSalesAccountId = id);
-          // Purchases account (3100 + offset)
-          _autoSelectAccount(_costAccounts, 3100 + codeOffset,
-              (id) => _selectedPurchaseAccountId = id);
-          // Inventory account (1300 + offset)
-          _autoSelectAccount(_assetAccounts, 1300 + codeOffset,
-              (id) => _selectedInventoryAccountId = id);
-          // COGS account (3200 + offset)
-          _autoSelectAccount(_costAccounts, 3200 + codeOffset,
-              (id) => _selectedCogsAccountId = id);
-          // VAT account (2300 + offset)
-          _autoSelectAccount(_liabilityAccounts, 2300 + codeOffset,
-              (id) => _selectedVatAccountId = id);
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تحذير: خطأ في تحميل البيانات المساعدة: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     }
   }

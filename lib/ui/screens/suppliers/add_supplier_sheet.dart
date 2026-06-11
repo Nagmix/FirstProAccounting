@@ -111,11 +111,25 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
 
     final supplierRepo = locator<SupplierRepository>();
 
-    if (_isEditing) {
-      await supplierRepo.updateSupplier(widget.supplier!.id!, supplierMap);
-    } else {
-      supplierMap['created_at'] = now;
-      await supplierRepo.insertSupplier(supplierMap);
+    try {
+      if (_isEditing) {
+        await supplierRepo.updateSupplier(widget.supplier!.id!, supplierMap);
+      } else {
+        supplierMap['created_at'] = now;
+        await supplierRepo.insertSupplier(supplierMap);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      debugPrint('Supplier save error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء الحفظ: $e'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
     }
 
     if (!mounted) return;
