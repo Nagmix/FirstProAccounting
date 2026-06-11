@@ -44,12 +44,13 @@
 - القيود ترحل بعملتها الأصلية على حسابات تلك العملة.
 - الاحتفاظ بـ `amount_base` للتقارير الموحدة.
 
-## A-8 🔶 العملات ليست ديناميكية — **قيد التنفيذ (المرحلة الثانية)**
-**الحالة: 🔶 غير مكتملة (إنجاز البنية التحتية في commit `1159bdd`)**
+## A-8 ✅ العملات ليست ديناميكية — **مُصلحة**
+**الحالة: ✅ منجزة (commit `1159bdd` + `5cbb092`)**
 - تم إلغاء نظام `codeOffset` الثابت واستبداله بـ `code_offset` في جدول العملات.
 - تم إضافة `base_code` لجدول الحسابات لربط الحسابات وظيفياً عبر العملات.
 - تم تفعيل أتمتة إنشاء شجرة الحسابات لأي عملة جديدة تضاف للنظام.
-- المتبقي: جعل قوائم الواجهات ديناميكية وتحديث POS والعملة الأساس.
+- تم استبدال `AppConstants.currency` الثابت في ~20 شاشة/ملف UI بـ `CurrencyConstants.currencySymbol(code)` الديناميكي (B-1.7 Phase 2).
+- `BaseCurrencyService` يقرأ العملة الأساس ديناميكياً من `currencies.is_default`.
 
 ## A-9 ✅ خلط عملات في تقييم المخزون — **مُصلحة**
 **الحالة: ✅ منجزة (commit `ccdc644`)**
@@ -152,8 +153,8 @@
 
 | # | الوصف | الحالة | المهمة |
 |---|---|---|---|
-| E-01 | إضافة `currency_code` و `exchange_rate` إلى `transactions` table | ❌ غير منجزة | `E-01` |
-| E-02 | إضافة `default_vat_rate` و `default_currency` إلى `settings` table | 🔶 جزئية (migration v52 أضاف `default_vat_rate` إلى settings؛ لا يزال `default_currency` غير موجود في settings ولا يُقرأ منها) | `E-02` |
+| E-01 | إضافة `currency_code` و `exchange_rate` إلى `transactions` table | ✅ منجزة (migration v46 أضاف الأعمدة، v49 backfilled NULL values، وكل نقاط الإدخاج في الكود تُمرّر القيم) | `E-01` |
+| E-02 | إضافة `default_vat_rate` و `default_currency` إلى `settings` table | ✅ منجزة (migration v52 أضاف `default_vat_rate` إلى جدول `currencies`؛ migration v53 أضاف `default_currency` إلى `settings`؛ `BaseCurrencyService.getBaseCurrencyCode()` يقرأ العملة الأساس ديناميكياً من `currencies.is_default`) | `E-02` |
 | E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | ✅ منجزة (B-1.7 Phase 2 أزال ~20 استخدام في UI؛ تم إزالة آخر استخدام متبقي في `product_form_helpers.dart` وجعل `currencySymbol` إلزامياً في `ProductPriceField`) | `E-03` |
 
 ---
