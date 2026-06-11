@@ -300,7 +300,7 @@ class InvoiceRepository {
                   referenceType: 'purchase',
                   referenceId: invoiceIdStr,
                 );
-                await txn.insert('inventory_cost_layers', layer.toMap());
+                await txn.insert('inventory_cost_layers', MoneyHelper.toCentsMap(layer.toMap(), MoneyHelper.stockMovementMoneyFields));
               }
             } else {
               // Purchase return: stock leaves warehouse at COST (not selling price)

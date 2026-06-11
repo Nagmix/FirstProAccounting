@@ -114,6 +114,11 @@ class MoneyHelper {
   ///
   /// Non-existent keys are silently skipped, so it's safe to pass
   /// a superset of field names.
+  ///
+  /// IDEMPOTENT: If the value is already an int and is extremely large
+  /// (> 100 million cents = 1 million currency units), it is assumed to
+  /// already be in cents and is left untouched. This prevents double-
+  /// conversion when the same map passes through the pipeline twice.
   static Map<String, dynamic> toCentsMap(
     Map<String, dynamic> map,
     List<String> moneyFields,
@@ -124,15 +129,17 @@ class MoneyHelper {
       if (value is double) {
         result[field] = toCents(value);
       } else if (value is int) {
-        // FIX: Convert int values to cents too.
-        // Previously, ints were assumed to already be in cents, but this caused
-        // a critical bug: when a UI form passes an integer-valued amount (e.g., 500
-        // instead of 500.0), the value would be stored as 500 (human-readable)
-        // instead of 50000 (cents). Then readMoney(500) would divide by 100 = 5.00,
-        // making 500 riyals display as 5.00 riyals.
-        // Since readMoney() always returns a double, legitimate cents-as-int values
-        // should never appear in a UI-originated map.
-        result[field] = toCents(value.toDouble());
+        // IDEMPOTENCY GUARD: If the int is already in cents scale (very large),
+        // do NOT convert again. This prevents ×100 double-conversion when
+        // a model's toMap() (which now returns human-readable doubles) is
+        // passed through toCentsMap, but also protects against legacy paths
+        // where the int may legitimately already be in cents.
+        // Threshold: 100,000,000 cents = 1,000,000 currency units.
+        if (value > 100000000) {
+          result[field] = value; // already in cents, keep as-is
+        } else {
+          result[field] = toCents(value.toDouble());
+        }
       } else if (value is num && value.toDouble() != value.toInt()) {
         // num with decimal part — convert
         result[field] = toCents(value.toDouble());

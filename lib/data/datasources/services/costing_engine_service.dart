@@ -41,7 +41,7 @@ class CostingEngineService {
       referenceType: referenceType,
       referenceId: referenceId,
     );
-    await db.insert('inventory_cost_layers', layer.toMap());
+    await db.insert('inventory_cost_layers', MoneyHelper.toCentsMap(layer.toMap(), MoneyHelper.stockMovementMoneyFields));
   }
 
   /// Calculate COGS for a sale, consuming cost layers per the product's costing method.

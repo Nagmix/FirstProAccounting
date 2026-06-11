@@ -46,7 +46,7 @@ class CashBox {
       'bank_name': bankName,
       'bank_branch': bankBranch,
       'currency': currency,
-      'balance': MoneyHelper.toCents(balance),
+      'balance': balance,
       'balance_type': balanceType,
       'linked_account_id': linkedAccountId,
       'is_active': isActive ? 1 : 0,

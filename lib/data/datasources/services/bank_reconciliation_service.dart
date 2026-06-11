@@ -29,7 +29,7 @@ class BankReconciliationService {
   /// Create a new bank reconciliation session
   Future<int> createReconciliation(BankReconciliation reconciliation) async {
     final db = await _db;
-    return await db.insert('bank_reconciliations', reconciliation.toMap());
+    return await db.insert('bank_reconciliations', MoneyHelper.toCentsMap(reconciliation.toMap(), MoneyHelper.bankReconciliationMoneyFields));
   }
 
   /// Get all bank-type cash boxes
@@ -82,14 +82,14 @@ class BankReconciliationService {
   /// Add a bank statement line
   Future<int> addStatementLine(BankStatementLine line) async {
     final db = await _db;
-    return await db.insert('bank_statement_lines', line.toMap());
+    return await db.insert('bank_statement_lines', MoneyHelper.toCentsMap(line.toMap(), MoneyHelper.bankStatementLineMoneyFields));
   }
 
   /// Add multiple bank statement lines at once (for bulk import)
   Future<void> addStatementLines(List<BankStatementLine> lines) async {
     final db = await _db;
     for (final line in lines) {
-      await db.insert('bank_statement_lines', line.toMap());
+      await db.insert('bank_statement_lines', MoneyHelper.toCentsMap(line.toMap(), MoneyHelper.bankStatementLineMoneyFields));
     }
   }
 
@@ -444,7 +444,7 @@ class BankReconciliationService {
         sourceId: txn['id']?.toString(),
       );
 
-      await db.insert('bank_statement_lines', line.toMap());
+      await db.insert('bank_statement_lines', MoneyHelper.toCentsMap(line.toMap(), MoneyHelper.bankStatementLineMoneyFields));
     }
   }
 
@@ -494,7 +494,7 @@ class BankReconciliationService {
   /// Update a reconciliation
   Future<void> updateReconciliation(BankReconciliation recon) async {
     final db = await _db;
-    await db.update('bank_reconciliations', recon.toMap(),
+    await db.update('bank_reconciliations', MoneyHelper.toCentsMap(recon.toMap(), MoneyHelper.bankReconciliationMoneyFields),
         where: 'id = ?', whereArgs: [recon.id]);
   }
 

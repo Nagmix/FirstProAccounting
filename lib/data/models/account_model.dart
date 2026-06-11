@@ -137,11 +137,11 @@ class Account {
       'parent_id': parentId,
       'account_code': accountCode,
       'account_type': _accountTypeString,
-      'balance': MoneyHelper.toCents(balance),
+      'balance': balance,
       'currency': currency,
       'linked_cash_box_id': linkedCashBoxId,
       'is_active': isActive ? 1 : 0,
-      'debt_ceiling': MoneyHelper.toCents(debtCeiling),
+      'debt_ceiling': debtCeiling,
       'balance_type': effectiveBalanceType, // Always save derived value
       'base_code': baseCode,
       'is_system': isSystem ? 1 : 0,

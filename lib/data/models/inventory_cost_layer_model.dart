@@ -72,7 +72,7 @@ class InventoryCostLayer {
         'warehouse_id': warehouseId,
         'quantity_original': quantityOriginal,
         'quantity_remaining': quantityRemaining,
-        'unit_cost': MoneyHelper.toCents(unitCost),
+        'unit_cost': unitCost,
         'acquisition_date': acquisitionDate.toIso8601String(),
         'reference_type': referenceType,
         'reference_id': referenceId,
@@ -123,8 +123,8 @@ class MovementCostAllocation {
         'cost_layer_id': costLayerId,
         'invoice_id': invoiceId,
         'quantity_used': quantityUsed,
-        'unit_cost': MoneyHelper.toCents(unitCost),
-        'total_cost': MoneyHelper.toCents(totalCost),
+        'unit_cost': unitCost,
+        'total_cost': totalCost,
         'created_at': createdAt.toIso8601String(),
       };
 

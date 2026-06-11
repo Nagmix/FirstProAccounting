@@ -45,10 +45,10 @@ class Customer {
       'email': email,
       'contact_method': contactMethod,
       'notes': notes,
-      'balance': MoneyHelper.toCents(balance),
+      'balance': balance,
       'balance_type': balanceType,
       'currency': currency,
-      'debt_ceiling': MoneyHelper.toCents(debtCeiling),
+      'debt_ceiling': debtCeiling,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
