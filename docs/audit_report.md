@@ -96,6 +96,54 @@
 | 2026-06-10 | **استقرار الـ CI:** معالجة أخطاء التحليل البرمجي الناتجة عن التعديلات الهيكلية وضمان نجاح بناء الـ APK في GitHub Actions. |
 | 2026-06-11 | **إصلاح A-10 (×100 Bug):** إصلاح جذري لمشكلة الضعف ×100 في المبالغ المالية بإزالة التحويل المزدوج بين `toMap` و `toCentsMap`، وتحديث 11 نموذجاً و3 Repositories و4 ملفات اختبارات وحدات. تم التحقق من نجاح 567 اختباراً ومعالجة 8 اختبارات فاشلة لتتوافق مع السلوك الجديد. |
 | 2026-06-11 | **متابعة A-10:** تم العثور على `MoneyHelper.toCents()` متبقٍ في `Invoice.toMap()` لحقل `transport_charges`، تم تصحيحه. CI اجتاز بـ **0 فاشلات** (run `27316668537`). |
+| 2026-06-11 | **B-1.7 المرحلة 2 (Phase 2):** ديناميكية العملات في الواجهات — تم استبدال `AppConstants.currency` الثابت في 13 ملف UI بـ `CurrencyConstants.currencySymbol(code)` الديناميكي. CI اجتاز بنجاح (run `27317248644`). |
+| 2026-06-11 | **فحص شامل للمشروع:** تم إجراء فحص شامل يدوي للكود (218 ملف .dart) واستخراج المشاكل المتبقية (C-01, C-03, I-01..I-05, E-01..E-03). |
+
+---
+
+# 🐛 القسم أ (متابعة): أخطاء جديدة مكتشفة في الفحص الشامل 2026-06-11
+
+## A-11 🚨 استخدام Hardcoded `codeOffset` (YER=0, SAR=1, USD=2) في 13 مكاناً
+**الحالة:** ❌ غير منجزة — بانتظار B-1.7 Phase 3
+**الوصف:** رغم إنجاز B-1.7 Phase 1/2، لا يزال هناك استخدام مباشر للـ `codeOffset` الثابت في أجزاء من المنطق المحاسبي. عند إضافة عملة رابعة (مثل EUR)، ستُخاطب هذه الأماكن الحسابات الخاطئة.
+**الملفات المتأثرة:**
+- `invoice_repository.dart` (line 396, 2302)
+- `cash_box_service.dart` (line 872, 885, 1082, 1106)
+- `customer_repository.dart` (line 222)
+- `expense_repository.dart` (line 394)
+- `product_repository.dart` (line 461)
+- `supplier_repository.dart` (line 213, 231)
+- `report_service.dart` (line 1643)
+- `add_expense_screen.dart` (line 202)
+**الحل:** استبدال كل هذه الأماكن بـ `await locator<BaseCurrencyService>().getOffsetForCurrency(currency)`.
+**المهمة:** `B-1.7-P3`
+
+## A-12 🚨 `AppConstants.defaultVatRate` ثابت = 0.0
+**الحالة:** ❌ غير منجزة
+**الوصف:** `defaultVatRate = 0.0` ثابت في `AppConstants`، ويُستخدم في `pos_viewmodel` (حساب الضريبة) و `create_invoice_screen` و `invoice_summary_section` و `add_product_sheet`. لا يوجد setting مركزي للـ VAT rate.
+**الحل:** إضافة `defaultVatRate` إلى جدول `settings` أو `currencies`، وتحميله من DB في startup. إزالة الثابت من `AppConstants`.
+**المهمة:** `C-03` (VAT rate configurability)
+
+---
+
+# ⚠️ قسم جديد: أخطاء مهمة (Important Issues)
+
+| # | الوصف | الحالة | الملفات | المهمة |
+|---|---|---|---|---|
+| I-01 | `MoneyHelper.readMoney()` يُستخدم على `double` من UI (legacy semantic) في `invoice_repository` | ❌ غير منجزة | `invoice_repository` | `I-01` |
+| I-02 | `unit_cost` في `InvoiceItem` لا يُعرض في UI (غير مُقرأ في `fromMap`) | ❌ غير منجزة | `invoice_item_model` | `I-02` |
+| I-04 | POS لا يدعم `transport_charges` (غير موجود في `invoiceMap`) | ❌ غير منجزة | `pos_screen` | `I-04` |
+| I-05 | `exchange_rate` و `currency_code` غير مُخزّنين في `transactions` table | ❌ غير منجزة | `transactions` schema | `I-05` |
+
+---
+
+# 💡 قسم تحسينات (Enhancements)
+
+| # | الوصف | الحالة | المهمة |
+|---|---|---|---|
+| E-01 | إضافة `currency_code` و `exchange_rate` إلى `transactions` table | ❌ غير منجزة | `E-01` |
+| E-02 | إضافة `default_vat_rate` و `default_currency` إلى `settings` table | ❌ غير منجزة | `E-02` |
+| E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | ❌ غير منجزة | `E-03` |
 
 ---
 **قاعدة دائمة:** يتم تحديث هذا الملف فور الانتهاء من أي ميزة أو إصلاح قبل الانتقال للمهمة التالية.
