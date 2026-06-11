@@ -23,7 +23,7 @@
 | `flutter analyze` errors/warnings | 0 / 0 | 0 / 0 | **0 / 0** ✅ |
 | `flutter analyze` infos | 2790 | 851 | **~855** (تغيرات هيكلية) |
 | `flutter test` | 543 ناجحة | 575 ناجحة | **575 ناجحة** ✅ |
-| إصدار قاعدة البيانات | v49 | v50 | **v51** ✅ |
+| إصدار قاعدة البيانات | v49 | v50 | **v52** ✅ |
 
 ---
 
@@ -104,20 +104,10 @@
 
 # 🐛 القسم أ (متابعة): أخطاء جديدة مكتشفة في الفحص الشامل 2026-06-11
 
-## A-11 🚨 استخدام Hardcoded `codeOffset` (YER=0, SAR=1, USD=2) في 13 مكاناً
-**الحالة:** ❌ غير منجزة — بانتظار B-1.7 Phase 3
-**الوصف:** رغم إنجاز B-1.7 Phase 1/2، لا يزال هناك استخدام مباشر للـ `codeOffset` الثابت في أجزاء من المنطق المحاسبي. عند إضافة عملة رابعة (مثل EUR)، ستُخاطب هذه الأماكن الحسابات الخاطئة.
-**الملفات المتأثرة:**
-- `invoice_repository.dart` (line 396, 2302)
-- `cash_box_service.dart` (line 872, 885, 1082, 1106)
-- `customer_repository.dart` (line 222)
-- `expense_repository.dart` (line 394)
-- `product_repository.dart` (line 461)
-- `supplier_repository.dart` (line 213, 231)
-- `report_service.dart` (line 1643)
-- `add_expense_screen.dart` (line 202)
-**الحل:** استبدال كل هذه الأماكن بـ `await locator<BaseCurrencyService>().getOffsetForCurrency(currency)`.
-**المهمة:** `B-1.7-P3`
+## A-11 ✅ استخدام Hardcoded `codeOffset` — **مُصلحة (فحص 2026-06-11)**
+**الحالة:** ✅ منجزة (تم التحقق يدوياً من الكود الحالي)
+**الوصف:** تم فحص جميع الملفات المذكورة في التقرير السابق. تبيّن أن كافة الـ Repositories والخدمات (`invoice_repository`, `cash_box_service`, `customer_repository`, `expense_repository`, `product_repository`, `supplier_repository`, `report_service`, `add_expense_screen`) تستخدم بالفعل `await locator<BaseCurrencyService>().getOffsetForCurrency(currency)` بشكل ديناميكي. لم يتبقَ أي استخدام ثابت لـ `codeOffset` خارج fallback التوافقية داخل `BaseCurrencyService` نفسه (للدعم الخلفي v49).
+**المهمة:** `B-1.7-P3` — ✅ تلقائياً منجزة مع تطبيق B-1.7 Phase 1/2.
 
 ## A-12 ✅ `AppConstants.defaultVatRate` ثابت = 0.0 — **مُصلحة**
 **الحالة:** ✅ منجزة (commit `TBD`)
@@ -142,8 +132,8 @@
 | # | الوصف | الحالة | المهمة |
 |---|---|---|---|
 | E-01 | إضافة `currency_code` و `exchange_rate` إلى `transactions` table | ❌ غير منجزة | `E-01` |
-| E-02 | إضافة `default_vat_rate` و `default_currency` إلى `settings` table | ❌ غير منجزة | `E-02` |
-| E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | ❌ غير منجزة | `E-03` |
+| E-02 | إضافة `default_vat_rate` و `default_currency` إلى `settings` table | 🔶 جزئية (migration v52 أضاف `default_vat_rate` إلى settings؛ لا يزال `default_currency` غير موجود في settings ولا يُقرأ منها) | `E-02` |
+| E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | 🔶 جزئية (B-1.7 Phase 2 أزال ~20 استخدام في UI؛ تبقى 5 استخدامات: `currency_constants.dart` (setter), `currency_formatter.dart` (fallback), `esc_pos_commands.dart` (fallback), `pos_viewmodel.dart` (default currency), `product_form_helpers.dart` (fallback)) | `E-03` |
 
 ---
 **قاعدة دائمة:** يتم تحديث هذا الملف فور الانتهاء من أي ميزة أو إصلاح قبل الانتقال للمهمة التالية.
