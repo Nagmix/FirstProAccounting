@@ -99,7 +99,7 @@ class Invoice {
       'notes': notes,
       'currency': currency,
       'exchange_rate': exchangeRate,
-      'transport_charges': MoneyHelper.toCents(transportCharges),
+      'transport_charges': transportCharges,
       'ewallet_provider': ewalletProvider,
       'bank_transfer_provider': bankTransferProvider,
       'transfer_number': transferNumber,
