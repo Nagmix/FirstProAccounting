@@ -78,7 +78,7 @@ void main() {
     //  Serialization
     // ═══════════════════════════════════════════════════════════
     group('serialization', () {
-      test('toMap converts monetary fields to cents', () {
+      test('toMap returns human-readable doubles', () {
         final invoice = Invoice(
           id: 'INV-001',
           type: 'sale',
@@ -91,13 +91,13 @@ void main() {
           transportCharges: 25.0,
         );
         final map = invoice.toMap();
-        expect(map['subtotal'], equals(MoneyHelper.toCents(1000.0)));
-        expect(map['discount_amount'], equals(MoneyHelper.toCents(50.0)));
-        expect(map['tax_amount'], equals(MoneyHelper.toCents(45.0)));
-        expect(map['total'], equals(MoneyHelper.toCents(995.0)));
-        expect(map['paid_amount'], equals(MoneyHelper.toCents(995.0)));
-        expect(map['remaining'], equals(MoneyHelper.toCents(0.0)));
-        expect(map['transport_charges'], equals(MoneyHelper.toCents(25.0)));
+        expect(map['subtotal'], equals(1000.0));
+        expect(map['discount_amount'], equals(50.0));
+        expect(map['tax_amount'], equals(45.0));
+        expect(map['total'], equals(995.0));
+        expect(map['paid_amount'], equals(995.0));
+        expect(map['remaining'], equals(0.0));
+        expect(map['transport_charges'], equals(25.0));
       });
 
       test('toMap converts boolean fields to 0/1', () {
@@ -159,7 +159,7 @@ void main() {
         expect(invoice.status, equals('paid'));
       });
 
-      test('round-trip toMap/fromMap preserves monetary values', () {
+      test('round-trip via toCentsMap preserves monetary values', () {
         final original = Invoice(
           id: 'INV-001',
           type: 'sale',
@@ -175,8 +175,8 @@ void main() {
           isPosted: true,
           createdAt: DateTime(2026, 1, 1),
         );
-        final map = original.toMap();
-        final restored = Invoice.fromMap(map);
+        final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.invoiceMoneyFields);
+        final restored = Invoice.fromMap(dbMap);
         expect(restored.subtotal, closeTo(original.subtotal, 0.01));
         expect(restored.discountAmount, closeTo(original.discountAmount, 0.01));
         expect(restored.taxAmount, closeTo(original.taxAmount, 0.01));

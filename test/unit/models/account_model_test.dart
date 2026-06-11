@@ -179,7 +179,7 @@ void main() {
     //  toMap / fromMap — Serialization
     // ═══════════════════════════════════════════════════════════
     group('serialization', () {
-      test('toMap converts balance to cents', () {
+      test('toMap returns human-readable doubles', () {
         final account = Account(
           nameAr: 'النقدية',
           nameEn: 'Cash',
@@ -188,8 +188,8 @@ void main() {
           debtCeiling: 5000.50,
         );
         final map = account.toMap();
-        expect(map['balance'], equals(MoneyHelper.toCents(150.75)));
-        expect(map['debt_ceiling'], equals(MoneyHelper.toCents(5000.50)));
+        expect(map['balance'], equals(150.75));
+        expect(map['debt_ceiling'], equals(5000.50));
       });
 
       test('toMap saves effectiveBalanceType (not auto)', () {
@@ -238,7 +238,7 @@ void main() {
         expect(account.debtCeiling, closeTo(5000.50, 0.001));
       });
 
-      test('round-trip toMap/fromMap preserves values', () {
+      test('round-trip via toCentsMap preserves values', () {
         final original = Account(
           id: 1,
           nameAr: 'النقدية',
@@ -254,8 +254,8 @@ void main() {
           createdAt: DateTime(2026, 1, 1),
           updatedAt: DateTime(2026, 1, 1),
         );
-        final map = original.toMap();
-        final restored = Account.fromMap(map);
+        final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.accountMoneyFields);
+        final restored = Account.fromMap(dbMap);
         expect(restored.id, equals(original.id));
         expect(restored.nameAr, equals(original.nameAr));
         expect(restored.nameEn, equals(original.nameEn));

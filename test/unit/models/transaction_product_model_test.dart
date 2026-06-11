@@ -15,7 +15,7 @@ void main() {
       expect(txn.credit, equals(0.0));
     });
 
-    test('toMap converts debit/credit to cents', () {
+    test('toMap returns human-readable doubles', () {
       final txn = Transaction(
         accountId: 1,
         date: DateTime(2026, 1, 1),
@@ -23,8 +23,8 @@ void main() {
         credit: 0.0,
       );
       final map = txn.toMap();
-      expect(map['debit'], equals(MoneyHelper.toCents(1000.0)));
-      expect(map['credit'], equals(0));
+      expect(map['debit'], equals(1000.0));
+      expect(map['credit'], equals(0.0));
     });
 
     test('fromMap reads cents correctly', () {
@@ -44,7 +44,7 @@ void main() {
       expect(txn.credit, equals(0.0));
     });
 
-    test('round-trip preserves debit and credit', () {
+    test('round-trip via toCentsMap preserves debit and credit', () {
       final original = Transaction(
         id: 1,
         accountId: 5,
@@ -55,7 +55,8 @@ void main() {
         date: DateTime(2026, 1, 1),
         createdAt: DateTime(2026, 1, 1),
       );
-      final restored = Transaction.fromMap(original.toMap());
+      final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.transactionMoneyFields);
+      final restored = Transaction.fromMap(dbMap);
       expect(restored.debit, closeTo(original.debit, 0.01));
       expect(restored.credit, closeTo(original.credit, 0.01));
     });
@@ -94,7 +95,7 @@ void main() {
       expect(product3.effectiveBaseUnitId, isNull);
     });
 
-    test('toMap converts monetary fields to cents', () {
+    test('toMap returns human-readable doubles', () {
       final product = Product(
         nameAr: 'قلم',
         costPrice: 50.0,
@@ -103,10 +104,10 @@ void main() {
         wholesalePrice: 80.0,
       );
       final map = product.toMap();
-      expect(map['cost_price'], equals(MoneyHelper.toCents(50.0)));
-      expect(map['sell_price'], equals(MoneyHelper.toCents(100.0)));
-      expect(map['average_cost'], equals(MoneyHelper.toCents(45.0)));
-      expect(map['wholesale_price'], equals(MoneyHelper.toCents(80.0)));
+      expect(map['cost_price'], equals(50.0));
+      expect(map['sell_price'], equals(100.0));
+      expect(map['average_cost'], equals(45.0));
+      expect(map['wholesale_price'], equals(80.0));
     });
 
     test('current_stock is NOT converted to cents (it is a quantity)', () {
@@ -180,7 +181,7 @@ void main() {
       expect(product.costingMethod, equals(CostingMethod.weightedAverage));
     });
 
-    test('round-trip preserves monetary values', () {
+    test('round-trip via toCentsMap preserves monetary values', () {
       final original = Product(
         id: 1,
         nameAr: 'قلم',
@@ -194,7 +195,8 @@ void main() {
         createdAt: DateTime(2026, 1, 1),
         updatedAt: DateTime(2026, 1, 1),
       );
-      final restored = Product.fromMap(original.toMap());
+      final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.productMoneyFields);
+      final restored = Product.fromMap(dbMap);
       expect(restored.costPrice, closeTo(original.costPrice, 0.01));
       expect(restored.sellPrice, closeTo(original.sellPrice, 0.01));
       expect(restored.averageCost, closeTo(original.averageCost, 0.01));
@@ -217,7 +219,7 @@ void main() {
       expect(item.conversionFactor, equals(1.0));
     });
 
-    test('toMap converts monetary fields to cents', () {
+    test('toMap returns human-readable doubles', () {
       final item = InvoiceItem(
         invoiceId: 'INV-001',
         productId: 1,
@@ -227,12 +229,12 @@ void main() {
         unitCost: 30.0,
       );
       final map = item.toMap();
-      expect(map['unit_price'], equals(MoneyHelper.toCents(50.0)));
-      expect(map['total_price'], equals(MoneyHelper.toCents(100.0)));
-      expect(map['unit_cost'], equals(MoneyHelper.toCents(30.0)));
+      expect(map['unit_price'], equals(50.0));
+      expect(map['total_price'], equals(100.0));
+      expect(map['unit_cost'], equals(30.0));
     });
 
-    test('round-trip preserves values', () {
+    test('round-trip via toCentsMap preserves values', () {
       final original = InvoiceItem(
         id: 1,
         invoiceId: 'INV-001',
@@ -245,7 +247,8 @@ void main() {
         conversionFactor: 24.0,
         baseQuantity: 120.0,
       );
-      final restored = InvoiceItem.fromMap(original.toMap());
+      final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.invoiceItemMoneyFields);
+      final restored = InvoiceItem.fromMap(dbMap);
       expect(restored.unitPrice, closeTo(original.unitPrice, 0.01));
       expect(restored.totalPrice, closeTo(original.totalPrice, 0.01));
       expect(restored.unitCost, closeTo(original.unitCost, 0.01));
@@ -270,7 +273,7 @@ void main() {
       expect(layer.remainingValue, closeTo(4000.0, 0.01)); // 80 * 50
     });
 
-    test('toMap converts unitCost to cents', () {
+    test('toMap returns human-readable doubles', () {
       final layer = InventoryCostLayer(
         productId: 1,
         quantityOriginal: 100.0,
@@ -279,10 +282,10 @@ void main() {
         acquisitionDate: DateTime(2026, 1, 1),
       );
       final map = layer.toMap();
-      expect(map['unit_cost'], equals(MoneyHelper.toCents(50.75)));
+      expect(map['unit_cost'], equals(50.75));
     });
 
-    test('round-trip preserves values', () {
+    test('round-trip via toCentsMap preserves values', () {
       final original = InventoryCostLayer(
         id: 1,
         productId: 1,
@@ -292,7 +295,8 @@ void main() {
         acquisitionDate: DateTime(2026, 1, 1),
         createdAt: DateTime(2026, 1, 1),
       );
-      final restored = InventoryCostLayer.fromMap(original.toMap());
+      final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.stockMovementMoneyFields);
+      final restored = InventoryCostLayer.fromMap(dbMap);
       expect(restored.unitCost, closeTo(original.unitCost, 0.01));
       expect(restored.quantityOriginal, equals(original.quantityOriginal));
       expect(restored.quantityRemaining, equals(original.quantityRemaining));

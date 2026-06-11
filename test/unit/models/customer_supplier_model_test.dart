@@ -38,12 +38,12 @@ void main() {
     });
 
     group('serialization', () {
-      test('toMap converts balance to cents', () {
+      test('toMap returns human-readable doubles', () {
         final customer =
             Customer(name: 'أحمد', balance: 150.75, debtCeiling: 5000.50);
         final map = customer.toMap();
-        expect(map['balance'], equals(MoneyHelper.toCents(150.75)));
-        expect(map['debt_ceiling'], equals(MoneyHelper.toCents(5000.50)));
+        expect(map['balance'], equals(150.75));
+        expect(map['debt_ceiling'], equals(5000.50));
       });
 
       test('fromMap reads cents correctly', () {
@@ -95,7 +95,7 @@ void main() {
         expect(customer.contactMethod, equals('whatsapp'));
       });
 
-      test('round-trip preserves monetary values', () {
+      test('round-trip via toCentsMap preserves monetary values', () {
         final original = Customer(
           id: 1,
           name: 'أحمد',
@@ -105,7 +105,8 @@ void main() {
           createdAt: DateTime(2026, 1, 1),
           updatedAt: DateTime(2026, 1, 1),
         );
-        final restored = Customer.fromMap(original.toMap());
+        final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.customerMoneyFields);
+        final restored = Customer.fromMap(dbMap);
         expect(restored.balance, closeTo(original.balance, 0.01));
         expect(restored.debtCeiling, closeTo(original.debtCeiling, 0.01));
         expect(restored.balanceType, equals(original.balanceType));
@@ -177,15 +178,15 @@ void main() {
     });
 
     group('serialization', () {
-      test('toMap converts balance to cents', () {
+      test('toMap returns human-readable doubles', () {
         final supplier = Supplier(
             name: 'شركة التوريد', balance: 250.50, debtCeiling: 10000.0);
         final map = supplier.toMap();
-        expect(map['balance'], equals(MoneyHelper.toCents(250.50)));
-        expect(map['debt_ceiling'], equals(MoneyHelper.toCents(10000.0)));
+        expect(map['balance'], equals(250.50));
+        expect(map['debt_ceiling'], equals(10000.0));
       });
 
-      test('round-trip preserves values', () {
+      test('round-trip via toCentsMap preserves values', () {
         final original = Supplier(
           id: 1,
           name: 'شركة التوريد',
@@ -196,7 +197,8 @@ void main() {
           createdAt: DateTime(2026, 1, 1),
           updatedAt: DateTime(2026, 1, 1),
         );
-        final restored = Supplier.fromMap(original.toMap());
+        final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.supplierMoneyFields);
+        final restored = Supplier.fromMap(dbMap);
         expect(restored.balance, closeTo(original.balance, 0.01));
         expect(restored.balanceType, equals(original.balanceType));
         expect(restored.currency, equals(original.currency));
