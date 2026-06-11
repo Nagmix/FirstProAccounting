@@ -66,7 +66,7 @@
 | B-1 | إصلاح مشكلة الفرز A-1 جذرياً | ✅ منجزة | commit `ea5cd54` |
 | B-1.5 | إصلاح حذف الفاتورة A-3 | ✅ منجزة | commit `1dfde76` |
 | B-1.6 | **توحيد العملة A-7 + سلامة المخزون A-9 + A-10** | ✅ **منجزة** | commit `ccdc644` + `15c7fb0` — التزام بمعايير IAS 2/21، وسلامة المبالغ المالية |
-| B-1.7 | **ديناميكية العملات A-8 + دعم تغيير الأساس** | 🔶 **قيد التنفيذ** | المرحلة 1 (البنية): ✅ (v51) / المرحلة 2 (الواجهات): 🔶 — لا يزال هناك استخدامات لـ `AppConstants.currency` في ~20 شاشة/ملف UI (مثل `add_product_sheet`, `add_invoice_item_sheet`, `pos_*_dialogs`, `products_screen`, `employees_screen`, `add_supplier_sheet`). يجب استبدالها بتحميل العملة من `BaseCurrencyService` أو من السياق (invoice/product/entity). |
+| B-1.7 | **ديناميكية العملات A-8 + دعم تغيير الأساس** | ✅ **منجزة** | المرحلة 1 (البنية): ✅ (v51) / المرحلة 2 (الواجهات): ✅ (commit `5cbb092`) — تم استبدال جميع استخدامات `AppConstants.currency` الثابت في ~20 شاشة/ملف UI بـ `CurrencyConstants.currencySymbol(code)` الديناميكي. العملة تُحمّل من سياق الكيان (product/invoice/supplier/employee) أو من `vm.selectedCurrency` في POS. CI اجتاز بنجاح. |
 | B-2 | استبدال `withOpacity` → `withValues` | ✅ منجزة | commit `23b24a0` |
 | B-3 | `dart format` | ✅ منجزة | commit `9040c96` |
 | B-4 | تحويل الاستيرادات النسبية → package imports | ✅ منجزة | commit `dc3509a` |
