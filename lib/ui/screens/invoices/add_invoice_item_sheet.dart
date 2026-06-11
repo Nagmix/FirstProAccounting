@@ -845,6 +845,11 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
       quantity: _quantity,
       unitPrice: _unitPrice,
       totalPrice: _total,
+      unitCost: widget.invoiceType == 'purchase'
+          ? _unitPrice
+          : (_selectedProduct!.averageCost > 0
+              ? _selectedProduct!.averageCost
+              : _selectedProduct!.costPrice),
       unitName: _unitName.isNotEmpty ? _unitName : null,
       conversionFactor: _conversionFactor,
       baseQuantity: _baseQuantity,

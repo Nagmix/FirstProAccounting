@@ -147,7 +147,10 @@ class PosViewModel extends ChangeNotifier {
     return taxableBase * (_vatRate / 100);
   }
 
-  double get total => subtotal - effectiveDiscount + tax;
+  double _transportCharges = 0.0;
+  double get transportCharges => _transportCharges;
+
+  double get total => subtotal - effectiveDiscount + tax + _transportCharges;
 
   double get totalPaid => _payments.fold(0.0, (sum, p) => sum + p.amount);
   double get remaining => total - totalPaid;
@@ -319,12 +322,19 @@ class PosViewModel extends ChangeNotifier {
   }
 
   /// Reset for a new invoice after successful checkout.
+  void setTransportCharges(double value) {
+    _transportCharges = value.clamp(0.0, double.infinity);
+    _syncPaymentsWithTotal();
+    notifyListeners();
+  }
+
   void resetForNewInvoice() {
     _cartItems.clear();
     _orderDiscount = 0;
     _discountType = DiscountType.fixed;
     _selectedCustomerId = null;
     _selectedCustomerName = '';
+    _transportCharges = 0.0;
     _payments.clear();
     _activePaymentMethod = 'cash';
     _searchQuery = '';

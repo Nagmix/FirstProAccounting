@@ -14,6 +14,7 @@ class PosTotalsSection extends StatelessWidget {
     required this.discountType,
     required this.orderDiscount,
     required this.tax,
+    required this.transportCharges,
     required this.total,
     required this.vatRate,
   });
@@ -23,6 +24,7 @@ class PosTotalsSection extends StatelessWidget {
   final DiscountType discountType;
   final double orderDiscount; // raw discount value (amount or percentage)
   final double tax;
+  final double transportCharges;
   final double total;
   final double vatRate;
 
@@ -49,6 +51,14 @@ class PosTotalsSection extends StatelessWidget {
               context,
               'الضريبة (${vatRate.toStringAsFixed(0)}%)',
               CurrencyFormatter.format(tax),
+            ),
+          ],
+          if (transportCharges > 0) ...[
+            const SizedBox(height: 3),
+            _totalRow(
+              context,
+              'أجور النقل',
+              CurrencyFormatter.format(transportCharges),
             ),
           ],
           const Divider(height: 12),

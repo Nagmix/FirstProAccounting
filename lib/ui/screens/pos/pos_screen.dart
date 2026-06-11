@@ -253,6 +253,12 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
           icon: const Icon(Icons.label),
           tooltip: 'خصم',
         ),
+        // Transport charges
+        IconButton(
+          onPressed: _vm.cartItems.isEmpty ? null : _showTransportDialog,
+          icon: const Icon(Icons.local_shipping),
+          tooltip: 'أجور النقل',
+        ),
       ],
     );
   }
@@ -655,6 +661,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   discountType: _vm.discountType,
                   orderDiscount: _vm.orderDiscount,
                   tax: _vm.tax,
+                  transportCharges: _vm.transportCharges,
                   total: _vm.total,
                   vatRate: _vm.vatRate,
                 ),
@@ -905,6 +912,50 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
   // ═══════════════════════════════════════════════════════════════════
   void _showDiscountDialog() {
     showDiscountDialog(context, _vm);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  TRANSPORT CHARGES DIALOG
+  // ═══════════════════════════════════════════════════════════════════
+  void _showTransportDialog() {
+    final controller =
+        TextEditingController(text: _vm.transportCharges.toStringAsFixed(2));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.local_shipping, color: Color(0xFF4F6AF0)),
+            SizedBox(width: 8),
+            Text('أجور النقل'),
+          ],
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'المبلغ',
+            prefixIcon: Icon(Icons.local_shipping),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text) ?? 0.0;
+              _vm.setTransportCharges(value);
+              Navigator.pop(ctx);
+            },
+            child: const Text('تطبيق'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1194,6 +1245,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 : 0.0),
         'discount_amount': _vm.effectiveDiscount,
         'tax_amount': _vm.tax,
+        'transport_charges': _vm.transportCharges,
         'total': _vm.total,
         'paid_amount': primaryMethod == 'credit' ? 0.0 : _vm.total,
         'remaining': primaryMethod == 'credit' ? _vm.total : 0.0,
@@ -1228,6 +1280,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
         paymentMechanism: paymentMechanism,
         isReturn: false,
         cashBoxId: cashBoxId,
+        transportChargesParam: _vm.transportCharges,
         deferPosting: true,
       );
 

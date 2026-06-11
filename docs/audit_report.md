@@ -99,6 +99,7 @@
 | 2026-06-11 | **B-1.7 المرحلة 2 (Phase 2):** ديناميكية العملات في الواجهات — تم استبدال `AppConstants.currency` الثابت في 13 ملف UI بـ `CurrencyConstants.currencySymbol(code)` الديناميكي. CI اجتاز بنجاح (run `27317248644`). |
 | 2026-06-11 | **فحص شامل للمشروع:** تم إجراء فحص شامل يدوي للكود (218 ملف .dart) واستخراج المشاكل المتبقية (C-01, C-03, I-01..I-05, E-01..E-03). |
 | 2026-06-11 | **إنجاز A-12 (C-03 VAT Configurability):** إضافة `vat_rate` لجدول `currencies` (migration v52)، تحديث `InvoiceViewModel` و `PosViewModel` لقراءة VAT rate من العملة المختارة، تحديث الواجهات (`create_invoice_screen`, `invoice_summary_section`, `pos_screen`, `add_product_sheet`) لاستخدام VAT rate الديناميكي، وإزالة `AppConstants.defaultVatRate` الثابت. |
+| 2026-06-11 | **إنجاز المجموعة الأولى (I-01 → I-05):** I-01 تحقق (readMoney يعمل بشكل صحيح). I-02 تفعيل `unit_cost` في `InvoiceItem` (عرض في UI + تمرير عند الإنشاء + تمرير في itemsMaps عند الحفظ). I-04 إضافة `transport_charges` إلى POS (ViewModel + UI + Checkout). I-05 تحقق (columns موجودة في schema + migration v46). |
 
 ---
 
@@ -120,10 +121,30 @@
 
 | # | الوصف | الحالة | الملفات | المهمة |
 |---|---|---|---|---|
-| I-01 | `MoneyHelper.readMoney()` يُستخدم على `double` من UI (legacy semantic) في `invoice_repository` | ❌ غير منجزة | `invoice_repository` | `I-01` |
-| I-02 | `unit_cost` في `InvoiceItem` لا يُعرض في UI (غير مُقرأ في `fromMap`) | ❌ غير منجزة | `invoice_item_model` | `I-02` |
-| I-04 | POS لا يدعم `transport_charges` (غير موجود في `invoiceMap`) | ❌ غير منجزة | `pos_screen` | `I-04` |
-| I-05 | `exchange_rate` و `currency_code` غير مُخزّنين في `transactions` table | ❌ غير منجزة | `transactions` schema | `I-05` |
+| I-01 | `MoneyHelper.readMoney()` يُستخدم على `double` من UI (legacy semantic) في `invoice_repository` | ✅ منجزة | `invoice_repository` | `I-01` |
+| I-02 | `unit_cost` في `InvoiceItem` لا يُعرض في UI (غير مُقرأ في `fromMap`) | ✅ منجزة | `invoice_item_model`, `add_invoice_item_sheet`, `invoice_viewmodel`, `invoice_item_card`, `create_invoice_screen` | `I-02` |
+| I-04 | POS لا يدعم `transport_charges` (غير موجود في `invoiceMap`) | ✅ منجزة | `pos_screen`, `pos_viewmodel`, `pos_totals_section` | `I-04` |
+| I-05 | `exchange_rate` و `currency_code` غير مُخزّنين في `transactions` table | ✅ منجزة | `transactions` schema, `migration_v46` | `I-05` |
+
+---
+
+## I-02 ✅ تفعيل `unit_cost` في `InvoiceItem` — تفاصيل الإنجاز
+**الحالة:** ✅ منجزة (2026-06-11)
+**الوصف:** تم تفعيل حقل `unit_cost` (تكلفة الوحدة) ليكون لقطة تاريخية عند البيع/الشراء بدلاً من الاعتماد على جدول المنتجات فقط.
+**الملفات المُعدَّلة:**
+- `lib/core/viewmodels/invoice_viewmodel.dart` (سطر ~494): `addItemFromProduct()` تُضبط `unitCost` من `average_cost` أو `cost_price`.
+- `lib/ui/screens/invoices/add_invoice_item_sheet.dart` (سطر ~748): تمرير `unitCost:` إلى `InvoiceItem()` عند الإنشاء (شراء: `_unitPrice`، بيع: `averageCost` أو `costPrice`).
+- `lib/ui/widgets/invoice_item_card.dart`: عرض صف "تكلفة: X" عندما يكون `item.unitCost > 0`.
+- `lib/ui/screens/invoices/create_invoice_screen.dart` (موقعان): إضافة `'unit_cost': item.unitCost` إلى `itemsMaps` في `checkReturnLimits` و `_saveInvoice` لضمان حفظ اللقطة التاريخية.
+
+## I-04 ✅ دعم `transport_charges` في نقطة البيع (POS) — تفاصيل الإنجاز
+**الحالة:** ✅ منجزة (2026-06-11)
+**الوصف:** أضيفت قدرة POS على احتساب وعرض وحفظ أجور النقل (`transport_charges`) بشكل مماثل لشاشة الفاتورة الاعتيادية.
+**الملفات المُعدَّلة:**
+- `lib/core/viewmodels/pos_viewmodel.dart`: إضافة `_transportCharges` و `setTransportCharges()` وإدراجها في `total` و `resetForNewInvoice()`.
+- `lib/ui/screens/pos/pos_screen.dart`: زر أجور النقل في AppBar، دالة `_showTransportDialog()`، تمرير `transport_charges` في `invoiceMap` و `transportChargesParam` إلى Repository.
+- `lib/ui/screens/pos/widgets/pos_totals_section.dart`: إضافة صف عرض `transportCharges`.
+- `lib/data/datasources/repositories/invoice_repository.dart`: تم التحقق من دعم `transportChargesParam` (سطر ~95).
 
 ---
 

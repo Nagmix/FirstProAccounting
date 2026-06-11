@@ -206,6 +206,30 @@ class InvoiceItemCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (item.unitCost > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 12,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'تكلفة: ${CurrencyFormatter.format(item.unitCost)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

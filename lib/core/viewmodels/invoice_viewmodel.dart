@@ -501,6 +501,9 @@ class InvoiceViewModel extends ChangeNotifier {
         unitPrice: MoneyHelper.readMoney(product['sell_price']),
         quantity: 1,
         totalPrice: MoneyHelper.readMoney(product['sell_price']),
+        unitCost: MoneyHelper.readMoney(product['average_cost']) > 0
+            ? MoneyHelper.readMoney(product['average_cost'])
+            : MoneyHelper.readMoney(product['cost_price']),
         baseQuantity: 1.0,
       ));
     }

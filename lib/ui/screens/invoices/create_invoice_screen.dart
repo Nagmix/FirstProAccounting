@@ -792,6 +792,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 'quantity': item.quantity,
                 'base_quantity': item.baseQuantity,
                 'unit_price': item.unitPrice,
+                'unit_cost': item.unitCost,
                 'total_price': item.totalPrice,
               })
           .toList();
@@ -883,6 +884,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               'product_name': item.productName,
               'quantity': item.quantity,
               'unit_price': item.unitPrice,
+              'unit_cost': item.unitCost,
               'total_price': item.totalPrice,
               'unit_name': item.unitName,
               'conversion_factor': item.conversionFactor,
