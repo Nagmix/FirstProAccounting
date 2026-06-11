@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/date_formatter.dart';
@@ -1016,7 +1017,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       decoration: InputDecoration(
                         labelText: 'مبلغ الدفعة',
                         prefixIcon: const Icon(Icons.payments),
-                        suffixText: AppConstants.currency,
+                        suffixText: CurrencyConstants.currencySymbol(_invoice?['currency'] as String?),
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),

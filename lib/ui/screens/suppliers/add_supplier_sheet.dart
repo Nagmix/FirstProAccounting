@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
@@ -261,8 +262,7 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
                       decoration: InputDecoration(
                         labelText: 'الرصيد الافتتاحي',
                         prefixIcon: const Icon(Icons.calculate),
-                        suffixText: _currencyInfo[_currency]?['symbol'] ??
-                            AppConstants.currency,
+                        suffixText: CurrencyConstants.currencySymbol(_currency),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(

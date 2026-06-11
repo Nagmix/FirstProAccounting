@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
@@ -282,7 +283,7 @@ Future<void> showZReport(BuildContext context, PosViewModel vm) async {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: 'أدخل المبلغ الفعلي',
-                  suffixText: AppConstants.currency,
+                  suffixText: CurrencyConstants.currencySymbol(vm.selectedCurrency),
                   prefixIcon:
                       const Icon(Icons.account_balance_wallet, size: 20),
                   border: OutlineInputBorder(

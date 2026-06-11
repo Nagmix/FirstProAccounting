@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
@@ -398,7 +399,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                             controller: _priceController,
                             keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true),
-                            suffixText: AppConstants.currency,
+                            suffixText: CurrencyConstants.currencySymbol(_selectedProduct?.currency),
                             onChanged: (_) => setState(() {}),
                             isDark: isDark,
                           ),
@@ -449,7 +450,7 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
                       controller: _discountController,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
-                      suffixText: AppConstants.currency,
+                      suffixText: CurrencyConstants.currencySymbol(_selectedProduct?.currency),
                       onChanged: (_) => setState(() {}),
                       isDark: isDark,
                     ),

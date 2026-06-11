@@ -48,6 +48,7 @@ class ProductPriceField extends StatelessWidget {
   final String label;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onChanged;
+  final String? currencySymbol;
 
   const ProductPriceField({
     super.key,
@@ -55,6 +56,7 @@ class ProductPriceField extends StatelessWidget {
     required this.label,
     this.textInputAction = TextInputAction.next,
     this.onChanged,
+    this.currencySymbol,
   });
 
   @override
@@ -69,7 +71,7 @@ class ProductPriceField extends StatelessWidget {
       decoration: InputDecoration(
         isDense: true,
         labelText: label,
-        suffixText: AppConstants.currency,
+        suffixText: currencySymbol ?? AppConstants.currency,
       ),
       onChanged: onChanged,
     );

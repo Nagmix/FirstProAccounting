@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/data/datasources/repositories/account_repository.dart';
@@ -1132,6 +1133,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
       effectiveSaleUnitId: _effectiveSaleUnitId,
       taxInclusive: _taxInclusive,
       unitNameById: _unitNameById,
+      currencyCode: _defaultCurrencyCode ?? 'YER',
       onStateChanged: () => setState(() {}),
       onTaxInclusiveChanged: (v) => setState(() => _taxInclusive = v),
     );
@@ -1698,7 +1700,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                                   isDense: true,
                                   labelText: 'الرصيد الافتتاحي',
                                   prefixIcon: const Icon(Icons.calculate),
-                                  suffixText: AppConstants.currency,
+                                  suffixText: CurrencyConstants.currencySymbol(_defaultCurrencyCode),
                                 ),
                               ),
                             ),
@@ -1822,7 +1824,7 @@ class _AddProductSheetState extends State<AddProductSheet> {
                             isDense: true,
                             labelText: 'سقف المدينية',
                             prefixIcon: const Icon(Icons.credit_card),
-                            suffixText: AppConstants.currency,
+                            suffixText: CurrencyConstants.currencySymbol(_defaultCurrencyCode),
                           ),
                         ),
                         const SizedBox(height: 14),

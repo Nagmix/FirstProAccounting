@@ -900,9 +900,7 @@ class _AddEmployeeSheetState extends State<AddEmployeeSheet> {
                         decoration: InputDecoration(
                           labelText: 'الرصيد الافتتاحي',
                           prefixIcon: const Icon(Icons.calculate),
-                          suffixText: _currencyInfo[_openingBalanceCurrency]
-                                  ?['symbol'] ??
-                              AppConstants.currency,
+                          suffixText: CurrencyConstants.currencySymbol(_openingBalanceCurrency),
                         ),
                       ),
                       const SizedBox(height: 14),

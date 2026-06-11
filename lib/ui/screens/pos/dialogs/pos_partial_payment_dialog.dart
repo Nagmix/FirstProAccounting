@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
 import 'package:firstpro/ui/screens/pos/pos_models.dart';
@@ -43,7 +44,7 @@ Future<void> showAddPartialPaymentDialog(
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'مبلغ الدفعة',
-                suffixText: AppConstants.currency,
+                suffixText: CurrencyConstants.currencySymbol(vm.selectedCurrency),
               ),
             ),
           ],

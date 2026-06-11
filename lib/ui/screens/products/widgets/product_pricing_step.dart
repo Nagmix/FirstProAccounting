@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/ui/screens/products/widgets/product_form_helpers.dart';
 
@@ -29,6 +30,9 @@ class ProductPricingStep extends StatelessWidget {
   // Helpers
   final String Function(int? id) unitNameById;
 
+  // Currency
+  final String? currencyCode;
+
   // Callbacks
   final VoidCallback onStateChanged;
   final ValueChanged<bool> onTaxInclusiveChanged;
@@ -48,6 +52,7 @@ class ProductPricingStep extends StatelessWidget {
     required this.effectiveSaleUnitId,
     required this.taxInclusive,
     required this.unitNameById,
+    this.currencyCode,
     required this.onStateChanged,
     required this.onTaxInclusiveChanged,
   });
@@ -57,6 +62,8 @@ class ProductPricingStep extends StatelessWidget {
     final hasMulti = hasMultiUnits;
     final purchaseUnitName = unitNameById(selectedPurchaseUnitId);
     final baseUnitName = unitNameById(selectedBaseUnitId);
+
+    final currencySymbol = CurrencyConstants.currencySymbol(currencyCode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,6 +79,7 @@ class ProductPricingStep extends StatelessWidget {
                 label: hasMulti
                     ? 'سعر تكلفة الـ $purchaseUnitName *'
                     : 'سعر التكلفة *',
+                currencySymbol: currencySymbol,
                 onChanged: hasMulti ? (_) => onStateChanged() : null,
               ),
             ),
@@ -82,6 +90,7 @@ class ProductPricingStep extends StatelessWidget {
                 label: hasMulti
                     ? 'سعر بيع الـ ${unitNameById(effectiveSaleUnitId)} *'
                     : 'سعر بيع الـ $baseUnitName *',
+                currencySymbol: currencySymbol,
                 onChanged: hasMulti ? (_) => onStateChanged() : null,
               ),
             ),
@@ -126,6 +135,7 @@ class ProductPricingStep extends StatelessWidget {
           label: hasMulti
               ? 'سعر الجملة الخاصة للـ ${unitNameById(effectiveSaleUnitId)}'
               : 'سعر الجملة الخاصة',
+          currencySymbol: currencySymbol,
         ),
         const SizedBox(height: 14),
 
@@ -135,6 +145,7 @@ class ProductPricingStep extends StatelessWidget {
           label: hasMulti
               ? 'سعر البيع الأدنى للـ ${unitNameById(effectiveSaleUnitId)}'
               : 'سعر البيع الأدنى',
+          currencySymbol: currencySymbol,
         ),
         const SizedBox(height: 14),
 
@@ -179,11 +190,12 @@ class ProductPricingStep extends StatelessWidget {
     final costPrice = double.tryParse(costPriceController.text);
     if (costPrice == null || costPrice <= 0) return '...';
     final factor = purchaseUnitFactor;
+    final symbol = CurrencyConstants.currencySymbol(currencyCode);
     if (factor <= 1) {
-      return '${costPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+      return '${costPrice.toStringAsFixed(2)} $symbol';
     }
     final baseCost = costPrice / factor;
-    return '${baseCost.toStringAsFixed(2)} ${AppConstants.currency}';
+    return '${baseCost.toStringAsFixed(2)} $symbol';
   }
 
   /// Display string for auto-calculated base unit sell price
@@ -191,10 +203,11 @@ class ProductPricingStep extends StatelessWidget {
     final sellPrice = double.tryParse(sellPriceController.text);
     if (sellPrice == null || sellPrice <= 0) return '...';
     final factor = purchaseUnitFactor;
+    final symbol = CurrencyConstants.currencySymbol(currencyCode);
     if (factor <= 1) {
-      return '${sellPrice.toStringAsFixed(2)} ${AppConstants.currency}';
+      return '${sellPrice.toStringAsFixed(2)} $symbol';
     }
     final baseSell = sellPrice / factor;
-    return '${baseSell.toStringAsFixed(2)} ${AppConstants.currency}';
+    return '${baseSell.toStringAsFixed(2)} $symbol';
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
 import 'package:firstpro/ui/screens/pos/pos_models.dart';
@@ -33,7 +34,7 @@ void showDiscountDialog(BuildContext context, PosViewModel vm) {
                     : 'مبلغ الخصم',
                 suffixText: vm.discountType == DiscountType.percentage
                     ? '%'
-                    : AppConstants.currency,
+                    : CurrencyConstants.currencySymbol(vm.selectedCurrency),
               ),
             ),
             const SizedBox(height: 12),

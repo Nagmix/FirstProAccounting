@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
@@ -143,7 +144,7 @@ Future<void> showOpenShiftDialog(BuildContext context, PosViewModel vm) async {
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   hintText: 'أدخل مبلغ الافتتاح',
-                  suffixText: AppConstants.currency,
+                  suffixText: CurrencyConstants.currencySymbol(vm.selectedCurrency),
                   prefixIcon:
                       const Icon(Icons.account_balance_wallet, size: 20),
                   border: OutlineInputBorder(
