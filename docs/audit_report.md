@@ -154,7 +154,7 @@
 |---|---|---|---|
 | E-01 | إضافة `currency_code` و `exchange_rate` إلى `transactions` table | ❌ غير منجزة | `E-01` |
 | E-02 | إضافة `default_vat_rate` و `default_currency` إلى `settings` table | 🔶 جزئية (migration v52 أضاف `default_vat_rate` إلى settings؛ لا يزال `default_currency` غير موجود في settings ولا يُقرأ منها) | `E-02` |
-| E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | 🔶 جزئية (B-1.7 Phase 2 أزال ~20 استخدام في UI؛ تبقى 5 استخدامات: `currency_constants.dart` (setter), `currency_formatter.dart` (fallback), `esc_pos_commands.dart` (fallback), `pos_viewmodel.dart` (default currency), `product_form_helpers.dart` (fallback)) | `E-03` |
+| E-03 | إزالة `AppConstants.currency` و `AppConstants.currencyEn` (mutable globals) | ✅ منجزة (B-1.7 Phase 2 أزال ~20 استخدام في UI؛ تم إزالة آخر استخدام متبقي في `product_form_helpers.dart` وجعل `currencySymbol` إلزامياً في `ProductPriceField`) | `E-03` |
 
 ---
 **قاعدة دائمة:** يتم تحديث هذا الملف فور الانتهاء من أي ميزة أو إصلاح قبل الانتقال للمهمة التالية.

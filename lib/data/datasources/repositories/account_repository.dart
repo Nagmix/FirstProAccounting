@@ -203,6 +203,9 @@ class AccountRepository {
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'amount_base': MoneyHelper.toCents(openingBalance),
             });
             await txn.insert('transactions', {
               'account_id': obAccountId,
@@ -212,6 +215,9 @@ class AccountRepository {
               'description': 'مقابل رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'amount_base': MoneyHelper.toCents(openingBalance),
             });
             // Update both account balances
             await _updateAccountBalanceWithJournal(
@@ -229,6 +235,9 @@ class AccountRepository {
               'description': 'رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'amount_base': MoneyHelper.toCents(openingBalance),
             });
             await txn.insert('transactions', {
               'account_id': obAccountId,
@@ -238,6 +247,9 @@ class AccountRepository {
               'description': 'مقابل رصيد افتتاحي - $nameAr',
               'date': now,
               'created_at': now,
+              'currency_code': currency,
+              'exchange_rate': 1.0,
+              'amount_base': MoneyHelper.toCents(openingBalance),
             });
             // Update both account balances
             await _updateAccountBalanceWithJournal(
@@ -448,7 +460,15 @@ class AccountRepository {
     // B-1: exclusive upper bound — see getYearProfitLoss note.
     final yearEndExclusive = '${year + 1}-01-01';
 
-    await db.transaction((txn) async {
+      await db.transaction((txn) async {
+      // Pre-load exchange rates for all currencies
+      final currencyRates = <String, double>{'YER': 1.0};
+      final currencyRows = await txn.query('currencies');
+      for (final c in currencyRows) {
+        final code = c['code'] as String? ?? '';
+        final rate = (c['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+        if (code.isNotEmpty) currencyRates[code] = rate;
+      }
       // Check if already closed
       final existing = await txn.query('fiscal_years',
           where: 'year = ? AND status = ?',
@@ -555,6 +575,7 @@ class AccountRepository {
       double totalNetProfitYER = 0.0;
 
       for (final currency in allCurrencies) {
+        final rate = currencyRates[currency] ?? 1.0;
         final rev = revenuePerCurrency[currency] ?? 0.0;
         final cost = costPerCurrency[currency] ?? 0.0;
         final exp = expensePerCurrency[currency] ?? 0.0;
@@ -583,15 +604,21 @@ class AccountRepository {
             'description': 'إقفال إيرادات السنة $year',
             'date': '$year-12-31',
             'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, accId, balance, 0.0, now);
-
-          // Credit Retained Earnings
-          await txn.insert('transactions', {
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
+      await txn.insert('transactions', {
             'account_id': reAccId,
             'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(balance),
+            'description': 'ترحيل أرباح السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
+          });ce),
             'description': 'ترحيل أرباح السنة $year',
             'date': '$year-12-31',
             'created_at': now,
@@ -602,13 +629,7 @@ class AccountRepository {
 
         // Close cost accounts: Debit Retained Earnings, Credit Cost
         for (final acc
-            in costAccounts.where((a) => a['currency'] == currency)) {
-          final accId = acc['id'] as int;
-          final balance = await calcNormalBalance(accId, 'COST');
-          if (balance == 0.0) continue;
-
-          // Cost accounts have debit normal balance, to close we credit them
-          await txn.insert('transactions', {
+            in costAccounts.wherawait txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
             'debit': 0,
@@ -616,8 +637,21 @@ class AccountRepository {
             'description': 'إقفال تكاليف السنة $year',
             'date': '$year-12-31',
             'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(txn, accId, 0.0, balance, now);
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
+     await txn.insert('transactions', {
+            'account_id': reAccId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(balance),
+            'credit': 0,
+            'description': 'ترحيل تكاليف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
+          });lanceWithJournal(txn, accId, 0.0, balance, now);
 
           // Debit Retained Earnings
           await txn.insert('transactions', {
@@ -627,23 +661,29 @@ class AccountRepository {
             'credit': 0,
             'description': 'ترحيل تكاليف السنة $year',
             'date': '$year-12-31',
-            'created_at': now,
-          });
-          await _updateAccountBalanceWithJournal(
-              txn, reAccId, balance, 0.0, now);
-        }
-
-        // Close expense accounts: Debit Retained Earnings, Credit Expense
-        for (final acc
-            in expenseAccounts.where((a) => a['currency'] == currency)) {
-          final accId = acc['id'] as int;
-          final balance = await calcNormalBalance(accId, 'EXPENSE');
-          if (balance == 0.0) continue;
-
-          // Expense accounts have debit balance, to close we credit them
           await txn.insert('transactions', {
             'account_id': accId,
             'journal_id': journalId,
+            'debit': 0,
+            'credit': MoneyHelper.toCents(balance),
+            'description': 'إقفال مصاريف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
+     await txn.insert('transactions', {
+            'account_id': reAccId,
+            'journal_id': journalId,
+            'debit': MoneyHelper.toCents(balance),
+            'credit': 0,
+            'description': 'ترحيل مصاريف السنة $year',
+            'date': '$year-12-31',
+            'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
+          });        'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(balance),
             'description': 'إقفال مصاريف السنة $year',
@@ -661,6 +701,9 @@ class AccountRepository {
             'description': 'ترحيل مصاريف السنة $year',
             'date': '$year-12-31',
             'created_at': now,
+            'currency_code': currency,
+            'exchange_rate': rate,
+            'amount_base': MoneyHelper.toCents(balance * rate),
           });
           await _updateAccountBalanceWithJournal(
               txn, reAccId, balance, 0.0, now);

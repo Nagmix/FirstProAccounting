@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -48,7 +47,7 @@ class ProductPriceField extends StatelessWidget {
   final String label;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onChanged;
-  final String? currencySymbol;
+  final String currencySymbol;
 
   const ProductPriceField({
     super.key,
@@ -56,7 +55,7 @@ class ProductPriceField extends StatelessWidget {
     required this.label,
     this.textInputAction = TextInputAction.next,
     this.onChanged,
-    this.currencySymbol,
+    required this.currencySymbol,
   });
 
   @override
@@ -71,7 +70,7 @@ class ProductPriceField extends StatelessWidget {
       decoration: InputDecoration(
         isDense: true,
         labelText: label,
-        suffixText: currencySymbol ?? AppConstants.currency,
+        suffixText: currencySymbol,
       ),
       onChanged: onChanged,
     );

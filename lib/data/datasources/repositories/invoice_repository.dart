@@ -2180,6 +2180,9 @@ class InvoiceRepository {
             'description': 'استرداد دفعة مرتجع مشتريات - $invoiceId',
             'date': now,
             'created_at': now,
+            'currency_code': invoiceCurrency,
+            'exchange_rate': exchangeRate,
+            'amount_base': MoneyHelper.toCents(paymentAmount * exchangeRate),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, cashBanksAccountId, paymentAmount, 0.0, now);
@@ -2193,6 +2196,9 @@ class InvoiceRepository {
             'description': 'استرداد دفعة مرتجع مشتريات - $invoiceId',
             'date': now,
             'created_at': now,
+            'currency_code': invoiceCurrency,
+            'exchange_rate': exchangeRate,
+            'amount_base': MoneyHelper.toCents(paymentAmount * exchangeRate),
           });
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, suppliersAccountId, 0.0, paymentAmount, now);
@@ -2275,6 +2281,7 @@ class InvoiceRepository {
 
       final total = MoneyHelper.readMoney(invoice['total']);
       final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
+      final exchangeRate = (invoice['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final invoiceType = (invoice['type'] as String?) ?? 'sale';
       final isReturn = (invoice['is_return'] as int?) == 1;
       final paymentMechanism =
@@ -2355,6 +2362,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات (مدفوع) - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(paidAmount * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, cashBanksAccountId, 0.0, paidAmount, now);
@@ -2368,6 +2378,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات (آجل) - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(remainingAmount * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, customersAccountId, 0.0, remainingAmount, now);
@@ -2381,6 +2394,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, salesAccountId, total, 0.0, now);
@@ -2399,6 +2415,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, originalCreditAccountId, total, 0.0, now);
@@ -2412,6 +2431,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات - مرتجع - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, salesAccountId, 0.0, total, now);
@@ -2430,6 +2452,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, salesAccountId, total, 0.0, now);
@@ -2443,6 +2468,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مبيعات - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, originalDebitAccountId, 0.0, total, now);
@@ -2461,6 +2489,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات (مدفوع) - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(paidAmount * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, cashBanksAccountId, paidAmount, 0.0, now);
@@ -2474,6 +2505,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات (آجل) - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(remainingAmount * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, suppliersAccountId, remainingAmount, 0.0, now);
@@ -2487,6 +2521,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, purchasesAccountId, 0.0, total, now);
@@ -2505,6 +2542,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, purchasesAccountId, total, 0.0, now);
@@ -2518,6 +2558,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات - مرتجع - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, originalDebitAccountId, 0.0, total, now);
@@ -2536,6 +2579,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, originalCreditAccountId, total, 0.0, now);
@@ -2549,6 +2595,9 @@ class InvoiceRepository {
                 'description': 'إلغاء فاتورة مشتريات - $id',
                 'date': now,
                 'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': MoneyHelper.toCents(total * exchangeRate),
               });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, purchasesAccountId, 0.0, total, now);
@@ -2612,6 +2661,9 @@ class InvoiceRepository {
                   'description': 'إلغاء تكلفة بضاعة مباعة - $id',
                   'date': now,
                   'created_at': now,
+                  'currency_code': invoiceCurrency,
+                  'exchange_rate': exchangeRate,
+                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
                 });
                 await txn.insert('transactions', {
                   'account_id': cogsAccountId,
@@ -2621,6 +2673,9 @@ class InvoiceRepository {
                   'description': 'إلغاء تخفيض مخزون - $id',
                   'date': now,
                   'created_at': now,
+                  'currency_code': invoiceCurrency,
+                  'exchange_rate': exchangeRate,
+                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(
                     txn, inventoryAccountId, totalCogs, 0.0, now);
@@ -2636,6 +2691,9 @@ class InvoiceRepository {
                   'description': 'إلغاء إعادة مخزون مرتجع - $id',
                   'date': now,
                   'created_at': now,
+                  'currency_code': invoiceCurrency,
+                  'exchange_rate': exchangeRate,
+                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
                 });
                 await txn.insert('transactions', {
                   'account_id': inventoryAccountId,
@@ -2645,6 +2703,9 @@ class InvoiceRepository {
                   'description': 'إلغاء عكس تكلفة بضاعة مرتجعة - $id',
                   'date': now,
                   'created_at': now,
+                  'currency_code': invoiceCurrency,
+                  'exchange_rate': exchangeRate,
+                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
                 });
                 await _dbHelper.journal.updateAccountBalanceWithJournal(
                     txn, cogsAccountId, totalCogs, 0.0, now);

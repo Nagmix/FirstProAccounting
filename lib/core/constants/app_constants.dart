@@ -11,10 +11,12 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 52; // Must match DatabaseHelper._databaseVersion
+  static const int dbVersion = 53; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
+  @Deprecated('Use CurrencyConstants.currencySymbol() instead')
   static String currency = 'ر.ي';
+  @Deprecated('Use CurrencyConstants.currencyOptions or the currency table instead')
   static String currencyEn = 'YER';
   static const String defaultLanguage = 'ar';
   static const String localeAr = 'ar';

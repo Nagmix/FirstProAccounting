@@ -1,4 +1,4 @@
-import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 
 /// Utility class for formatting currency values in Arabic context.
 class CurrencyFormatter {
@@ -6,7 +6,7 @@ class CurrencyFormatter {
 
   /// Formats [amount] with two decimal places and the given [symbol].
   static String format(double amount, {String? symbol}) {
-    final effectiveSymbol = symbol ?? AppConstants.currency;
+    final effectiveSymbol = symbol ?? CurrencyConstants.defaultSymbol;
     final formatted = _addCommas(amount.toStringAsFixed(2));
     return '$formatted $effectiveSymbol';
   }
@@ -37,7 +37,7 @@ class CurrencyFormatter {
     double amount, {
     String? symbol,
   }) {
-    final effectiveSymbol = symbol ?? AppConstants.currency;
+    final effectiveSymbol = symbol ?? CurrencyConstants.defaultSymbol;
     return '${formatCompact(amount)} $effectiveSymbol';
   }
 
@@ -45,8 +45,8 @@ class CurrencyFormatter {
   static double parse(String value) {
     final cleaned = value
         .replaceAll(',', '')
-        .replaceAll(AppConstants.currency, '')
-        .replaceAll(AppConstants.currencyEn, '')
+        .replaceAll(CurrencyConstants.defaultSymbol, '')
+        .replaceAll(CurrencyConstants.defaultCode, '')
         .trim();
     return double.tryParse(cleaned) ?? 0.0;
   }
@@ -61,7 +61,7 @@ class CurrencyFormatter {
     double amount, {
     String? symbol,
   }) {
-    final effectiveSymbol = symbol ?? AppConstants.currency;
+    final effectiveSymbol = symbol ?? CurrencyConstants.defaultSymbol;
     final prefix = amount >= 0 ? '+' : '';
     return '$prefix${format(amount, symbol: effectiveSymbol)}';
   }

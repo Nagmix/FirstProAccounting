@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 
 /// ESC/POS command generator for 80mm/58mm thermal printers.
@@ -238,7 +238,7 @@ class EscPosCommands {
     // Initialize
     cmds.addAll(init());
 
-    final effectiveCurrency = currency ?? AppConstants.currency;
+    final effectiveCurrency = currency ?? CurrencyConstants.defaultSymbol;
 
     // Select Arabic code page
     cmds.addAll(selectCodeTable(16)); // CP1256

@@ -403,7 +403,7 @@ class PosViewModel extends ChangeNotifier {
   //  CURRENCY STATE
   // ══════════════════════════════════════════════════════════════════
 
-  String _selectedCurrency = AppConstants.currencyEn;
+  String _selectedCurrency = CurrencyConstants.defaultCode;
   String get selectedCurrency => _selectedCurrency;
 
   double _exchangeRate = 1.0;

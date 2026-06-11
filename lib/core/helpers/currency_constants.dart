@@ -30,16 +30,22 @@ class CurrencyConstants {
   static List<MapEntry<String, String>> get currencyMapEntries => 
     _currencyOptions.map((c) => MapEntry(c, c)).toList();
 
+  /// Returns the default currency symbol (YER fallback).
+  static String get defaultSymbol => _currencyInfo['YER']?['symbol'] ?? 'ر.ي';
+
+  /// Returns the default currency code (YER fallback).
+  static String get defaultCode => 'YER';
+
   /// Initialize and refresh currency data from the database.
   static Future<void> refresh() async {
     try {
       final refData = locator<ReferenceDataRepository>();
       final currencies = await refData.getAllCurrencies();
-      
+
       if (currencies.isNotEmpty) {
         final Map<String, Map<String, String>> newInfo = {};
         final List<String> newOptions = [];
-        
+
         for (final c in currencies) {
           final code = c['code'] as String;
           newInfo[code] = {
@@ -48,19 +54,9 @@ class CurrencyConstants {
           };
           newOptions.add(code);
         }
-        
+
         _currencyInfo = newInfo;
         _currencyOptions = newOptions;
-
-        // Update AppConstants with the base currency
-        final baseService = locator<BaseCurrencyService>();
-        baseService.clearCache(); // Force refresh from DB
-        final baseCode = await baseService.getBaseCurrencyCode();
-        final baseInfo = newInfo[baseCode];
-        if (baseInfo != null) {
-          AppConstants.currency = baseInfo['symbol']!;
-          AppConstants.currencyEn = baseCode;
-        }
       }
     } catch (e) {
       // Fallback to defaults if DB fails
