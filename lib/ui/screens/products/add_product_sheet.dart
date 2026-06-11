@@ -173,7 +173,6 @@ class _AddProductSheetState extends State<AddProductSheet> {
       _loadUnitConversions();
     } else {
       _generateItemCode();
-      _taxRateController.text = AppConstants.defaultVatRate.toStringAsFixed(0);
     }
   }
 
@@ -233,6 +232,8 @@ class _AddProductSheetState extends State<AddProductSheet> {
       final currencyCode = defaultCurrency['code'] as String? ?? 'YER';
       _defaultCurrencyCode = currencyCode;
       final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currencyCode);
+      final vatRate = (defaultCurrency['vat_rate'] as num?)?.toDouble() ?? 0.0;
+      _taxRateController.text = vatRate.toStringAsFixed(0);
 
       if (mounted) {
         setState(() {

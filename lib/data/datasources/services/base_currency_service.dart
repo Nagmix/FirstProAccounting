@@ -57,6 +57,20 @@ class BaseCurrencyService {
     return offset;
   }
 
+  /// Get the VAT rate for a specific currency (default 0.0 if not found).
+  Future<double> getVatRateForCurrency(String code) async {
+    final db = await _db;
+    final result = await db.query('currencies',
+        columns: ['vat_rate'],
+        where: 'code = ?',
+        whereArgs: [code],
+        limit: 1);
+    if (result.isNotEmpty) {
+      return (result.first['vat_rate'] as num?)?.toDouble() ?? 0.0;
+    }
+    return 0.0;
+  }
+
   /// Reset cache when currency settings change.
   void clearCache() {
     _cachedBaseCurrencyCode = null;

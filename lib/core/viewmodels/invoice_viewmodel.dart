@@ -148,9 +148,12 @@ class InvoiceViewModel extends ChangeNotifier {
   /// Transport charges (from stored value).
   double get transportChargesAmount => _transportCharges;
 
+  double _vatRate = 0.0;
+  double get vatRate => _vatRate;
+
   /// Tax amount based on VAT rate.
   double get taxAmount =>
-      (subtotal - discountAmount) * (AppConstants.defaultVatRate / 100);
+      (subtotal - discountAmount) * (_vatRate / 100);
 
   /// Total after discount, tax, and transport.
   double get total =>
@@ -227,6 +230,12 @@ class InvoiceViewModel extends ChangeNotifier {
       _cashBoxes = results[3];
       _currencies = results[4];
       _buildCombinedEntities();
+
+      // Sync VAT rate for current selected currency
+      final cRow = _currencies.where((c) => c['code'] == _selectedCurrency).firstOrNull;
+      if (cRow != null) {
+        _vatRate = (cRow['vat_rate'] as num?)?.toDouble() ?? 0.0;
+      }
       _errorMessage = null;
     } catch (e) {
       _errorMessage = 'حدث خطأ أثناء تحميل البيانات';
@@ -414,6 +423,7 @@ class InvoiceViewModel extends ChangeNotifier {
     if (currency != null) {
       _selectedExchangeRate =
           (currency['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      _vatRate = (currency['vat_rate'] as num?)?.toDouble() ?? 0.0;
     }
     notifyListeners();
   }
@@ -547,6 +557,7 @@ class InvoiceViewModel extends ChangeNotifier {
     _autoPay = true;
     _selectedCurrency = 'YER';
     _selectedExchangeRate = 1.0;
+    _vatRate = 0.0;
     _selectedEwalletProvider = null;
     _selectedBankTransferProvider = null;
     _attachmentPath = null;

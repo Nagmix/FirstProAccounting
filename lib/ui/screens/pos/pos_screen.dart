@@ -656,7 +656,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   orderDiscount: _vm.orderDiscount,
                   tax: _vm.tax,
                   total: _vm.total,
-                  vatRate: AppConstants.defaultVatRate,
+                  vatRate: _vm.vatRate,
                 ),
 
                 // ── Action buttons ──────────────────────────

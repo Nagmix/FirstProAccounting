@@ -325,6 +325,7 @@ class DatabaseSchema {
         is_default INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,
         code_offset INTEGER DEFAULT 0,
+        vat_rate REAL NOT NULL DEFAULT 0.0,
         created_at TEXT NOT NULL
       )
     ''');

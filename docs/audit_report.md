@@ -98,6 +98,7 @@
 | 2026-06-11 | **متابعة A-10:** تم العثور على `MoneyHelper.toCents()` متبقٍ في `Invoice.toMap()` لحقل `transport_charges`، تم تصحيحه. CI اجتاز بـ **0 فاشلات** (run `27316668537`). |
 | 2026-06-11 | **B-1.7 المرحلة 2 (Phase 2):** ديناميكية العملات في الواجهات — تم استبدال `AppConstants.currency` الثابت في 13 ملف UI بـ `CurrencyConstants.currencySymbol(code)` الديناميكي. CI اجتاز بنجاح (run `27317248644`). |
 | 2026-06-11 | **فحص شامل للمشروع:** تم إجراء فحص شامل يدوي للكود (218 ملف .dart) واستخراج المشاكل المتبقية (C-01, C-03, I-01..I-05, E-01..E-03). |
+| 2026-06-11 | **إنجاز A-12 (C-03 VAT Configurability):** إضافة `vat_rate` لجدول `currencies` (migration v52)، تحديث `InvoiceViewModel` و `PosViewModel` لقراءة VAT rate من العملة المختارة، تحديث الواجهات (`create_invoice_screen`, `invoice_summary_section`, `pos_screen`, `add_product_sheet`) لاستخدام VAT rate الديناميكي، وإزالة `AppConstants.defaultVatRate` الثابت. |
 
 ---
 
@@ -118,10 +119,9 @@
 **الحل:** استبدال كل هذه الأماكن بـ `await locator<BaseCurrencyService>().getOffsetForCurrency(currency)`.
 **المهمة:** `B-1.7-P3`
 
-## A-12 🚨 `AppConstants.defaultVatRate` ثابت = 0.0
-**الحالة:** ❌ غير منجزة
-**الوصف:** `defaultVatRate = 0.0` ثابت في `AppConstants`، ويُستخدم في `pos_viewmodel` (حساب الضريبة) و `create_invoice_screen` و `invoice_summary_section` و `add_product_sheet`. لا يوجد setting مركزي للـ VAT rate.
-**الحل:** إضافة `defaultVatRate` إلى جدول `settings` أو `currencies`، وتحميله من DB في startup. إزالة الثابت من `AppConstants`.
+## A-12 ✅ `AppConstants.defaultVatRate` ثابت = 0.0 — **مُصلحة**
+**الحالة:** ✅ منجزة (commit `TBD`)
+**الوصف:** تم إزالة الثابت `AppConstants.defaultVatRate` بالكامل. تم إضافة `vat_rate` إلى جدول `currencies` (migration v52) وتحديث `schema.dart`. يتم الآن تحميل VAT rate ديناميكياً من قاعدة البيانات حسب العملة المختارة في `InvoiceViewModel` و `PosViewModel`. كما تم تحديث واجهات `create_invoice_screen` و `invoice_summary_section` و `pos_screen` و `add_product_sheet` لاستخدام VAT rate الديناميكي.
 **المهمة:** `C-03` (VAT rate configurability)
 
 ---

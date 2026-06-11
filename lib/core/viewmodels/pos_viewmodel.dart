@@ -138,10 +138,13 @@ class PosViewModel extends ChangeNotifier {
     return _orderDiscount.clamp(0, subtotal); // Fixed discount also clamped
   }
 
+  double _vatRate = 0.0;
+  double get vatRate => _vatRate;
+
   double get tax {
     final taxableBase =
         (subtotal - effectiveDiscount).clamp(0.0, double.infinity);
-    return taxableBase * (AppConstants.defaultVatRate / 100);
+    return taxableBase * (_vatRate / 100);
   }
 
   double get total => subtotal - effectiveDiscount + tax;
@@ -398,23 +401,25 @@ class PosViewModel extends ChangeNotifier {
 
   void setSelectedCurrency(String currency) async {
     _selectedCurrency = currency;
-    
-    // Fetch exchange rate from DB
+
+    // Fetch exchange rate and VAT rate from DB
     try {
       final currencies = await _refData.getAllCurrencies();
       final cRow = currencies.where((c) => c['code'] == currency).firstOrNull;
       if (cRow != null) {
         _exchangeRate = (cRow['exchange_rate'] as num).toDouble();
+        _vatRate = (cRow['vat_rate'] as num?)?.toDouble() ?? 0.0;
       } else {
         // Fallback for legacy support
         if (currency == 'SAR') _exchangeRate = 140.0;
         else if (currency == 'USD') _exchangeRate = 530.0;
         else _exchangeRate = 1.0;
+        _vatRate = 0.0;
       }
     } catch (e) {
       debugPrint('PosViewModel currency rate error: $e');
     }
-    
+
     notifyListeners();
   }
 
@@ -460,10 +465,12 @@ class PosViewModel extends ChangeNotifier {
       final results = await Future.wait([
         _refData.getAllCategories(),
         _productRepo.getAllProducts(activeOnly: true),
+        _refData.getAllCurrencies(),
       ]);
 
       _categories = results[0];
       final prodMaps = results[1];
+      final currencies = results[2] as List<Map<String, dynamic>>;
 
       _products = prodMaps
           .map((m) => Product.fromMap(m))
@@ -481,6 +488,12 @@ class PosViewModel extends ChangeNotifier {
       final todayStr =
           '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
       _todayInvoiceCount = await _invoiceRepo.getTodayPosInvoiceCount(todayStr);
+
+      // Sync VAT rate for current selected currency
+      final cRow = currencies.where((c) => c['code'] == _selectedCurrency).firstOrNull;
+      if (cRow != null) {
+        _vatRate = (cRow['vat_rate'] as num?)?.toDouble() ?? 0.0;
+      }
 
       _isLoading = false;
       notifyListeners();

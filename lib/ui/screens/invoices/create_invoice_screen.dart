@@ -295,6 +295,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         paidAmountInBaseCurrency: _paidAmountInBaseCurrency,
                         remainingInBaseCurrency: _remainingInBaseCurrency,
                         selectedCurrency: _vm.selectedCurrency,
+                        vatRate: _vm.vatRate,
                         discountController: _discountController,
                         transportChargesController: _transportChargesController,
                         notesController: _notesController,

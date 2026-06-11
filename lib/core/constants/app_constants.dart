@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 51; // Must match DatabaseHelper._databaseVersion
+  static const int dbVersion = 52; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
   static String currency = 'ر.ي';
@@ -86,9 +86,6 @@ class AppConstants {
   // ── Number formats ────────────────────────────────────────────
   static const int decimalPlaces = 2;
   static const int quantityDecimalPlaces = 3;
-
-  // ── Tax ───────────────────────────────────────────────────────
-  static const double defaultVatRate = 0.0; // Yemen has no VAT
 
   // ── Route names ───────────────────────────────────────────────
   static const String dashboard = '/dashboard';

@@ -11,6 +11,7 @@ import 'package:firstpro/data/datasources/migrations/migration_v48.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v49.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v50.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v51.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v52.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -90,5 +91,8 @@ class MigrationRunner {
 
     // v51 — Dynamic currencies and base codes
     if (oldVersion < 51) await MigrationV51.migrate(db);
+
+    // v52 — Per-currency VAT rate configuration
+    if (oldVersion < 52) await MigrationV52.migrate(db);
   }
 }

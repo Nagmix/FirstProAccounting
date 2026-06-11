@@ -23,6 +23,7 @@ class InvoiceSummarySection extends StatelessWidget {
     required this.paidAmountInBaseCurrency,
     required this.remainingInBaseCurrency,
     required this.selectedCurrency,
+    required this.vatRate,
     required this.discountController,
     required this.transportChargesController,
     required this.notesController,
@@ -43,6 +44,7 @@ class InvoiceSummarySection extends StatelessWidget {
   final double paidAmountInBaseCurrency;
   final double remainingInBaseCurrency;
   final String selectedCurrency;
+  final double vatRate;
   final TextEditingController discountController;
   final TextEditingController transportChargesController;
   final TextEditingController notesController;
@@ -179,11 +181,11 @@ class InvoiceSummarySection extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (AppConstants.defaultVatRate > 0) ...[
+                if (vatRate > 0) ...[
                   const SizedBox(height: 8),
                   _summaryRow(
                       context,
-                      'الضريبة (${AppConstants.defaultVatRate.toStringAsFixed(0)}%)',
+                      'الضريبة (${vatRate.toStringAsFixed(0)}%)',
                       CurrencyFormatter.format(taxAmount),
                       isDark),
                 ],
