@@ -134,18 +134,13 @@ void main() {
     test('precise matching: deleting invoice 12 must not touch invoice 112',
         () async {
       final now = DateTime.now().toIso8601String();
-      final accId = await db.insert('accounts', {
-        'name_ar': 'المبيعات',
-        'name_en': 'Sales',
-        'account_code': '4100',
-        'account_type': 'REVENUE',
-        'balance': 0,
-        'currency': 'YER',
-        'balance_type': 'credit',
-        'is_active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
+      final salesAccount = await db.query('accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: ['4100', 'YER'],
+          limit: 1);
+      expect(salesAccount, isNotEmpty,
+          reason: 'Fresh schema seeds the default sales account.');
+      final accId = salesAccount.first['id'] as int;
 
       Future<void> insertTx(String desc, String? refId) => db.insert(
             'transactions',
@@ -188,18 +183,16 @@ void main() {
         () async {
       final now = DateTime.now().toIso8601String();
       // حساب مبيعات (دائن الطبيعة) رصيده 1000 بعد فاتورة
-      final accId = await db.insert('accounts', {
-        'name_ar': 'المبيعات',
-        'name_en': 'Sales',
-        'account_code': '4100',
-        'account_type': 'REVENUE',
-        'balance': MoneyHelper.toCents(1000),
-        'currency': 'YER',
-        'balance_type': 'credit',
-        'is_active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
+      final salesAccount = await db.query('accounts',
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: ['4100', 'YER'],
+          limit: 1);
+      expect(salesAccount, isNotEmpty,
+          reason: 'Fresh schema seeds the default sales account.');
+      final accId = salesAccount.first['id'] as int;
+      await db.update('accounts',
+          {'balance': MoneyHelper.toCents(1000), 'updated_at': now},
+          where: 'id = ?', whereArgs: [accId]);
 
       // القيد الأصلي كان: credit=1000. العكس = تطبيق (debit=1000):
       // credit-nature: balance += credit - debit = -1000
