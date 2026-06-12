@@ -171,16 +171,19 @@ class CashBoxService {
   }
 
   /// جلب الصناديق حسب العملة
-  /// Get cash boxes filtered by currency (via linked account currency).
+  /// Get cash boxes filtered by their effective currency.
+  ///
+  /// A linked account's currency is authoritative. If no linked account exists,
+  /// fall back to `cash_boxes.currency`. This avoids showing unlinked boxes in
+  /// every currency and prevents cross-currency cash operations.
   Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(
       String currency) async {
     final db = await _db;
     return await db.rawQuery('''
       SELECT cb.* FROM cash_boxes cb
       LEFT JOIN accounts a ON cb.linked_account_id = a.id
-      WHERE cb.is_active = 1 AND (
-        (a.currency = ?) OR (cb.linked_account_id IS NULL)
-      )
+      WHERE cb.is_active = 1
+        AND COALESCE(a.currency, cb.currency) = ?
       ORDER BY cb.type ASC, cb.name ASC
     ''', [currency]);
   }
@@ -268,7 +271,20 @@ class CashBoxService {
     balance +=
         MoneyHelper.readCalculatedMoney(purchaseReturnPaid.first['total']);
 
-    // 11. Opening balance transactions for this cash box in this currency.
+    // 11. Expenses paid from / received into this cash box in this currency.
+    final expenseOut = await db.rawQuery('''
+      SELECT COALESCE(SUM(amount), 0) AS total FROM expenses
+      WHERE cash_box_id = ? AND currency = ? AND operation_type = 'صرف'
+    ''', [cashBoxId, currency]);
+    balance -= MoneyHelper.readCalculatedMoney(expenseOut.first['total']);
+
+    final expenseIn = await db.rawQuery('''
+      SELECT COALESCE(SUM(amount), 0) AS total FROM expenses
+      WHERE cash_box_id = ? AND currency = ? AND operation_type = 'قبض'
+    ''', [cashBoxId, currency]);
+    balance += MoneyHelper.readCalculatedMoney(expenseIn.first['total']);
+
+    // 12. Opening balance transactions for this cash box in this currency.
     //     First try to find by reference_id (new data), then fall back to
     //     searching by account code + reference_type (legacy data).
     double obBalance = 0.0;
@@ -595,7 +611,49 @@ class CashBoxService {
       debugPrint('CashBoxService.getCashBoxMovements [invoices]: $e');
     }
 
-    // 5. Opening balance transactions for this cash box
+    // 5. Expenses linked to this cash box
+    try {
+      final expenseFilter = currency != null ? 'AND e.currency = ?' : '';
+      final expenseArgs =
+          currency != null ? [cashBoxId, currency] : [cashBoxId];
+      final expenses = await db.rawQuery('''
+        SELECT e.* FROM expenses e
+        WHERE e.cash_box_id = ? $expenseFilter
+        ORDER BY e.expense_date ASC, e.id ASC
+      ''', expenseArgs);
+
+      for (final e in expenses) {
+        final amount = MoneyHelper.readMoney(e['amount']);
+        final curr = e['currency'] as String? ?? 'YER';
+        final operationType = e['operation_type'] as String? ?? 'صرف';
+        final isOut = operationType == 'صرف';
+        final dateStr = e['expense_date'] as String? ??
+            e['created_at'] as String? ??
+            DateTime.now().toIso8601String();
+        final title = e['title'] as String? ?? 'مصروف';
+
+        movements.add({
+          'id': 'x_${e['id']}',
+          'date': dateStr,
+          'type': isOut ? 'expense_payment' : 'expense_receipt',
+          'type_ar': isOut ? 'مصروف' : 'قبض مصروف',
+          'filter_key': 'expense',
+          'icon': isOut ? Icons.money_off : Icons.payments,
+          'color': isOut ? AppColors.error : AppColors.success,
+          'description': title,
+          'debit': isOut ? amount : 0.0,
+          'credit': isOut ? 0.0 : amount,
+          'currency': curr,
+          'source': 'expense',
+          'voucher_type': null,
+          'created_at': e['created_at'] as String? ?? dateStr,
+        });
+      }
+    } catch (e) {
+      debugPrint('CashBoxService.getCashBoxMovements [expenses]: $e');
+    }
+
+    // 6. Opening balance transactions for this cash box
     try {
       final obMovements = await db.rawQuery('''
         SELECT t.*, a.currency AS account_currency

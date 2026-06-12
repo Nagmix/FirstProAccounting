@@ -13,6 +13,9 @@ void main() {
     late String reportSource;
     late String invoiceSource;
     late String expenseSource;
+    late String schemaSource;
+    late String cashBoxSource;
+    late String bankReconciliationSource;
 
     setUpAll(() {
       reportSource = File(
@@ -23,6 +26,15 @@ void main() {
       ).readAsStringSync();
       expenseSource = File(
         'lib/data/datasources/repositories/expense_repository.dart',
+      ).readAsStringSync();
+      schemaSource = File(
+        'lib/data/datasources/migrations/schema.dart',
+      ).readAsStringSync();
+      cashBoxSource = File(
+        'lib/data/datasources/services/cash_box_service.dart',
+      ).readAsStringSync();
+      bankReconciliationSource = File(
+        'lib/data/datasources/services/bank_reconciliation_service.dart',
       ).readAsStringSync();
     });
 
@@ -48,8 +60,8 @@ void main() {
       expect(start, greaterThan(0));
       final body = reportSource.substring(start, start + 2200);
 
-      expect(body.contains('LEFT JOIN transactions t ON t.account_id = a.id\$dateFilter'), isTrue);
-      expect(body.contains('WHERE a.is_active = 1\$currencyFilter'), isTrue);
+      expect(body.contains(r'LEFT JOIN transactions t ON t.account_id = a.id$dateFilter'), isTrue);
+      expect(body.contains(r'WHERE a.is_active = 1$currencyFilter'), isTrue);
       expect(
         body.contains('[...dateArgs, ...currencyArgs]'),
         isTrue,
@@ -62,8 +74,8 @@ void main() {
       expect(start, greaterThan(0));
       final body = reportSource.substring(start, start + 2600);
 
-      expect(body.contains('LEFT JOIN transactions t ON t.account_id = a.id\$dateFilter'), isTrue);
-      expect(body.contains('a.account_type IN (\${accountTypes.map((_) => \'?\').join(\',\')})\$currencyFilter'), isTrue);
+      expect(body.contains(r'LEFT JOIN transactions t ON t.account_id = a.id$dateFilter'), isTrue);
+      expect(body.contains(r"a.account_type IN (${accountTypes.map((_) => '?').join(',')})$currencyFilter"), isTrue);
       expect(
         body.contains('[...dateArgs, ...accountTypes, ...currencyArgs]'),
         isTrue,
@@ -115,5 +127,66 @@ void main() {
         reason: 'New expense transactions should be reference-linked for exact future reversals.',
       );
     });
+
+
+    test('fresh schema includes account code/currency unique index', () {
+      expect(
+        schemaSource.contains('idx_accounts_code_currency'),
+        isTrue,
+        reason: 'Fresh installs must enforce the same (account_code, currency) uniqueness as migrations.',
+      );
+      expect(
+        schemaSource.contains('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_code_currency ON accounts (account_code, currency)'),
+        isTrue,
+      );
+    });
+
+    test('cash box currency filtering and balances include expenses', () {
+      expect(
+        cashBoxSource.contains('COALESCE(a.currency, cb.currency) = ?'),
+        isTrue,
+        reason: 'Unlinked cash boxes must be filtered by cash_boxes.currency instead of appearing for every currency.',
+      );
+      expect(
+        cashBoxSource.contains('(cb.linked_account_id IS NULL)'),
+        isFalse,
+        reason: 'linked_account_id IS NULL should not make a cash box visible in every currency.',
+      );
+      expect(cashBoxSource.contains("operation_type = 'صرف'"), isTrue);
+      expect(cashBoxSource.contains("operation_type = 'قبض'"), isTrue);
+      expect(cashBoxSource.contains("'source': 'expense'"), isTrue);
+    });
+
+    test('bank reconciliation aggregate totals use readCalculatedMoney', () {
+      expect(
+        bankReconciliationSource.contains('MoneyHelper.readMoney(unmatchedDeposits.first'),
+        isFalse,
+        reason: 'SQL SUM(amount) returns cents and must be read with readCalculatedMoney.',
+      );
+      expect(
+        bankReconciliationSource.contains('MoneyHelper.readCalculatedMoney(unmatchedDeposits.first'),
+        isTrue,
+      );
+      expect(
+        bankReconciliationSource.contains('MoneyHelper.readCalculatedMoney(newBankDebits.first'),
+        isTrue,
+      );
+    });
+
+    test('manual P&L COGS uses COST/base_code and keeps NULL manual refs', () {
+      expect(
+        reportSource.contains("account_type = 'COGS'"),
+        isFalse,
+        reason: 'The chart of accounts uses account_type COST; COGS is identified by base_code/account_code.',
+      );
+      expect(reportSource.contains("a.account_type = 'COST'"), isTrue);
+      expect(reportSource.contains('a.base_code = 3200'), isTrue);
+      expect(
+        reportSource.contains('t.reference_type IS NULL OR t.reference_type NOT IN'),
+        isTrue,
+        reason: 'Manual/legacy entries with NULL reference_type must not be excluded by SQL NOT IN semantics.',
+      );
+    });
+
   });
 }

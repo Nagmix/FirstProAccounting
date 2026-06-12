@@ -845,12 +845,10 @@ class ReportService {
         "FROM transactions t "
         "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'REVENUE' AND a.is_active = 1$revCurrencyFilter) "
         "$acctDf "
-        // FIX: Exclude ALL invoice-related reference types, not just 'invoice'/'pos_sale'.
-        // The invoice_repository uses 'sale','pos','purchase','sale_return','purchase_return'.
-        // postShiftInvoices now also sets reference_type to the invoiceType.
-        // Including reference_type IS NULL was causing double-counting for
-        // transactions created before the reference_type fix was applied.
-        "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        // Exclude operational invoice reference types to avoid double-counting
+        // table-driven revenue. NULL reference types are treated as manual or
+        // legacy journal entries and are included in the manual supplement.
+        "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return'))",
         [...revCurrencyArgs, ...acctDateArgs],
       );
       manualRevenue = (revRes2.first['manual_rev'] as int? ?? 0);
@@ -866,13 +864,14 @@ class ReportService {
         "FROM transactions t "
         "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1$expCurrencyFilter) "
         "$acctDf "
-        "AND t.reference_type NOT IN ('expense', 'expense_reversal', 'expense_reversed', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('expense', 'expense_reversal', 'expense_reversed', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return'))",
         [...expCurrencyArgs, ...acctDateArgs],
       );
       manualExpenses = (expRes2.first['manual_exp'] as int? ?? 0);
 
-      // COGS accounts (account_type = 'COGS') — debit nature
-      // Single query with IN (...) instead of per-account loop
+      // COGS accounts are COST accounts whose base code is 3200.
+      // Older data may not have base_code populated, so default currency
+      // account codes are kept as a compatibility fallback.
       final cogsCurrencyFilter =
           currency != null && currency.isNotEmpty ? ' AND a.currency = ?' : '';
       final cogsCurrencyArgs =
@@ -880,9 +879,14 @@ class ReportService {
       final cogsRes2 = await db.rawQuery(
         "SELECT CAST(COALESCE(SUM(t.debit) - SUM(t.credit), 0) AS INTEGER) AS manual_cogs "
         "FROM transactions t "
-        "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'COGS' AND a.is_active = 1$cogsCurrencyFilter) "
+        "WHERE t.account_id IN ("
+        "  SELECT a.id FROM accounts a "
+        "  WHERE a.account_type = 'COST' AND a.is_active = 1 "
+        "  AND (a.base_code = 3200 OR a.account_code IN ('3200', '3201', '3202'))"
+        "  $cogsCurrencyFilter"
+        ") "
         "$acctDf "
-        "AND t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        "AND (t.reference_type IS NULL OR t.reference_type NOT IN ('invoice', 'pos_sale', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return'))",
         [...cogsCurrencyArgs, ...acctDateArgs],
       );
       manualCogs = (cogsRes2.first['manual_cogs'] as int? ?? 0);

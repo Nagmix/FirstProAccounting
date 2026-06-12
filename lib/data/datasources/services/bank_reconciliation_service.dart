@@ -234,11 +234,11 @@ class BankReconciliationService {
     ''', [recon.id]);
 
     final depositsInTransit =
-        MoneyHelper.readMoney(unmatchedDeposits.first['total']);
+        MoneyHelper.readCalculatedMoney(unmatchedDeposits.first['total']);
     final outstandingChecks =
-        MoneyHelper.readMoney(unmatchedChecks.first['total']);
-    final interestEarned = MoneyHelper.readMoney(newBankCredits.first['total']);
-    final bankCharges = MoneyHelper.readMoney(newBankDebits.first['total']);
+        MoneyHelper.readCalculatedMoney(unmatchedChecks.first['total']);
+    final interestEarned = MoneyHelper.readCalculatedMoney(newBankCredits.first['total']);
+    final bankCharges = MoneyHelper.readCalculatedMoney(newBankDebits.first['total']);
 
     final adjustedBankBalance =
         recon.statementBalance + depositsInTransit - outstandingChecks;

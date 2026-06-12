@@ -629,6 +629,8 @@ class DatabaseSchema {
     await db.execute(
         'CREATE INDEX idx_accounts_account_code ON accounts (account_code)');
     await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_code_currency ON accounts (account_code, currency)');
+    await db.execute(
         'CREATE INDEX idx_accounts_account_type ON accounts (account_type)');
     await db.execute(
         'CREATE INDEX idx_products_category_id ON products (category_id)');
