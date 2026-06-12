@@ -43,7 +43,7 @@ void main() {
     test('monthly cash flow does not query non-existent expenses.total', () {
       final start = reportSource.indexOf('getMonthlyCashFlow');
       expect(start, greaterThan(0));
-      final body = reportSource.substring(start, start + 4500);
+      final body = reportSource.substring(start, (start + 4500).clamp(0, reportSource.length));
 
       expect(
         body.contains('SUM(total) AS outflow'),
@@ -60,7 +60,7 @@ void main() {
     test('trial balance SQL args follow placeholder order', () {
       final start = reportSource.indexOf('Future<List<Map<String, dynamic>>> getTrialBalanceData');
       expect(start, greaterThan(0));
-      final body = reportSource.substring(start, start + 2200);
+      final body = reportSource.substring(start, (start + 2200).clamp(0, reportSource.length));
 
       expect(body.contains(r'LEFT JOIN transactions t ON t.account_id = a.id$dateFilter'), isTrue);
       expect(body.contains(r'WHERE a.is_active = 1$currencyFilter'), isTrue);
@@ -74,7 +74,7 @@ void main() {
     test('financial statements SQL args follow placeholder order', () {
       final start = reportSource.indexOf('Future<List<Map<String, dynamic>>> getFinancialStatementsData');
       expect(start, greaterThan(0));
-      final body = reportSource.substring(start, start + 2600);
+      final body = reportSource.substring(start, (start + 2600).clamp(0, reportSource.length));
 
       expect(body.contains(r'LEFT JOIN transactions t ON t.account_id = a.id$dateFilter'), isTrue);
       expect(body.contains(r"a.account_type IN (${accountTypes.map((_) => '?').join(',')})$currencyFilter"), isTrue);
