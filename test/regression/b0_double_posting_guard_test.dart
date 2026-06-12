@@ -162,30 +162,50 @@ void main() {
     Future<({int cashBoxId, int cashAccountId, int contraAccountId})>
         seedFixtures() async {
       final now = DateTime.now().toIso8601String();
-      final cashAccountId = await db.insert('accounts', {
-        'name_ar': 'الصناديق والبنوك',
-        'name_en': 'Cash & Banks',
-        'account_code': '1100',
-        'account_type': 'ASSET',
-        'balance': 0,
-        'currency': 'YER',
-        'balance_type': 'debit',
-        'is_active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
-      final contraAccountId = await db.insert('accounts', {
-        'name_ar': 'رصيد افتتاحي',
-        'name_en': 'Opening Balance Equity',
-        'account_code': '2901',
-        'account_type': 'EQUITY',
-        'balance': 0,
-        'currency': 'YER',
-        'balance_type': 'credit',
-        'is_active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
+
+      Future<int> getOrInsertAccount({
+        required String code,
+        required String nameAr,
+        required String nameEn,
+        required String type,
+        required String balanceType,
+      }) async {
+        final existing = await db.query(
+          'accounts',
+          columns: ['id'],
+          where: 'account_code = ? AND currency = ?',
+          whereArgs: [code, 'YER'],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) return existing.first['id'] as int;
+        return db.insert('accounts', {
+          'name_ar': nameAr,
+          'name_en': nameEn,
+          'account_code': code,
+          'account_type': type,
+          'balance': 0,
+          'currency': 'YER',
+          'balance_type': balanceType,
+          'is_active': 1,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+
+      final cashAccountId = await getOrInsertAccount(
+        code: '1100',
+        nameAr: 'الصناديق والبنوك',
+        nameEn: 'Cash & Banks',
+        type: 'ASSET',
+        balanceType: 'debit',
+      );
+      final contraAccountId = await getOrInsertAccount(
+        code: '2901',
+        nameAr: 'رصيد افتتاحي',
+        nameEn: 'Opening Balance Equity',
+        type: 'EQUITY',
+        balanceType: 'credit',
+      );
       final cashBoxId = await db.insert('cash_boxes', {
         'name': 'الصندوق الرئيسي',
         'balance': 0,

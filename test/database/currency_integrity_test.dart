@@ -38,13 +38,25 @@ void main() {
     await db.close();
   });
 
-  /// Helper: create a minimal account for testing.
+  /// Helper: create or reuse a minimal account for testing.
+  ///
+  /// Fresh schema now enforces UNIQUE(account_code, currency), and the default
+  /// seed data already creates many system accounts used by these tests.
   Future<int> _insertAccount({
     String code = '9999',
     String type = 'ASSET',
     String balanceType = 'debit',
     String currency = 'YER',
   }) async {
+    final existing = await db.query(
+      'accounts',
+      columns: ['id'],
+      where: 'account_code = ? AND currency = ?',
+      whereArgs: [code, currency],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) return existing.first['id'] as int;
+
     final now = DateTime.now().toIso8601String();
     return await db.insert('accounts', {
       'name_ar': 'حساب اختبار $code',
