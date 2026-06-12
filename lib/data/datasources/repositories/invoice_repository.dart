@@ -1417,6 +1417,8 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(
+                  totalPurchaseCost * effectiveExchangeRate),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1430,6 +1432,8 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(
+                  totalPurchaseCost * effectiveExchangeRate),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1461,6 +1465,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(totalReturnCost),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1474,6 +1479,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(totalReturnCost),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1530,6 +1536,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(yerTransport),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1544,6 +1551,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(yerTransport),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1587,6 +1595,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(yerTransport),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1601,6 +1610,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
+              'amount_base': MoneyHelper.toCents(yerTransport),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });

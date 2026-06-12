@@ -582,22 +582,25 @@ class ReportService {
       {String? currency}) async {
     final db = await _db;
     final yearStr = year.toString();
-    String currencyFilter = '';
-    List<dynamic> inflowArgs = [yearStr];
-    List<dynamic> outflowArgs = [yearStr];
-    List<dynamic> purchaseOutflowArgs = [yearStr];
-    List<dynamic> voucherOutflowArgs = [yearStr];
-    if (currency != null && currency.isNotEmpty) {
-      currencyFilter = ' AND currency = ?';
-      inflowArgs.add(currency);
-      outflowArgs.add(currency);
-      purchaseOutflowArgs.add(currency);
-      voucherOutflowArgs.add(currency);
-    }
+    final hasCurrencyFilter = currency != null && currency.isNotEmpty;
+    final currencyFilter = hasCurrencyFilter ? ' AND currency = ?' : '';
+    final invoiceAmountExpr = hasCurrencyFilter
+        ? 'paid_amount'
+        : 'CAST(ROUND(paid_amount * exchange_rate) AS INTEGER)';
+    final expenseAmountExpr = hasCurrencyFilter ? 'amount' : 'amount_base';
+    final voucherAmountExpr = hasCurrencyFilter
+        ? 'v.total_amount'
+        : 'CAST(ROUND(v.total_amount * v.exchange_rate) AS INTEGER)';
+
+    List<dynamic> argsForYearAndOptionalCurrency() => [
+          yearStr,
+          if (hasCurrencyFilter) currency,
+        ];
+
     return await db.rawQuery('''
       SELECT m.month,
-        COALESCE(i.inflow, 0.0) AS inflow,
-        COALESCE(o.outflow, 0.0) + COALESCE(p.purchase_outflow, 0.0) + COALESCE(v.voucher_outflow, 0.0) AS outflow
+        COALESCE(i.inflow, 0) AS inflow,
+        COALESCE(o.outflow, 0) + COALESCE(p.purchase_outflow, 0) + COALESCE(v.voucher_outflow, 0) AS outflow
       FROM (
         SELECT 1 AS month UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION
         SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION
@@ -605,7 +608,7 @@ class ReportService {
       ) m
       LEFT JOIN (
         SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
-               SUM(paid_amount) AS inflow
+               CAST(COALESCE(SUM($invoiceAmountExpr), 0) AS INTEGER) AS inflow
         FROM invoices
         WHERE type IN ('sale','pos') AND is_return = 0 AND paid_amount > 0
           AND strftime('%Y', created_at) = ?
@@ -614,16 +617,17 @@ class ReportService {
       ) i ON m.month = i.month
       LEFT JOIN (
         SELECT CAST(strftime('%m', expense_date) AS INTEGER) AS month,
-               SUM(total) AS outflow
+               CAST(COALESCE(SUM($expenseAmountExpr), 0) AS INTEGER) AS outflow
         FROM expenses
         WHERE strftime('%Y', expense_date) = ?
+          AND operation_type = 'صرف'
           $currencyFilter
         GROUP BY month
       ) o ON m.month = o.month
       LEFT JOIN (
         -- Fix #6: Include cash purchase payments in outflow
         SELECT CAST(strftime('%m', created_at) AS INTEGER) AS month,
-               SUM(paid_amount) AS purchase_outflow
+               CAST(COALESCE(SUM($invoiceAmountExpr), 0) AS INTEGER) AS purchase_outflow
         FROM invoices
         WHERE type = 'purchase' AND is_return = 0 AND payment_mechanism = 'cash' AND paid_amount > 0
           AND strftime('%Y', created_at) = ?
@@ -633,7 +637,7 @@ class ReportService {
       LEFT JOIN (
         -- Fix #6: Include payment voucher outflows (سندات صرف)
         SELECT CAST(strftime('%m', v.date) AS INTEGER) AS month,
-               SUM(v.total_amount) AS voucher_outflow
+               CAST(COALESCE(SUM($voucherAmountExpr), 0) AS INTEGER) AS voucher_outflow
         FROM vouchers v
         WHERE v.voucher_type = 'payment'
           AND strftime('%Y', v.date) = ?
@@ -642,10 +646,10 @@ class ReportService {
       ) v ON m.month = v.month
       ORDER BY m.month
     ''', [
-      ...inflowArgs,
-      ...outflowArgs,
-      ...purchaseOutflowArgs,
-      ...voucherOutflowArgs
+      ...argsForYearAndOptionalCurrency(),
+      ...argsForYearAndOptionalCurrency(),
+      ...argsForYearAndOptionalCurrency(),
+      ...argsForYearAndOptionalCurrency(),
     ]);
   }
 
@@ -862,7 +866,7 @@ class ReportService {
         "FROM transactions t "
         "WHERE t.account_id IN (SELECT a.id FROM accounts a WHERE a.account_type = 'EXPENSE' AND a.is_active = 1$expCurrencyFilter) "
         "$acctDf "
-        "AND t.reference_type NOT IN ('expense', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
+        "AND t.reference_type NOT IN ('expense', 'expense_reversal', 'expense_reversed', 'invoice', 'sale', 'pos', 'purchase', 'sale_return', 'purchase_return')",
         [...expCurrencyArgs, ...acctDateArgs],
       );
       manualExpenses = (expRes2.first['manual_exp'] as int? ?? 0);
@@ -1817,20 +1821,22 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-    final args = <dynamic>[];
-    String currencyFilter = '';
-    if (currency != null) {
-      currencyFilter = ' AND a.currency = ?';
-      args.add(currency);
-    }
+    final dateArgs = <dynamic>[];
     String dateFilter = '';
     if (dateFrom != null) {
       dateFilter += ' AND t.date >= ?';
-      args.add(dateFrom.toIso8601String());
+      dateArgs.add(dateFrom.toIso8601String());
     }
     if (dateTo != null) {
       dateFilter += ' AND t.date < ?';
-      args.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+      dateArgs.add(dateTo.add(const Duration(days: 1)).toIso8601String());
+    }
+
+    final currencyArgs = <dynamic>[];
+    String currencyFilter = '';
+    if (currency != null) {
+      currencyFilter = ' AND a.currency = ?';
+      currencyArgs.add(currency);
     }
 
     return await db.rawQuery(
@@ -1843,7 +1849,7 @@ class ReportService {
       "GROUP BY a.id "
       "HAVING total_debit > 0 OR total_credit > 0 "
       "ORDER BY a.account_code",
-      args,
+      [...dateArgs, ...currencyArgs],
     );
   }
 
@@ -1870,13 +1876,12 @@ class ReportService {
       dateArgs.add(dateTo.add(const Duration(days: 1)).toIso8601String());
     }
 
-    final args = <dynamic>[];
+    final currencyArgs = <dynamic>[];
     String currencyFilter = '';
     if (currency != null) {
       currencyFilter = ' AND a.currency = ?';
-      args.add(currency);
+      currencyArgs.add(currency);
     }
-    args.addAll(dateArgs);
 
     return await db.rawQuery(
       "SELECT a.id, a.account_code, a.name_ar, a.account_type, a.balance_type, a.currency, "
@@ -1888,7 +1893,7 @@ class ReportService {
       "GROUP BY a.id "
       "HAVING total_debit > 0 OR total_credit > 0 "
       "ORDER BY a.account_code",
-      [...accountTypes, ...args],
+      [...dateArgs, ...accountTypes, ...currencyArgs],
     );
   }
 
