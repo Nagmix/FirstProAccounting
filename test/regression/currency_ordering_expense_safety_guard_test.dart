@@ -91,6 +91,24 @@ void main() {
           .contains('_shiftOrderByWhitelist'), isTrue);
     });
 
+
+
+    test('legacy foreign-currency expense audit is available and read-only', () {
+      expect(
+        expenseRepositorySource.contains('auditLegacyForeignCurrencyExpenseJournals'),
+        isTrue,
+        reason: 'Historical foreign-currency expense inconsistencies need an explicit audit path.',
+      );
+      final idx = expenseRepositorySource.indexOf('auditLegacyForeignCurrencyExpenseJournals');
+      final nextMethod = expenseRepositorySource.indexOf('Future<int> updateExpense', idx);
+      final body = expenseRepositorySource.substring(idx, nextMethod);
+      expect(body.contains('SELECT'), isTrue);
+      expect(body.contains('UPDATE '), isFalse,
+          reason: 'Historical audit must not rewrite accounting history silently.');
+      expect(body.contains('DELETE '), isFalse,
+          reason: 'Historical audit must be read-only.');
+    });
+
     test('unsafe expense CRUD paths are journal-aware or blocked', () {
       final insertIdx = expenseRepositorySource.indexOf('Future<int> insertExpense');
       final updateIdx = expenseRepositorySource.indexOf('Future<int> updateExpense');

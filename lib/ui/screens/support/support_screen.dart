@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/date_formatter.dart';
@@ -28,6 +29,8 @@ class _SupportScreenState extends State<SupportScreen>
   final _descriptionController = TextEditingController();
   String _selectedCountry = 'اليمن';
   String _complaintType = 'فني'; // فني / مالي / خدمي
+  String? _attachmentPath;
+  final ImagePicker _imagePicker = ImagePicker();
 
   // ── Previous complaints (loaded from DB) ────────────────────────
   final List<_Complaint> _previousComplaints = [];
@@ -101,9 +104,7 @@ class _SupportScreenState extends State<SupportScreen>
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'بحث',
-            onPressed: () {
-              // TODO: Search complaints
-            },
+            onPressed: _showComplaintSearch,
           ),
         ],
         bottom: TabBar(
@@ -334,11 +335,9 @@ class _SupportScreenState extends State<SupportScreen>
 
             // ── Attach image button ─────────────────────────────
             OutlinedButton.icon(
-              onPressed: () {
-                // TODO: Implement image attachment
-              },
+              onPressed: _pickComplaintImage,
               icon: const Icon(Icons.camera_alt_outlined, size: 20),
-              label: const Text('إرفاق صورة'),
+              label: Text(_attachmentPath == null ? 'إرفاق صورة' : 'تغيير الصورة'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
@@ -349,6 +348,36 @@ class _SupportScreenState extends State<SupportScreen>
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
+            if (_attachmentPath != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkSurfaceVariant
+                      : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.image_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _attachmentPath!.split('/').last,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'إزالة الصورة',
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => setState(() => _attachmentPath = null),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
 
             // ── Submit button ───────────────────────────────────
@@ -416,6 +445,39 @@ class _SupportScreenState extends State<SupportScreen>
   // ════════════════════════════════════════════════════════════════
   //  ACTIONS
   // ════════════════════════════════════════════════════════════════
+  Future<void> _showComplaintSearch() async {
+    if (_previousComplaints.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا توجد شكاوى للبحث')),
+      );
+      return;
+    }
+    await showSearch<_Complaint?>(
+      context: context,
+      delegate: _ComplaintSearchDelegate(_previousComplaints),
+    );
+  }
+
+  Future<void> _pickComplaintImage() async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+      if (picked == null || !mounted) return;
+      setState(() => _attachmentPath = picked.path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('تعذر إرفاق الصورة'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   Future<void> _submitComplaint() async {
     if (_customerNameController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty) {
@@ -441,6 +503,7 @@ class _SupportScreenState extends State<SupportScreen>
         '${phone.isNotEmpty ? ' | الهاتف: $phone' : ''}'
         ' | الدولة: $_selectedCountry'
         ' | النوع: $_complaintType'
+        '${_attachmentPath != null ? ' | المرفق: $_attachmentPath' : ''}'
         '\n$description';
 
     // Save to notifications table in the database
@@ -463,6 +526,7 @@ class _SupportScreenState extends State<SupportScreen>
           type: _complaintType,
           status: ComplaintStatus.open,
           date: now,
+          attachmentPath: _attachmentPath,
         ),
       );
     });
@@ -472,6 +536,7 @@ class _SupportScreenState extends State<SupportScreen>
     _phoneController.clear();
     _subjectController.clear();
     _descriptionController.clear();
+    _attachmentPath = null;
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -498,6 +563,7 @@ class _Complaint {
     required this.type,
     required this.status,
     required this.date,
+    this.attachmentPath,
   });
 
   final String customerName;
@@ -505,6 +571,7 @@ class _Complaint {
   final String type;
   final ComplaintStatus status;
   final DateTime date;
+  final String? attachmentPath;
 
   /// Create a _Complaint from a notifications table row.
   factory _Complaint.fromMap(Map<String, dynamic> map) {
@@ -513,6 +580,7 @@ class _Complaint {
     // "العميل: أحمد | الهاتف: 05XX | الدولة: اليمن | النوع: فني\nDescription"
     String customerName = '';
     String type = 'فني';
+    String? attachmentPath;
     final bodyParts = body.split('\n');
     if (bodyParts.isNotEmpty) {
       final metaLine = bodyParts[0];
@@ -523,6 +591,9 @@ class _Complaint {
         }
         if (part.startsWith('النوع:')) {
           type = part.replaceFirst('النوع:', '').trim();
+        }
+        if (part.startsWith('المرفق:')) {
+          attachmentPath = part.replaceFirst('المرفق:', '').trim();
         }
       }
     }
@@ -539,6 +610,7 @@ class _Complaint {
       date: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'] as String) ?? DateTime.now()
           : DateTime.now(),
+      attachmentPath: attachmentPath,
     );
   }
 }
@@ -606,13 +678,25 @@ class _ComplaintCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    DateFormatter.timeAgo(complaint.date),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.textHint,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        DateFormatter.timeAgo(complaint.date),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textHint,
+                        ),
+                      ),
+                      if (complaint.attachmentPath != null) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.attach_file,
+                            size: 14,
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textHint),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -652,6 +736,83 @@ class _ComplaintCard extends StatelessWidget {
   }
 
   IconData _getTypeIcon(String type) {
+    switch (type) {
+      case 'فني':
+        return Icons.build_outlined;
+      case 'مالي':
+        return Icons.attach_money;
+      case 'خدمي':
+        return Icons.support_agent_outlined;
+      default:
+        return Icons.help_outline;
+    }
+  }
+}
+
+class _ComplaintSearchDelegate extends SearchDelegate<_Complaint?> {
+  _ComplaintSearchDelegate(this.complaints)
+      : super(
+          searchFieldLabel: 'ابحث في الشكاوى',
+          keyboardType: TextInputType.text,
+        );
+
+  final List<_Complaint> complaints;
+
+  @override
+  List<Widget>? buildActions(BuildContext context) => [
+        if (query.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.clear),
+            tooltip: 'مسح',
+            onPressed: () => query = '',
+          ),
+      ];
+
+  @override
+  Widget? buildLeading(BuildContext context) => IconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: 'رجوع',
+        onPressed: () => close(context, null),
+      );
+
+  @override
+  Widget buildResults(BuildContext context) => _buildMatches(context);
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _buildMatches(context);
+
+  Widget _buildMatches(BuildContext context) {
+    final normalizedQuery = query.trim().toLowerCase();
+    final matches = normalizedQuery.isEmpty
+        ? complaints
+        : complaints.where((complaint) {
+            return complaint.customerName.toLowerCase().contains(normalizedQuery) ||
+                complaint.subject.toLowerCase().contains(normalizedQuery) ||
+                complaint.type.toLowerCase().contains(normalizedQuery);
+          }).toList();
+
+    if (matches.isEmpty) {
+      return const Center(child: Text('لا توجد نتائج مطابقة'));
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: matches.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final complaint = matches[index];
+        return ListTile(
+          leading: Icon(_typeIcon(complaint.type), color: AppColors.primary),
+          title: Text(complaint.customerName),
+          subtitle: Text('${complaint.subject} • ${complaint.type}'),
+          trailing: Text(DateFormatter.timeAgo(complaint.date)),
+          onTap: () => close(context, complaint),
+        );
+      },
+    );
+  }
+
+  IconData _typeIcon(String type) {
     switch (type) {
       case 'فني':
         return Icons.build_outlined;

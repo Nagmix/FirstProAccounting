@@ -18,9 +18,11 @@ void main() {
     late String bankReconciliationSource;
 
     setUpAll(() {
-      reportSource = File(
+      reportSource = [
         'lib/data/datasources/services/report_service.dart',
-      ).readAsStringSync();
+        'lib/data/datasources/services/report_service_daily_inventory.dart',
+        'lib/data/datasources/services/report_service_statistics.dart',
+      ].map((path) => File(path).readAsStringSync()).join('\n');
       invoiceSource = File(
         'lib/data/datasources/repositories/invoice_repository.dart',
       ).readAsStringSync();

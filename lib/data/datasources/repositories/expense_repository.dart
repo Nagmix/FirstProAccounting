@@ -68,6 +68,42 @@ class ExpenseRepository {
     return results.isNotEmpty ? results.first : null;
   }
 
+  /// Audit historical foreign-currency expense records that may have been
+  /// created before native-currency expense posting was enforced.
+  ///
+  /// This method is intentionally read-only. It identifies records that need a
+  /// controlled review/reversal workflow instead of silently rewriting
+  /// accounting history.
+  Future<List<Map<String, dynamic>>> auditLegacyForeignCurrencyExpenseJournals() async {
+    final db = await _db;
+    final rows = await db.rawQuery('''
+      SELECT
+        e.id AS expense_id,
+        e.title,
+        e.currency AS expense_currency,
+        e.expense_date,
+        COUNT(t.id) AS linked_transaction_count,
+        SUM(CASE WHEN t.id IS NOT NULL AND t.currency_code != e.currency THEN 1 ELSE 0 END)
+          AS currency_mismatch_count,
+        SUM(CASE WHEN t.id IS NOT NULL AND substr(t.date, 1, 10) != substr(e.expense_date, 1, 10) THEN 1 ELSE 0 END)
+          AS date_mismatch_count,
+        SUM(CASE WHEN t.id IS NOT NULL AND t.amount_base = 0 THEN 1 ELSE 0 END)
+          AS zero_amount_base_count
+      FROM expenses e
+      LEFT JOIN transactions t
+        ON t.reference_type IN ('expense', 'expense_reversal', 'expense_reversed')
+       AND t.reference_id = CAST(e.id AS TEXT)
+      WHERE e.currency != 'YER'
+      GROUP BY e.id
+      HAVING linked_transaction_count = 0
+         OR currency_mismatch_count > 0
+         OR date_mismatch_count > 0
+         OR zero_amount_base_count > 0
+      ORDER BY e.expense_date ASC, e.id ASC
+    ''');
+    return rows;
+  }
+
   Future<int> updateExpense(int id, Map<String, dynamic> expenseMap) async {
     final existing = await getExpenseById(id);
     if (existing == null) return 0;
