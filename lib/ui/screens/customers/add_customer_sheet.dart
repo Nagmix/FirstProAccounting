@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -119,7 +120,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     }
 
     try {
-      await locator<CustomerRepository>().insertCustomer(map);
+      // Defensive timeout: if the DB transaction hangs (e.g. lock), we
+      // recover instead of leaving the UI stuck forever.
+      await locator<CustomerRepository>()
+          .insertCustomer(map)
+          .timeout(const Duration(seconds: 8), onTimeout: () {
+        throw TimeoutException(
+            'انتهى الوقت المسموح لحفظ العميل. قد تكون قاعدة البيانات مشغولة.');
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);

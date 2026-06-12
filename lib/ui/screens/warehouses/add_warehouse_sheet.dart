@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/di/service_locator.dart';
@@ -52,11 +53,19 @@ class _AddWarehouseSheetState extends State<AddWarehouseSheet> {
 
       final refRepo = locator<ReferenceDataRepository>();
       if (_isEdit) {
-        await refRepo.updateWarehouse(
-            widget.existing!['id'] as int, warehouseMap);
+        await refRepo
+            .updateWarehouse(widget.existing!['id'] as int, warehouseMap)
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لتعديل المستودع. قد تكون قاعدة البيانات مشغولة.');
+        });
       } else {
         warehouseMap['created_at'] = now;
-        await refRepo.insertWarehouse(warehouseMap);
+        await refRepo.insertWarehouse(warehouseMap).timeout(
+            const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لحفظ المستودع. قد تكون قاعدة البيانات مشغولة.');
+        });
       }
 
       if (!mounted) return;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/helpers/currency_constants.dart';
@@ -132,9 +133,18 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
       if (_isEdit) {
         await locator<AccountRepository>()
-            .updateAccount(account.id!, account.toMap());
+            .updateAccount(account.id!, account.toMap())
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لتعديل الحساب. قد تكون قاعدة البيانات مشغولة.');
+        });
       } else {
-        await locator<AccountRepository>().insertAccount(account.toMap());
+        await locator<AccountRepository>()
+            .insertAccount(account.toMap())
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لحفظ الحساب. قد تكون قاعدة البيانات مشغولة.');
+        });
       }
 
       if (!mounted) return;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:firstpro/core/utils/money_helper.dart';
 
@@ -781,24 +782,34 @@ class _AddProductSheetState extends State<AddProductSheet> {
         updateMap['current_stock'] = widget.existing!.currentStock;
         updateMap['warehouse_id'] = widget.existing!.warehouseId;
         updateMap['image_path'] = _imagePath;
-        await locator<ProductRepository>().updateProductWithConversions(
-          productId: widget.existing!.id!,
-          updateMap: updateMap,
-          unitConversions: unitConversionMaps,
-        );
+        await locator<ProductRepository>()
+            .updateProductWithConversions(
+              productId: widget.existing!.id!,
+              updateMap: updateMap,
+              unitConversions: unitConversionMaps,
+            )
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لتعديل الصنف. قد تكون قاعدة البيانات مشغولة.');
+        });
       } else {
         final map = product.toMap();
         map['image_path'] = _imagePath;
         final openingQty = double.tryParse(_openingStockController.text) ?? 0.0;
-        await locator<ProductRepository>().saveProductWithConversions(
-          productMap: map,
-          unitConversions: unitConversionMaps,
-          openingStock: openingQty > 0 && _trackStock ? openingQty : null,
-          warehouseId: _selectedWarehouseId,
-          baseCostPrice: baseCostPrice,
-          currency: _defaultCurrencyCode ?? 'YER',
-          productName: _nameArController.text.trim(),
-        );
+        await locator<ProductRepository>()
+            .saveProductWithConversions(
+              productMap: map,
+              unitConversions: unitConversionMaps,
+              openingStock: openingQty > 0 && _trackStock ? openingQty : null,
+              warehouseId: _selectedWarehouseId,
+              baseCostPrice: baseCostPrice,
+              currency: _defaultCurrencyCode ?? 'YER',
+              productName: _nameArController.text.trim(),
+            )
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لحفظ الصنف. قد تكون قاعدة البيانات مشغولة.');
+        });
       }
     } catch (e) {
       if (!mounted) return;

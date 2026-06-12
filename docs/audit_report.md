@@ -188,4 +188,18 @@
 - تم إضافة `try-catch` وقائية في `add_account_sheet` و `add_warehouse_sheet` لمنع نفس نمط التعليق على أي استثناء غير متوقع.
 
 ---
+
+# 🐛 القسم أ (متابعة 2): Fresh Install Hang Bug — **إصلاحات دفاعية إضافية**
+**التاريخ:** 2026-06-12
+**الحالة:** ✅ منجزة (timeout wrappers + تعديلات وقائية)
+**الملفات المُعدَّلة الإضافية:**
+- `lib/ui/screens/customers/add_customer_sheet.dart`: `.timeout(Duration(seconds: 8))` حول `insertCustomer` + `import 'dart:async'`
+- `lib/ui/screens/suppliers/add_supplier_sheet.dart`: `.timeout(Duration(seconds: 8))` حول `insertSupplier`/`updateSupplier` + `import 'dart:async'`
+- `lib/ui/screens/products/add_product_sheet.dart`: `.timeout(Duration(seconds: 8))` حول `saveProductWithConversions` و `updateProductWithConversions` + `import 'dart:async'`
+- `lib/ui/screens/accounts/add_account_sheet.dart`: `.timeout(Duration(seconds: 8))` حول `insertAccount`/`updateAccount` + `import 'dart:async'`
+- `lib/ui/screens/warehouses/add_warehouse_sheet.dart`: `.timeout(Duration(seconds: 8))` حول `insertWarehouse`/`updateWarehouse` + `import 'dart:async'`
+
+**المنطق:** حتى لو كان `db.transaction` يتعلّق بسبب قفل قاعدة بيانات (deadlock) أو انتظار `onCreate`، فإن `Future.timeout()` سيُفشل العملية بعد 8 ثوانٍ ويُظهر `SnackBar` خطأ ويُعيد تعيين `_isSaving = false`، بدلاً من تعليق الواجهة للأبد.
+
+---
 **قاعدة دائمة:** يتم تحديث هذا الملف فور الانتهاء من أي ميزة أو إصلاح قبل الانتقال للمهمة التالية.

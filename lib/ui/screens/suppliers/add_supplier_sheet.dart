@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
@@ -113,10 +114,20 @@ class _AddSupplierSheetState extends State<AddSupplierSheet> {
 
     try {
       if (_isEditing) {
-        await supplierRepo.updateSupplier(widget.supplier!.id!, supplierMap);
+        await supplierRepo
+            .updateSupplier(widget.supplier!.id!, supplierMap)
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لتعديل المورد. قد تكون قاعدة البيانات مشغولة.');
+        });
       } else {
         supplierMap['created_at'] = now;
-        await supplierRepo.insertSupplier(supplierMap);
+        await supplierRepo
+            .insertSupplier(supplierMap)
+            .timeout(const Duration(seconds: 8), onTimeout: () {
+          throw TimeoutException(
+              'انتهى الوقت المسموح لحفظ المورد. قد تكون قاعدة البيانات مشغولة.');
+        });
       }
     } catch (e) {
       if (!mounted) return;
