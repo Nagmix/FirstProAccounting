@@ -315,7 +315,9 @@ class BankReconciliationService {
           'amount_base':
               (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate)
                   .round(),
-        });
+                  'reference_type': 'bank_reconciliation',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, expenseAccountId, calculated.bankCharges, 0.0, now);
 
@@ -332,7 +334,9 @@ class BankReconciliationService {
           'amount_base':
               (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate)
                   .round(),
-        });
+                  'reference_type': 'bank_reconciliation',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, linkedAccountId, 0.0, calculated.bankCharges, now);
 
@@ -367,7 +371,9 @@ class BankReconciliationService {
             'amount_base':
                 (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate)
                     .round(),
-          });
+                    'reference_type': 'bank_reconciliation',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, linkedAccountId, calculated.interestEarned, 0.0, now);
 
@@ -384,7 +390,9 @@ class BankReconciliationService {
             'amount_base':
                 (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate)
                     .round(),
-          });
+                    'reference_type': 'bank_reconciliation',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, revenueAccountId, 0.0, calculated.interestEarned, now);
 

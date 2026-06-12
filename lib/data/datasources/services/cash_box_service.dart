@@ -969,7 +969,9 @@ class CashBoxService {
           'currency_code': toCurrency,
           'exchange_rate': toCurrency == 'YER' ? 1.0 : toRate,
           'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
-        });
+                  'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, toCashBanksAccountId, toAmount, 0.0, now);
       }
@@ -988,7 +990,9 @@ class CashBoxService {
           'currency_code': fromCurrency,
           'exchange_rate': fromCurrency == 'YER' ? 1.0 : fromRate,
           'amount_base': (MoneyHelper.toCents(fromAmount) * fromRate).round(),
-        });
+                  'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, fromCashBanksAccountId, 0.0, fromAmount, now);
       }
@@ -1014,7 +1018,9 @@ class CashBoxService {
             'currency_code': 'YER',
             'exchange_rate': 1.0,
             'amount_base': MoneyHelper.toCents(gainLoss),
-          });
+                    'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, exchangeAccountId, 0.0, gainLoss, now);
         } else if (gainLossType == 'loss') {
@@ -1030,7 +1036,9 @@ class CashBoxService {
             'currency_code': 'YER',
             'exchange_rate': 1.0,
             'amount_base': MoneyHelper.toCents(gainLoss),
-          });
+                    'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, exchangeAccountId, gainLoss, 0.0, now);
         }
@@ -1188,7 +1196,9 @@ class CashBoxService {
           'currency_code': transferCurrency,
           'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
           'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
-        });
+                  'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, toAccountId, amount, 0.0, now);
       }
@@ -1207,7 +1217,9 @@ class CashBoxService {
           'currency_code': transferCurrency,
           'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
           'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
-        });
+                  'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, fromAccountId, 0.0, amount, now);
       }
@@ -1340,7 +1352,9 @@ class CashBoxService {
             'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
             'amount_base':
                 (MoneyHelper.toCents(itemAmount) * voucherRate).round(),
-          });
+                    'reference_type': 'cash_box_journal',
+          'reference_id': journalId.toString(),
+});
 
           // تحديث رصيد الحساب باستخدام منطق balance_type
           await _dbHelper.journal.updateAccountBalanceWithJournal(
@@ -1529,7 +1543,9 @@ class CashBoxService {
             'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
             'amount_base':
                 (MoneyHelper.toCents(reversalAmount) * voucherRate).round(),
-          });
+                    'reference_type': 'cash_box_journal',
+          'reference_id': voucherId.toString(),
+});
 
           // تحديث رصيد الحساب (عكس) باستخدام منطق balance_type
           await _dbHelper.journal.updateAccountBalanceWithJournal(

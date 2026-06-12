@@ -380,7 +380,9 @@ class EmployeeRepository {
           'currency_code': currency,
           'exchange_rate': exchangeRate,
           'amount_base': MoneyHelper.toCents(baseAmount),
-        });
+                  'reference_type': 'employee_journal',
+          'reference_id': journalId.toString(),
+});
         await txn.insert('transactions', {
           'account_id': cashAccountId,
           'journal_id': journalId,
@@ -392,7 +394,9 @@ class EmployeeRepository {
           'currency_code': currency,
           'exchange_rate': exchangeRate,
           'amount_base': MoneyHelper.toCents(baseAmount),
-        });
+                  'reference_type': 'employee_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, empAccountId!, 0.0, amount, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(
@@ -412,7 +416,9 @@ class EmployeeRepository {
           'currency_code': currency,
           'exchange_rate': exchangeRate,
           'amount_base': MoneyHelper.toCents(baseAmount),
-        });
+                  'reference_type': 'employee_journal',
+          'reference_id': journalId.toString(),
+});
         await txn.insert('transactions', {
           'account_id': cashAccountId,
           'journal_id': journalId,
@@ -424,7 +430,9 @@ class EmployeeRepository {
           'currency_code': currency,
           'exchange_rate': exchangeRate,
           'amount_base': MoneyHelper.toCents(baseAmount),
-        });
+                  'reference_type': 'employee_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, empAccountId!, amount, 0.0, now);
         await _dbHelper.journal.updateAccountBalanceWithJournal(

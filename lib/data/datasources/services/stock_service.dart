@@ -247,7 +247,9 @@ class StockService {
             'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
             'amount_base':
                 (MoneyHelper.toCents(transferValue) * transferRate).round(),
-          });
+                    'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, toInventoryAccountId, transferValue, 0.0, now);
 
@@ -265,7 +267,9 @@ class StockService {
             'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
             'amount_base':
                 (MoneyHelper.toCents(transferValue) * transferRate).round(),
-          });
+                    'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, fromInventoryAccountId, 0.0, transferValue, now);
         }
@@ -552,7 +556,9 @@ class StockService {
                   'currency_code': 'YER',
                   'exchange_rate': 1.0,
                   'amount_base': MoneyHelper.toCents(adjustmentAmount),
-                });
+                          'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
                 await _dbHelper.journal.updateAccountBalanceWithJournal(txn,
                     effectiveInventoryAccountId, adjustmentAmount, 0.0, now);
               }
@@ -568,7 +574,9 @@ class StockService {
                 'currency_code': 'YER',
                 'exchange_rate': 1.0,
                 'amount_base': MoneyHelper.toCents(adjustmentAmount),
-              });
+                        'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, varianceIncomeAccountId, 0.0, adjustmentAmount, now);
             } else {
@@ -586,7 +594,9 @@ class StockService {
                 'currency_code': 'YER',
                 'exchange_rate': 1.0,
                 'amount_base': MoneyHelper.toCents(lossAmount),
-              });
+                        'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, varianceLossAccountId, lossAmount, 0.0, now);
               if (effectiveInventoryAccountId != null) {
@@ -602,7 +612,9 @@ class StockService {
                   'currency_code': 'YER',
                   'exchange_rate': 1.0,
                   'amount_base': MoneyHelper.toCents(lossAmount),
-                });
+                          'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
                 await _dbHelper.journal.updateAccountBalanceWithJournal(
                     txn, effectiveInventoryAccountId, 0.0, lossAmount, now);
               }
@@ -854,7 +866,9 @@ class StockService {
               'amount_base':
                   (MoneyHelper.toCents(totalIncreaseValue) * voucherRate)
                       .round(),
-            });
+                      'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
             await _dbHelper.journal.updateAccountBalanceWithJournal(
                 txn, invAccId, totalIncreaseValue, 0.0, now);
           }
@@ -870,7 +884,9 @@ class StockService {
             'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
             'amount_base':
                 (MoneyHelper.toCents(totalIncreaseValue) * voucherRate).round(),
-          });
+                    'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
         }
@@ -889,7 +905,9 @@ class StockService {
             'exchange_rate': currency == 'YER' ? 1.0 : voucherRate,
             'amount_base':
                 (MoneyHelper.toCents(totalDecreaseValue) * voucherRate).round(),
-          });
+                    'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
           if (inventoryAccount != null) {
@@ -907,7 +925,9 @@ class StockService {
               'amount_base':
                   (MoneyHelper.toCents(totalDecreaseValue) * voucherRate)
                       .round(),
-            });
+                      'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
             await _dbHelper.journal.updateAccountBalanceWithJournal(
                 txn, invAccId, 0.0, totalDecreaseValue, now);
           }
@@ -1071,6 +1091,7 @@ class StockService {
         );
 
         // عكس جميع القيود المرتبطة (وليس فقط أول 4)
+        final reversalJournalId = generateUniqueJournalId();
         for (final txnRow in relatedTxns) {
           final accId = txnRow['account_id'] as int;
           final debit = MoneyHelper.readMoney(txnRow['debit']);
@@ -1080,7 +1101,7 @@ class StockService {
           final reversalAmount = credit > 0 ? credit : debit;
           await txn.insert('transactions', {
             'account_id': accId,
-            'journal_id': generateUniqueJournalId(),
+            'journal_id': reversalJournalId,
             'debit': MoneyHelper.toCents(credit),
             'credit': MoneyHelper.toCents(debit),
             'description': 'عكس قيد - حذف سند جرد رقم $voucherNumber',
@@ -1090,11 +1111,19 @@ class StockService {
             'exchange_rate': deleteCurrency == 'YER' ? 1.0 : deleteRate,
             'amount_base':
                 (MoneyHelper.toCents(reversalAmount) * deleteRate).round(),
+            'reference_type': 'inventory_voucher_delete',
+            'reference_id': id.toString(),
           });
 
           // Reverse the account balance
           await _dbHelper.journal
               .updateAccountBalanceWithJournal(txn, accId, credit, debit, now);
+        }
+        if (relatedTxns.isNotEmpty) {
+          await _dbHelper.journal.validateJournalBalanceInTransaction(
+            txn,
+            reversalJournalId,
+          );
         }
       }
 
@@ -1281,7 +1310,9 @@ class StockService {
             'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
             'amount_base':
                 (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
-          });
+                    'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, invAccId, totalIncreaseValue, 0.0, now);
         }
@@ -1297,7 +1328,9 @@ class StockService {
           'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
           'amount_base':
               (MoneyHelper.toCents(totalIncreaseValue) * confirmRate).round(),
-        });
+                  'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, varianceIncomeAccountId, 0.0, totalIncreaseValue, now);
       }
@@ -1316,7 +1349,9 @@ class StockService {
           'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
           'amount_base':
               (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
-        });
+                  'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, varianceLossAccountId, totalDecreaseValue, 0.0, now);
         if (inventoryAccount != null) {
@@ -1333,7 +1368,9 @@ class StockService {
             'exchange_rate': currency == 'YER' ? 1.0 : confirmRate,
             'amount_base':
                 (MoneyHelper.toCents(totalDecreaseValue) * confirmRate).round(),
-          });
+                    'reference_type': 'stock_journal',
+          'reference_id': journalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, invAccId, 0.0, totalDecreaseValue, now);
         }

@@ -530,7 +530,9 @@ class ExpenseRepository {
             'currency_code': oldCurrency,
             'exchange_rate': oldExchangeRate,
             'amount_base': MoneyHelper.toCents(oldAmountBase),
-          });
+                    'reference_type': 'expense_legacy_reversal',
+          'reference_id': reverseJournalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, oldExpenseAccountId, 0.0, oldAmountBase, now);
 
@@ -546,7 +548,9 @@ class ExpenseRepository {
               'currency_code': oldCurrency,
               'exchange_rate': oldExchangeRate,
               'amount_base': MoneyHelper.toCents(oldAmountBase),
-            });
+                      'reference_type': 'expense_legacy_reversal',
+          'reference_id': reverseJournalId.toString(),
+});
             await _dbHelper.journal.updateAccountBalanceWithJournal(
                 txn, oldCashBankAccountId, oldAmountBase, 0.0, now);
           }
@@ -564,7 +568,9 @@ class ExpenseRepository {
               'currency_code': oldCurrency,
               'exchange_rate': oldExchangeRate,
               'amount_base': MoneyHelper.toCents(oldAmountBase),
-            });
+                      'reference_type': 'expense_legacy_reversal',
+          'reference_id': reverseJournalId.toString(),
+});
             await _dbHelper.journal.updateAccountBalanceWithJournal(
                 txn, oldCashBankAccountId, 0.0, oldAmountBase, now);
           }
@@ -579,7 +585,9 @@ class ExpenseRepository {
             'currency_code': oldCurrency,
             'exchange_rate': oldExchangeRate,
             'amount_base': MoneyHelper.toCents(oldAmountBase),
-          });
+                    'reference_type': 'expense_legacy_reversal',
+          'reference_id': reverseJournalId.toString(),
+});
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, oldExpenseAccountId, oldAmountBase, 0.0, now);
         }

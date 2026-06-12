@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -459,6 +460,8 @@ class ProductRepository {
           // Create journal entries for opening balance: Debit Inventory / Credit Opening Balance
           final totalValue = openingStock * baseCostPrice;
           if (totalValue > 0) {
+            final journalId = generateUniqueJournalId();
+            final referenceId = savedProductId.toString();
             final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
             final productExchangeRate = await _getExchangeRate(txn, currency);
 
@@ -486,6 +489,7 @@ class ProductRepository {
               // Journal entry: Debit Inventory / Credit Opening Balance
               await txn.insert('transactions', {
                 'account_id': inventoryAccountId,
+                'journal_id': journalId,
                 'debit': MoneyHelper.toCents(totalValue),
                 'credit': 0,
                 'description': 'رصيد افتتاحي - منتج: $productName',
@@ -496,9 +500,12 @@ class ProductRepository {
                 'amount_base':
                     (MoneyHelper.toCents(totalValue) * productExchangeRate)
                         .round(),
+                'reference_type': 'product_opening_stock',
+                'reference_id': referenceId,
               });
               await txn.insert('transactions', {
                 'account_id': openingBalanceAccountId,
+                'journal_id': journalId,
                 'debit': 0,
                 'credit': MoneyHelper.toCents(totalValue),
                 'description': 'رصيد افتتاحي - منتج: $productName',
@@ -509,7 +516,13 @@ class ProductRepository {
                 'amount_base':
                     (MoneyHelper.toCents(totalValue) * productExchangeRate)
                         .round(),
+                'reference_type': 'product_opening_stock',
+                'reference_id': referenceId,
               });
+              await _dbHelper.journal.validateJournalBalanceInTransaction(
+                txn,
+                journalId,
+              );
 
               // Update account balances using JournalService
               await _dbHelper.journal.updateAccountBalanceWithJournal(

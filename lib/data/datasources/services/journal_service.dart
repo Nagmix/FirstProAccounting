@@ -164,6 +164,54 @@ class JournalService {
     }
   }
 
+  /// Validate a journal entry inside an active transaction using the original
+  /// transaction currency amounts. Use this when all rows are in the same
+  /// currency or when each multi-currency pair is separately balanced by its
+  /// original amounts.
+  Future<void> validateJournalBalanceInTransaction(
+    Transaction txn,
+    int journalId,
+  ) async {
+    final entries = await txn.query(
+      'transactions',
+      where: 'journal_id = ?',
+      whereArgs: [journalId],
+    );
+    validateJournalBalance(entries);
+  }
+
+  /// Validate journal balance in the base currency using `amount_base`.
+  /// This is required for genuine multi-currency operations such as currency
+  /// exchange, where original debit/credit amounts are in different currencies.
+  Future<void> validateJournalBaseBalanceInTransaction(
+    Transaction txn,
+    int journalId,
+  ) async {
+    final debitRows = await txn.rawQuery(
+      'SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total '
+      'FROM transactions WHERE journal_id = ? AND debit > 0',
+      [journalId],
+    );
+    final creditRows = await txn.rawQuery(
+      'SELECT CAST(COALESCE(SUM(amount_base), 0) AS INTEGER) AS total '
+      'FROM transactions WHERE journal_id = ? AND credit > 0',
+      [journalId],
+    );
+    final totalDebitBase =
+        MoneyHelper.readCalculatedMoney(debitRows.first['total']);
+    final totalCreditBase =
+        MoneyHelper.readCalculatedMoney(creditRows.first['total']);
+    final difference = (totalDebitBase - totalCreditBase).abs();
+    if (difference > 0.005) {
+      debugPrint(
+        '⚠️ UNBALANCED BASE JOURNAL ENTRY: DebitBase=$totalDebitBase, CreditBase=$totalCreditBase, Diff=$difference',
+      );
+      throw Exception(
+        'قيد محاسبي غير متوازن بالعملة الأساسية: المدين=$totalDebitBase, الدائن=$totalCreditBase, الفرق=$difference',
+      );
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  Account-balance queries
   // ══════════════════════════════════════════════════════════════
@@ -333,7 +381,9 @@ class JournalService {
           'currency_code': 'YER',
           'exchange_rate': 1.0,
           'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
-        });
+                  'reference_type': 'exchange_gain_loss',
+          'reference_id': journalId.toString(),
+});
         await txn.insert('transactions', {
           'account_id': exchangeAccountId,
           'journal_id': journalId,
@@ -345,7 +395,9 @@ class JournalService {
           'currency_code': 'YER',
           'exchange_rate': 1.0,
           'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
-        });
+                  'reference_type': 'exchange_gain_loss',
+          'reference_id': journalId.toString(),
+});
         await updateAccountBalanceWithJournal(
           txn,
           accountId,
@@ -373,7 +425,9 @@ class JournalService {
           'currency_code': 'YER',
           'exchange_rate': 1.0,
           'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
-        });
+                  'reference_type': 'exchange_gain_loss',
+          'reference_id': journalId.toString(),
+});
         await txn.insert('transactions', {
           'account_id': accountId,
           'journal_id': journalId,
@@ -385,7 +439,9 @@ class JournalService {
           'currency_code': 'YER',
           'exchange_rate': 1.0,
           'amount_base': MoneyHelper.toCents(gainLossAmount.abs()),
-        });
+                  'reference_type': 'exchange_gain_loss',
+          'reference_id': journalId.toString(),
+});
         await updateAccountBalanceWithJournal(
           txn,
           exchangeAccountId,

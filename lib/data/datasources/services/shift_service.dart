@@ -1124,6 +1124,10 @@ class ShiftService {
     await db.transaction((txn) async {
       // Look up exchange rate for the cash in/out currency
       final exchangeRate = await _getExchangeRate(txn, currency);
+      final amountBaseCents = (MoneyHelper.toCents(amount) * exchangeRate).round();
+      final journalId = generateUniqueJournalId();
+      final referenceType = isCashIn ? 'shift_cash_in' : 'shift_cash_out';
+      final referenceId = 'shift_$shiftId';
 
       // ── 1. Update cash box balance ──
       final cashBoxRow = await txn.query('cash_boxes',
@@ -1149,7 +1153,6 @@ class ShiftService {
       final codeOffset =
           await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
       final cashAccountCode = 1100 + codeOffset;
-      final expenseAccountCode = 5000 + codeOffset;
 
       // Find cash/bank account
       final cashAccountRow = await txn.query(
@@ -1158,77 +1161,94 @@ class ShiftService {
         whereArgs: [cashAccountCode.toString(), currency],
         limit: 1,
       );
-      // Find expense account
-      final expenseAccountRow = await txn.query(
-        'accounts',
-        where: 'account_code = ? AND currency = ?',
-        whereArgs: [expenseAccountCode.toString(), currency],
-        limit: 1,
+
+      final counterpartAccountId = await _getOrCreateShiftCashAdjustmentAccount(
+        txn,
+        codeOffset: codeOffset,
+        currency: currency,
+        isCashIn: isCashIn,
+        now: now,
       );
 
-      if (cashAccountRow.isNotEmpty && expenseAccountRow.isNotEmpty) {
+      if (cashAccountRow.isNotEmpty && counterpartAccountId != null) {
         final cashAccountId = cashAccountRow.first['id'] as int;
-        final expenseAccountId = expenseAccountRow.first['id'] as int;
+        final description = reason.trim().isNotEmpty
+            ? reason.trim()
+            : (isCashIn ? 'إيداع نقدي أثناء الوردية' : 'سحب نقدي أثناء الوردية');
 
         if (isCashIn) {
-          // إيداع: مدين (الصندوق) / دائن (مصاريف متنوعة)
+          // Cash in: Debit cash, Credit cash-over/adjustment income.
           await txn.insert('transactions', {
             'account_id': cashAccountId,
+            'journal_id': journalId,
             'debit': MoneyHelper.toCents(amount),
             'credit': 0,
-            'description': reason,
+            'description': description,
             'date': now,
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': exchangeRate,
-            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
+            'amount_base': amountBaseCents,
+            'reference_type': referenceType,
+            'reference_id': referenceId,
           });
           await txn.insert('transactions', {
-            'account_id': expenseAccountId,
+            'account_id': counterpartAccountId,
+            'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(amount),
-            'description': reason,
+            'description': description,
             'date': now,
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': exchangeRate,
-            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
+            'amount_base': amountBaseCents,
+            'reference_type': referenceType,
+            'reference_id': referenceId,
           });
-          // Update account balances
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, cashAccountId, amount, 0.0, now);
           await _dbHelper.journal.updateAccountBalanceWithJournal(
-              txn, expenseAccountId, 0.0, amount, now);
+              txn, counterpartAccountId, 0.0, amount, now);
         } else {
-          // سحب: مدين (مصاريف متنوعة) / دائن (الصندوق)
+          // Cash out: Debit cash-short/adjustment expense, Credit cash.
           await txn.insert('transactions', {
-            'account_id': expenseAccountId,
+            'account_id': counterpartAccountId,
+            'journal_id': journalId,
             'debit': MoneyHelper.toCents(amount),
             'credit': 0,
-            'description': reason,
+            'description': description,
             'date': now,
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': exchangeRate,
-            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
+            'amount_base': amountBaseCents,
+            'reference_type': referenceType,
+            'reference_id': referenceId,
           });
           await txn.insert('transactions', {
             'account_id': cashAccountId,
+            'journal_id': journalId,
             'debit': 0,
             'credit': MoneyHelper.toCents(amount),
-            'description': reason,
+            'description': description,
             'date': now,
             'created_at': now,
             'currency_code': currency,
             'exchange_rate': exchangeRate,
-            'amount_base': (MoneyHelper.toCents(amount) * exchangeRate).round(),
+            'amount_base': amountBaseCents,
+            'reference_type': referenceType,
+            'reference_id': referenceId,
           });
-          // Update account balances
           await _dbHelper.journal.updateAccountBalanceWithJournal(
-              txn, expenseAccountId, amount, 0.0, now);
+              txn, counterpartAccountId, amount, 0.0, now);
           await _dbHelper.journal.updateAccountBalanceWithJournal(
               txn, cashAccountId, 0.0, amount, now);
         }
+        await _dbHelper.journal.validateJournalBalanceInTransaction(
+          txn,
+          journalId,
+        );
       }
 
       // ── 3. Update shift transaction count ──
@@ -1248,6 +1268,58 @@ class ShiftService {
   // ══════════════════════════════════════════════════════════════
   //  Helper methods
   // ══════════════════════════════════════════════════════════════
+
+  /// Get or create the proper counterpart account for shift cash in/out.
+  ///
+  /// Cash-in uses a revenue account (cash over / drawer adjustment income),
+  /// while cash-out uses an expense account (cash short / drawer adjustment
+  /// expense). This avoids the previous bug where cash-in credited a generic
+  /// expense account and understated expenses.
+  Future<int?> _getOrCreateShiftCashAdjustmentAccount(
+    Transaction txn, {
+    required int codeOffset,
+    required String currency,
+    required bool isCashIn,
+    required String now,
+  }) async {
+    final accountCode = ((isCashIn ? 4450 : 5550) + codeOffset).toString();
+    final existing = await txn.query(
+      'accounts',
+      where: 'account_code = ? AND currency = ?',
+      whereArgs: [accountCode, currency],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) return existing.first['id'] as int;
+
+    final parentCode = ((isCashIn ? 4000 : 5000) + codeOffset).toString();
+    final parentRows = await txn.query(
+      'accounts',
+      columns: ['id'],
+      where: 'account_code = ? AND currency = ?',
+      whereArgs: [parentCode, currency],
+      limit: 1,
+    );
+    final parentId = parentRows.isNotEmpty ? parentRows.first['id'] as int : null;
+
+    return txn.insert('accounts', {
+      'name_ar': isCashIn
+          ? 'زيادات صندوق الوردية ($currency)'
+          : 'عجز صندوق الوردية ($currency)',
+      'name_en': isCashIn
+          ? 'Shift Cash Over ($currency)'
+          : 'Shift Cash Short ($currency)',
+      'account_code': accountCode,
+      'account_type': isCashIn ? 'REVENUE' : 'EXPENSE',
+      'balance': 0,
+      'currency': currency,
+      'balance_type': isCashIn ? 'credit' : 'debit',
+      'parent_id': parentId,
+      'is_active': 1,
+      'is_system': 1,
+      'created_at': now,
+      'updated_at': now,
+    });
+  }
 
   /// Look up the exchange rate for a given currency code from the currencies table.
   /// Returns 1.0 for YER (base currency). Falls back to hardcoded rates if
