@@ -178,7 +178,8 @@ class LicenseStateModel {
           : null,
       deviceFingerprint: map['device_fingerprint'] as String?,
       installationId: map['installation_id'] as String?,
-      sessionToken: map['session_token'] as String?,
+      // session_token is intentionally not loaded from DB; it belongs in secure storage only.
+      sessionToken: null,
       lastValidatedAt: map['last_validated_at'] != null
           ? DateTime.tryParse(map['last_validated_at'] as String)
           : null,
@@ -203,7 +204,8 @@ class LicenseStateModel {
       'expires_at': expiresAt?.toIso8601String(),
       'device_fingerprint': deviceFingerprint,
       'installation_id': installationId,
-      'session_token': sessionToken,
+      // Keep session tokens out of the SQLCipher database and backups.
+      'session_token': null,
       'last_validated_at': lastValidatedAt?.toIso8601String(),
       'last_sync_at': lastSyncAt?.toIso8601String(),
       'record_count': recordCount,

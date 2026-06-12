@@ -56,46 +56,66 @@ class AccountRepository {
 
   Future<int> deleteAccount(int id) async {
     final db = await _db;
-    // Check if it's a system account
+    final now = DateTime.now().toIso8601String();
+
     final account =
         await db.query('accounts', where: 'id = ?', whereArgs: [id], limit: 1);
     if (account.isEmpty) return 0;
     if ((account.first['is_system'] as int?) == 1) {
-      return -1; // Cannot delete system account
+      throw Exception('لا يمكن حذف حساب نظامي.');
     }
-    // Check for child accounts
+
     final children = await db.query('accounts',
         where: 'parent_id = ?', whereArgs: [id], limit: 1);
     if (children.isNotEmpty) {
-      return -2; // Cannot delete account with child accounts
+      throw Exception('لا يمكن حذف حساب يحتوي على حسابات فرعية.');
     }
-    // Check for transactions referencing this account
-    final transactions = await db.query('transactions',
-        where: 'account_id = ?', whereArgs: [id], limit: 1);
-    if (transactions.isNotEmpty) {
-      return -3; // Cannot delete account with transactions
-    }
-    // Check for voucher items referencing this account
-    try {
-      final voucherItems = await db.query('voucher_items',
-          where: 'account_id = ?', whereArgs: [id], limit: 1);
-      if (voucherItems.isNotEmpty) {
-        return -4; // Cannot delete account with voucher items
+
+    final blockingChecks = <String, Future<bool> Function()>{
+      'transactions': () async => (await db.query('transactions',
+              where: 'account_id = ?', whereArgs: [id], limit: 1))
+          .isNotEmpty,
+      'voucher_items': () async => (await db.query('voucher_items',
+              where: 'account_id = ?', whereArgs: [id], limit: 1))
+          .isNotEmpty,
+      'cash_boxes': () async => (await db.query('cash_boxes',
+              where: 'linked_account_id = ?', whereArgs: [id], limit: 1))
+          .isNotEmpty,
+      'expenses': () async => (await db.query('expenses',
+              where: 'account_id = ? OR expense_account_id = ?',
+              whereArgs: [id, id],
+              limit: 1))
+          .isNotEmpty,
+      'products': () async => (await db.query('products',
+              where:
+                  'sales_account_id = ? OR purchase_account_id = ? OR inventory_account_id = ? OR cogs_account_id = ? OR vat_account_id = ?',
+              whereArgs: [id, id, id, id, id],
+              limit: 1))
+          .isNotEmpty,
+    };
+
+    for (final entry in blockingChecks.entries) {
+      try {
+        if (await entry.value()) {
+          return await db.update(
+            'accounts',
+            {'is_active': 0, 'updated_at': now},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+      } catch (_) {
+        // Optional/legacy table may not exist.
       }
-    } catch (_) {
-      // voucher_items table may not exist in older databases
     }
-    // Remove linked_cash_box_id references
-    await db.rawUpdate(
-        'UPDATE cash_boxes SET linked_account_id = NULL WHERE linked_account_id = ?',
-        [id]);
+
     return await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// Get the next available account code for a given account type.
+  /// Get the next available account code for a given account type and currency.
   /// Uses 4-digit numeric codes where the first digit is the type prefix.
   /// Steps by 10 to leave room for sub-accounts.
-  Future<String> getNextAccountCode(String accountType) async {
+  Future<String> getNextAccountCode(String accountType, {String? currency}) async {
     final db = await _db;
     final prefixMap = {
       'ASSET': '1',
@@ -106,12 +126,18 @@ class AccountRepository {
       'EXPENSE': '5',
     };
     final prefix = prefixMap[accountType] ?? '9';
+    final args = <Object>['$prefix%', accountType];
+    var currencyFilter = '';
+    if (currency != null && currency.isNotEmpty) {
+      currencyFilter = ' AND currency = ?';
+      args.add(currency);
+    }
     final result = await db.rawQuery(
-      'SELECT COALESCE(MAX(CAST(account_code AS INTEGER)), 0) AS max_code FROM accounts WHERE account_code LIKE ? AND account_type = ?',
-      ['$prefix%', accountType],
+      'SELECT COALESCE(MAX(CAST(account_code AS INTEGER)), 0) AS max_code '
+      'FROM accounts WHERE account_code LIKE ? AND account_type = ?$currencyFilter',
+      args,
     );
     final maxCode = (result.first['max_code'] as num?)?.toInt() ?? 0;
-    // If no existing codes, start at prefix*1000 + 10 (e.g. 1010 for ASSET)
     final nextCode =
         maxCode == 0 ? (int.parse(prefix) * 1000 + 10) : maxCode + 10;
     return nextCode.toString();

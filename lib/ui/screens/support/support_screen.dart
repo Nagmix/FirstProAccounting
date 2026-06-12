@@ -1,5 +1,8 @@
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/date_formatter.dart';
@@ -466,7 +469,23 @@ class _SupportScreenState extends State<SupportScreen>
         maxWidth: 1600,
       );
       if (picked == null || !mounted) return;
-      setState(() => _attachmentPath = picked.path);
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final attachmentsDir = io.Directory(
+        path.join(appDir.path, 'support_attachments'),
+      );
+      if (!await attachmentsDir.exists()) {
+        await attachmentsDir.create(recursive: true);
+      }
+      final extension = path.extension(picked.path).isEmpty
+          ? '.jpg'
+          : path.extension(picked.path);
+      final fileName =
+          'complaint_${DateTime.now().millisecondsSinceEpoch}$extension';
+      final savedPath = path.join(attachmentsDir.path, fileName);
+      await io.File(picked.path).copy(savedPath);
+
+      setState(() => _attachmentPath = savedPath);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -211,7 +211,6 @@ class LicenseService {
           expiresAt: result['expires_at'] != null
               ? DateTime.tryParse(result['expires_at'] as String)
               : null,
-          sessionToken: sessionToken,
           lastValidatedAt: DateTime.now(),
           lastSyncAt: DateTime.now(),
           isOfflineGrace: false,

@@ -23,11 +23,27 @@ class LicenseApiClient {
       },
     ));
 
-    // Add logging in debug mode
+    // Add safe metadata-only logging in debug mode. Never log request or
+    // response bodies because they may contain license_key, device_fingerprint,
+    // or session_token values.
     if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
+      _dio.interceptors.add(InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint('License API request: ${options.method} ${options.path}');
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint(
+            'License API response: ${response.requestOptions.path} status=${response.statusCode}',
+          );
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          debugPrint(
+            'License API error: ${error.requestOptions.path} ${error.type}',
+          );
+          handler.next(error);
+        },
       ));
     }
   }

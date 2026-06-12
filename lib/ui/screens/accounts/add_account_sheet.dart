@@ -26,8 +26,10 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   AccountType _selectedType = AccountType.ASSET;
   int? _selectedCashBoxId;
   int? _selectedParentId;
-  String _currency = 'YER';
+  String _currency = CurrencyConstants.defaultCode;
   bool _isSaving = false;
+  bool _codeEditedManually = false;
+  bool _isProgrammaticCodeUpdate = false;
 
   List<Map<String, dynamic>> _cashBoxes = [];
 
@@ -70,6 +72,13 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
   @override
   void initState() {
     super.initState();
+    _codeController.addListener(() {
+      if (!_isEdit &&
+          !_isProgrammaticCodeUpdate &&
+          _codeController.text.isNotEmpty) {
+        _codeEditedManually = true;
+      }
+    });
     if (widget.existing != null) {
       _selectedType = widget.existing!.accountType;
       _nameController.text = widget.existing!.nameAr;
@@ -87,12 +96,16 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     setState(() => _cashBoxes = cashBoxes);
   }
 
-  Future<void> _generateCode() async {
+  Future<void> _generateCode({bool force = false}) async {
     if (_isEdit) return;
+    if (_codeEditedManually && !force) return;
     final code = await locator<AccountRepository>()
-        .getNextAccountCode(_selectedType.name);
+        .getNextAccountCode(_selectedType.name, currency: _currency);
     if (mounted) {
+      _isProgrammaticCodeUpdate = true;
+      _codeEditedManually = false;
       _codeController.text = code;
+      _isProgrammaticCodeUpdate = false;
     }
   }
 
@@ -236,7 +249,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.refresh, size: 18),
                     tooltip: 'توليد رقم جديد',
-                    onPressed: _generateCode,
+                    onPressed: () => _generateCode(force: true),
                   ),
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
@@ -290,7 +303,9 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
                   );
                 }).toList(),
                 onChanged: (v) {
-                  if (v != null) setState(() => _currency = v);
+                  if (v == null) return;
+                  setState(() => _currency = v);
+                  _generateCode();
                 },
               ),
               const SizedBox(height: 14),

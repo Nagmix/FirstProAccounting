@@ -34,6 +34,7 @@ class _AppLockScreenState extends State<AppLockScreen>
   bool _isBiometricAvailable = false;
   bool _isBiometricEnabled = false;
   String _userName = '';
+  String? _securityErrorMessage;
 
   // PIN entry state
   String _enteredPin = '';
@@ -149,8 +150,17 @@ class _AppLockScreenState extends State<AppLockScreen>
         }
       }
     } catch (e) {
-      // On error, skip lock screen to avoid locking user out
-      if (mounted) _navigateToApp();
+      if (kDebugMode) {
+        debugPrint('AppLockScreen._initializeScreen: SECURITY ERROR $e');
+      }
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _securityErrorMessage =
+              'تعذر تهيئة قفل التطبيق بأمان. يرجى إعادة المحاولة أو التحقق من إعدادات الجهاز الآمنة.';
+          _enteredPin = '';
+        });
+      }
     }
   }
 
@@ -161,6 +171,9 @@ class _AppLockScreenState extends State<AppLockScreen>
     // Use per-installation salt if available, otherwise use a default
     // The salt is generated on first use and stored in FlutterSecureStorage
     final salt = _pinSalt;
+    if (salt == null || salt.isEmpty) {
+      throw StateError('PIN salt is not available. Secure storage initialization failed.');
+    }
     final key = utf8.encode('$salt$pin$salt');
     final bytes = sha256.convert(key).bytes;
     // Multiple rounds for key stretching
@@ -193,9 +206,11 @@ class _AppLockScreenState extends State<AppLockScreen>
       return salt;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('AppLockScreen._getOrCreatePinSalt: WARNING $e');
+        debugPrint('AppLockScreen._getOrCreatePinSalt: SECURITY ERROR $e');
       }
-      return 'F1r5tPr0_Fallback_2024_Salt';
+      throw StateError(
+        'Secure storage is required for PIN salt generation. Falling back to a static salt is not allowed.',
+      );
     }
   }
 
@@ -267,22 +282,24 @@ class _AppLockScreenState extends State<AppLockScreen>
       return await _readSecureWithMigration('app_pin');
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('AppLockScreen._getStoredPin: WARNING $e');
+        debugPrint('AppLockScreen._getStoredPin: SECURITY ERROR $e');
       }
-      return null;
+      rethrow;
     }
   }
 
   /// Read a value from FlutterSecureStorage with fallback to DB for migration.
   /// If found in DB but not in secure storage, migrates the value and removes it from DB.
   Future<String?> _readSecureWithMigration(String key) async {
+    Object? secureStorageError;
     try {
       final secureValue = await _secureStorage.read(key: key);
       if (secureValue != null) return secureValue;
     } catch (e) {
+      secureStorageError = e;
       if (kDebugMode) {
         debugPrint(
-            'AppLockScreen._readSecureWithMigration (secureStorage): WARNING $e');
+            'AppLockScreen._readSecureWithMigration (secureStorage): SECURITY ERROR $e');
       }
     }
 
@@ -488,6 +505,10 @@ class _AppLockScreenState extends State<AppLockScreen>
       return _buildLoadingScreen();
     }
 
+    if (_securityErrorMessage != null) {
+      return _buildSecurityErrorScreen();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -526,6 +547,54 @@ class _AppLockScreenState extends State<AppLockScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildSecurityErrorScreen() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.security, size: 72, color: AppColors.error),
+                const SizedBox(height: 16),
+                Text(
+                  'تعذر فتح قفل التطبيق بأمان',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.error,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _securityErrorMessage ?? 'حدث خطأ أمني غير متوقع.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _securityErrorMessage = null;
+                    });
+                    _initializeScreen();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إعادة المحاولة'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

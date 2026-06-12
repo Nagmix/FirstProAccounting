@@ -776,10 +776,20 @@ class ReportService {
 
   // ── 13. Sales Report (invoices with entity names) ─────────────
 
+  static const Map<String, String> _salesReportTypeFilterWhitelist = {
+    "i.type IN ('sale','pos') AND i.is_return=0":
+        "i.type IN ('sale','pos') AND i.is_return=0",
+    "i.type='purchase' AND i.is_return=0":
+        "i.type='purchase' AND i.is_return=0",
+    "i.type IN ('sale','pos') AND i.is_return=1":
+        "i.type IN ('sale','pos') AND i.is_return=1",
+    "i.type='purchase' AND i.is_return=1":
+        "i.type='purchase' AND i.is_return=1",
+  };
+
   /// تقرير المبيعات/المشتريات/المرتجعات — returns invoice rows
   /// with entity name (customer or supplier).
-  /// [typeFilter] is the WHERE clause fragment, e.g.
-  /// `"type IN ('sale','pos') AND is_return=0"`.
+  /// [typeFilter] must match one of the internal whitelist fragments above.
   Future<List<Map<String, dynamic>>> getSalesReport({
     required String typeFilter,
     DateTime? dateFrom,
@@ -789,7 +799,12 @@ class ReportService {
   }) async {
     final db = await _db;
     final args = <dynamic>[];
-    String whereClause = typeFilter;
+    final whitelistedTypeFilter = _salesReportTypeFilterWhitelist[typeFilter];
+    if (whitelistedTypeFilter == null) {
+      throw ArgumentError.value(
+          typeFilter, 'typeFilter', 'فلتر تقرير المبيعات غير مسموح');
+    }
+    String whereClause = whitelistedTypeFilter;
 
     if (dateFrom != null) {
       whereClause += ' AND i.created_at >= ?';

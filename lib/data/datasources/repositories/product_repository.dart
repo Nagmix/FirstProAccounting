@@ -96,14 +96,45 @@ class ProductRepository {
 
   Future<int> deleteProduct(int id) async {
     final db = await _db;
-    // Check if product is referenced in invoice_items
-    final refs = await db.query('invoice_items',
-        where: 'product_id = ?', whereArgs: [id], limit: 1);
-    if (refs.isNotEmpty) {
-      // Soft-delete: product has history, cannot hard-delete
-      return await db.update('products', {'is_active': 0},
-          where: 'id = ?', whereArgs: [id]);
+    final now = DateTime.now().toIso8601String();
+
+    final dependencyTables = <String, String>{
+      'invoice_items': 'product_id',
+      'stock_movements': 'product_id',
+      'inventory_cost_layers': 'product_id',
+      'movement_cost_allocations': 'product_id',
+      'stock_transfers': 'product_id',
+      'inventory_voucher_items': 'product_id',
+      'stocktaking_items': 'product_id',
+      'unit_conversions': 'product_id',
+      'quotation_items': 'product_id',
+      'purchase_order_items': 'product_id',
+      'sales_order_items': 'product_id',
+    };
+
+    for (final entry in dependencyTables.entries) {
+      try {
+        final refs = await db.query(
+          entry.key,
+          columns: [entry.value],
+          where: '${entry.value} = ?',
+          whereArgs: [id],
+          limit: 1,
+        );
+        if (refs.isNotEmpty) {
+          // Soft-delete: product has operational/accounting history.
+          return await db.update(
+            'products',
+            {'is_active': 0, 'updated_at': now},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+      } catch (_) {
+        // Some optional tables may not exist in older databases.
+      }
     }
+
     return await db.delete('products', where: 'id = ?', whereArgs: [id]);
   }
 

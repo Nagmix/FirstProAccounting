@@ -80,9 +80,59 @@ class ReferenceDataRepository {
 
   Future<int> deleteCurrency(int id) async {
     final db = await _db;
-    final rows = await db.delete('currencies', where: 'id = ?', whereArgs: [id]);
+    final rows = await db.query('currencies',
+        where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty) return 0;
+    final currencyCode = rows.first['code'] as String;
+    final isDefault = (rows.first['is_default'] as int? ?? 0) == 1;
+    if (isDefault) {
+      throw Exception('لا يمكن حذف العملة الافتراضية. اختر عملة افتراضية أخرى أولاً.');
+    }
+
+    final usage = await getCurrencyUsageSummary(currencyCode);
+    final used = usage.entries.where((entry) => entry.value > 0).toList();
+    if (used.isNotEmpty) {
+      final details = used.map((entry) => '${entry.key}: ${entry.value}').join('، ');
+      throw Exception(
+        'لا يمكن حذف العملة $currencyCode لأنها مستخدمة في بيانات مالية ($details). يمكنك تعطيلها بدلاً من حذفها.',
+      );
+    }
+
+    final deleted = await db.delete('currencies', where: 'id = ?', whereArgs: [id]);
     _clearBaseCurrencyCache();
-    return rows;
+    return deleted;
+  }
+
+  /// Count references to a currency code across financial tables.
+  Future<Map<String, int>> getCurrencyUsageSummary(String currencyCode) async {
+    final db = await _db;
+    final checks = <String, ({String table, String column})>{
+      'accounts': (table: 'accounts', column: 'currency'),
+      'transactions': (table: 'transactions', column: 'currency_code'),
+      'invoices': (table: 'invoices', column: 'currency'),
+      'expenses': (table: 'expenses', column: 'currency'),
+      'cash_boxes': (table: 'cash_boxes', column: 'currency'),
+      'vouchers': (table: 'vouchers', column: 'currency'),
+      'products': (table: 'products', column: 'currency'),
+      'shifts': (table: 'shifts', column: 'currency'),
+      'cash_transfers': (table: 'cash_transfers', column: 'currency'),
+      'currency_exchanges_from': (table: 'currency_exchanges', column: 'from_currency'),
+      'currency_exchanges_to': (table: 'currency_exchanges', column: 'to_currency'),
+      'inventory_vouchers': (table: 'inventory_vouchers', column: 'currency'),
+    };
+    final result = <String, int>{};
+    for (final entry in checks.entries) {
+      try {
+        final rows = await db.rawQuery(
+          'SELECT COUNT(*) AS cnt FROM ${entry.value.table} WHERE ${entry.value.column} = ?',
+          [currencyCode],
+        );
+        result[entry.key] = (rows.first['cnt'] as num?)?.toInt() ?? 0;
+      } catch (_) {
+        result[entry.key] = 0;
+      }
+    }
+    return result;
   }
 
   Future<void> setDefaultCurrency(int id) async {
