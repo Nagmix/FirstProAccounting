@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/di/service_locator.dart';
-import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
@@ -16,6 +15,7 @@ class CurrencyConstants {
   };
 
   static List<String> _currencyOptions = ['YER', 'SAR', 'USD'];
+  static String _defaultCurrencyCode = 'YER';
 
   /// Public getter for currency info.
   static Map<String, Map<String, String>> get currencyInfo => _currencyInfo;
@@ -30,11 +30,14 @@ class CurrencyConstants {
   static List<MapEntry<String, String>> get currencyMapEntries => 
     _currencyOptions.map((c) => MapEntry(c, c)).toList();
 
-  /// Returns the default currency symbol (YER fallback).
-  static String get defaultSymbol => _currencyInfo['YER']?['symbol'] ?? 'ر.ي';
+  /// Returns the default currency symbol.
+  static String get defaultSymbol =>
+      _currencyInfo[_defaultCurrencyCode]?['symbol'] ??
+      _currencyInfo['YER']?['symbol'] ??
+      'ر.ي';
 
-  /// Returns the default currency code (YER fallback).
-  static String get defaultCode => 'YER';
+  /// Returns the current default currency code.
+  static String get defaultCode => _defaultCurrencyCode;
 
   /// Initialize and refresh currency data from the database.
   static Future<void> refresh() async {
@@ -45,6 +48,7 @@ class CurrencyConstants {
       if (currencies.isNotEmpty) {
         final Map<String, Map<String, String>> newInfo = {};
         final List<String> newOptions = [];
+        String? defaultCode;
 
         for (final c in currencies) {
           final code = c['code'] as String;
@@ -53,10 +57,21 @@ class CurrencyConstants {
             'symbol': c['symbol'] as String,
           };
           newOptions.add(code);
+          if ((c['is_default'] as int? ?? 0) == 1) {
+            defaultCode = code;
+          }
+        }
+
+        try {
+          defaultCode = await locator<BaseCurrencyService>().getBaseCurrencyCode();
+        } catch (_) {
+          defaultCode ??= newOptions.contains('YER') ? 'YER' : newOptions.first;
         }
 
         _currencyInfo = newInfo;
         _currencyOptions = newOptions;
+        _defaultCurrencyCode =
+            newInfo.containsKey(defaultCode) ? defaultCode! : newOptions.first;
       }
     } catch (e) {
       // Fallback to defaults if DB fails
@@ -66,12 +81,12 @@ class CurrencyConstants {
 
   /// Returns the display symbol for a currency code.
   static String currencySymbol(String? code) {
-    return _currencyInfo[code]?['symbol'] ?? 'ر.ي';
+    return _currencyInfo[code]?['symbol'] ?? defaultSymbol;
   }
 
   /// Returns the display label for a currency code.
   static String currencyLabel(String? code) {
-    return _currencyInfo[code]?['label'] ?? code ?? 'ريال يمني';
+    return _currencyInfo[code]?['label'] ?? code ?? currencyLabel(defaultCode);
   }
 
   /// Shows a currency filter bottom sheet and returns the selected currency

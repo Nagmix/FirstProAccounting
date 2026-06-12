@@ -13,6 +13,19 @@ class CustomerRepository {
 
   Future<Database> get _db => _dbHelper.database;
 
+  static const Map<String, String> _customerOrderByWhitelist = {
+    'name': 'name ASC',
+    'name ASC': 'name ASC',
+    'name DESC': 'name DESC',
+    'created_at DESC': 'created_at DESC',
+    'created_at ASC': 'created_at ASC',
+    'balance DESC': 'balance DESC',
+    'balance ASC': 'balance ASC',
+  };
+
+  String _safeOrderBy(String orderBy) =>
+      _customerOrderByWhitelist[orderBy] ?? _customerOrderByWhitelist['name']!;
+
   // ══════════════════════════════════════════════════════════════
   //  Customer CRUD methods
   // ══════════════════════════════════════════════════════════════
@@ -155,7 +168,7 @@ class CustomerRepository {
       {String orderBy = 'name', int? limit, int offset = 0}) async {
     final db = await _db;
     return await db.query('customers',
-        orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
+        orderBy: _safeOrderBy(orderBy), limit: limit, offset: offset > 0 ? offset : null);
   }
 
   Future<List<Map<String, dynamic>>> searchCustomers(String query) async {

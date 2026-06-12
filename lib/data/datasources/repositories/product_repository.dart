@@ -13,6 +13,21 @@ class ProductRepository {
 
   Future<Database> get _db => _dbHelper.database;
 
+  static const Map<String, String> _productOrderByWhitelist = {
+    'created_at DESC': 'created_at DESC',
+    'created_at ASC': 'created_at ASC',
+    'name_ar ASC': 'name_ar ASC',
+    'name_ar DESC': 'name_ar DESC',
+    'sell_price DESC': 'sell_price DESC',
+    'sell_price ASC': 'sell_price ASC',
+    'current_stock DESC': 'current_stock DESC',
+    'current_stock ASC': 'current_stock ASC',
+  };
+
+  String _safeOrderBy(String orderBy) =>
+      _productOrderByWhitelist[orderBy] ??
+      _productOrderByWhitelist['created_at DESC']!;
+
   // ══════════════════════════════════════════════════════════════
   //  Product CRUD
   // ══════════════════════════════════════════════════════════════
@@ -33,12 +48,14 @@ class ProductRepository {
       return await db.query('products',
           where: 'is_active = ?',
           whereArgs: [1],
-          orderBy: orderBy,
+          orderBy: _safeOrderBy(orderBy),
           limit: limit,
           offset: offset > 0 ? offset : null);
     }
     return await db.query('products',
-        orderBy: orderBy, limit: limit, offset: offset > 0 ? offset : null);
+        orderBy: _safeOrderBy(orderBy),
+        limit: limit,
+        offset: offset > 0 ? offset : null);
   }
 
   Future<List<Map<String, dynamic>>> searchProducts(String query,

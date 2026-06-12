@@ -15,6 +15,15 @@ class ShiftService {
 
   Future<Database> get _db => _dbHelper.database;
 
+  static const Map<String, String> _shiftOrderByWhitelist = {
+    'opened_at DESC': 's.opened_at DESC',
+    'opened_at ASC': 's.opened_at ASC',
+    'closed_at DESC': 's.closed_at DESC',
+    'created_at DESC': 's.created_at DESC',
+    'shift_number DESC': 's.shift_number DESC',
+    'shift_number ASC': 's.shift_number ASC',
+  };
+
   // ══════════════════════════════════════════════════════════════
   //  Shift (وردية) CRUD methods
   // ══════════════════════════════════════════════════════════════
@@ -54,11 +63,13 @@ class ShiftService {
   Future<List<Map<String, dynamic>>> getAllShifts(
       {String orderBy = 'opened_at DESC'}) async {
     final db = await _db;
+    final safeOrderBy =
+        _shiftOrderByWhitelist[orderBy] ?? _shiftOrderByWhitelist['opened_at DESC']!;
     return await db.rawQuery('''
       SELECT s.*, cb.name AS cash_box_name
       FROM shifts s
       LEFT JOIN cash_boxes cb ON s.cash_box_id = cb.id
-      ORDER BY s.$orderBy
+      ORDER BY $safeOrderBy
     ''');
   }
 

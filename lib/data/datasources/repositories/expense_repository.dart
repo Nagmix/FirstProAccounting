@@ -16,21 +16,31 @@ class ExpenseRepository {
   //  Expense CRUD methods
   // ══════════════════════════════════════════════════════════════
 
+  static const Map<String, String> _expenseOrderByWhitelist = {
+    'expense_date DESC': 'expense_date DESC',
+    'expense_date ASC': 'expense_date ASC',
+    'created_at DESC': 'created_at DESC',
+    'created_at ASC': 'created_at ASC',
+    'amount DESC': 'amount DESC',
+    'amount ASC': 'amount ASC',
+  };
+
+  String _safeExpenseOrderBy(String orderBy) =>
+      _expenseOrderByWhitelist[orderBy] ??
+      _expenseOrderByWhitelist['expense_date DESC']!;
+
+  /// Backward-compatible safe entry point.
+  ///
+  /// Direct data-only expense inserts are forbidden because they bypass journal
+  /// entries, account balances, cash-box balances, and audit traceability.
   Future<int> insertExpense(Map<String, dynamic> expenseMap) async {
-    // H-12: تحقق من الفترة المالية قبل إدراج مصروف
-    final expenseDate = expenseMap['expense_date'] as String? ??
-        DateTime.now().toIso8601String();
-    await _dbHelper.journal.checkFiscalPeriodOpen(expenseDate);
-    final db = await _db;
-    final dbMap = MoneyHelper.toCentsMap(
-        expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']);
-    return await db.insert('expenses', dbMap);
+    return saveExpenseWithJournalEntry(expenseMap);
   }
 
   Future<List<Map<String, dynamic>>> getAllExpenses(
       {String orderBy = 'expense_date DESC'}) async {
     final db = await _db;
-    return await db.query('expenses', orderBy: orderBy);
+    return await db.query('expenses', orderBy: _safeExpenseOrderBy(orderBy));
   }
 
   Future<List<Map<String, dynamic>>> getExpensesByCategory(
@@ -59,29 +69,24 @@ class ExpenseRepository {
   }
 
   Future<int> updateExpense(int id, Map<String, dynamic> expenseMap) async {
-    // ── M-10: تحقق من الفترة المالية قبل التحديث ──
     final existing = await getExpenseById(id);
-    if (existing != null) {
-      final expenseDate = existing['expense_date'] as String? ??
-          DateTime.now().toIso8601String();
-      await _dbHelper.journal.checkFiscalPeriodOpen(expenseDate);
-    }
-    final db = await _db;
-    final dbMap = MoneyHelper.toCentsMap(
-        expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']);
-    return await db.update('expenses', dbMap, where: 'id = ?', whereArgs: [id]);
+    if (existing == null) return 0;
+    final expenseAccountId = (expenseMap['expense_account_id'] as int?) ??
+        (expenseMap['account_id'] as int?);
+    await updateExpenseWithJournalEntry(
+      id,
+      existing,
+      expenseMap,
+      expenseAccountId,
+    );
+    return 1;
   }
 
   Future<int> deleteExpense(int id) async {
-    // ── M-10: تحقق من الفترة المالية قبل الحذف ──
-    final existing = await getExpenseById(id);
-    if (existing != null) {
-      final expenseDate = existing['expense_date'] as String? ??
-          DateTime.now().toIso8601String();
-      await _dbHelper.journal.checkFiscalPeriodOpen(expenseDate);
-    }
-    final db = await _db;
-    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
+    throw UnsupportedError(
+      'Direct expense deletion is unsafe because it bypasses journal reversal. '
+      'Implement/use a journal-aware cancellation or reversal workflow instead.',
+    );
   }
 
   Future<double> getTotalExpensesThisMonth() async {
@@ -135,7 +140,7 @@ class ExpenseRepository {
   /// - `amount_base` stores the converted base-currency value for consolidated
   ///   reporting.
   /// - Cash box balance is always updated in the expense's native currency (`amount`).
-  Future<void> saveExpenseWithJournalEntry(
+  Future<int> saveExpenseWithJournalEntry(
       Map<String, dynamic> expenseMap) async {
     // Check if fiscal period is closed before creating expense
     final expenseDate = expenseMap['expense_date'] as String? ??
@@ -167,12 +172,13 @@ class ExpenseRepository {
     final int codeOffset =
         await locator<BaseCurrencyService>().getOffsetForCurrency(expenseCurrency);
     final double journalAmount = amount;
+    int expenseId = 0;
 
     await db.transaction((txn) async {
       // Insert expense (convert money fields to cents)
       final dbExpenseMap = MoneyHelper.toCentsMap(
           expenseMap, [...MoneyHelper.expenseMoneyFields, 'amount_base']);
-      final expenseId = await txn.insert('expenses', dbExpenseMap);
+      expenseId = await txn.insert('expenses', dbExpenseMap);
       final referenceId = expenseId.toString();
 
       // Post journal entry
@@ -318,6 +324,11 @@ class ExpenseRepository {
         }
       }
 
+      await _dbHelper.journal.validateJournalBalanceInTransaction(
+        txn,
+        journalId,
+      );
+
       // Update cash box balance (respecting balance_type)
       // FIX: Cash box balance is always updated in the expense's native currency (`amount`),
       // NOT in base currency (`amountBase`). Each cash box tracks its own currency.
@@ -354,6 +365,7 @@ class ExpenseRepository {
         }
       }
     });
+    return expenseId;
   }
 
   /// Update an existing expense with journal entry reversal and new entries.
@@ -833,7 +845,7 @@ class ExpenseRepository {
     return await db.query('expenses',
         where: 'expense_account_id = ?',
         whereArgs: [accountId],
-        orderBy: orderBy);
+        orderBy: _safeExpenseOrderBy(orderBy));
   }
 
   /// Get all expenses for a specific expense sub-account
@@ -843,6 +855,6 @@ class ExpenseRepository {
     return await db.query('expenses',
         where: 'expense_sub_account_id = ?',
         whereArgs: [subAccountId],
-        orderBy: orderBy);
+        orderBy: _safeExpenseOrderBy(orderBy));
   }
 }

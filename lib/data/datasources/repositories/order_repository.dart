@@ -9,6 +9,22 @@ class OrderRepository {
 
   Future<Database> get _db => _dbHelper.database;
 
+  static const Map<String, String> _orderByWhitelist = {
+    'created_at DESC': 'created_at DESC',
+    'created_at ASC': 'created_at ASC',
+    'updated_at DESC': 'updated_at DESC',
+    'updated_at ASC': 'updated_at ASC',
+    'status ASC': 'status ASC',
+    'total DESC': 'total DESC',
+    'total ASC': 'total ASC',
+  };
+
+  String _safeAliasedOrderBy(String alias, String orderBy) {
+    final safe = _orderByWhitelist[orderBy] ?? _orderByWhitelist['created_at DESC']!;
+    final parts = safe.split(' ');
+    return '$alias.${parts.first} ${parts.last}';
+  }
+
   // ══════════════════════════════════════════════════════════════
   //  Quotation CRUD methods
   // ══════════════════════════════════════════════════════════════
@@ -33,7 +49,7 @@ class OrderRepository {
       SELECT q.*, COALESCE(c.name, 'بدون عميل') AS customer_name
       FROM quotations q
       LEFT JOIN customers c ON q.customer_id = c.id
-      ORDER BY q.$orderBy
+      ORDER BY ${_safeAliasedOrderBy('q', orderBy)}
     ''');
   }
 
@@ -114,7 +130,7 @@ class OrderRepository {
       SELECT po.*, COALESCE(s.name, 'بدون مورد') AS supplier_name
       FROM purchase_orders po
       LEFT JOIN suppliers s ON po.supplier_id = s.id
-      ORDER BY po.$orderBy
+      ORDER BY ${_safeAliasedOrderBy('po', orderBy)}
     ''');
   }
 
@@ -193,7 +209,7 @@ class OrderRepository {
       SELECT so.*, COALESCE(c.name, 'بدون عميل') AS customer_name
       FROM sales_orders so
       LEFT JOIN customers c ON so.customer_id = c.id
-      ORDER BY so.$orderBy
+      ORDER BY ${_safeAliasedOrderBy('so', orderBy)}
     ''');
   }
 

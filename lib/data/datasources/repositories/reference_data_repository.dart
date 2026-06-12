@@ -1,8 +1,10 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/migrations/seeds.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
 class ReferenceDataRepository {
   final DatabaseHelper _dbHelper;
@@ -16,7 +18,7 @@ class ReferenceDataRepository {
 
   Future<int> insertCurrency(Map<String, dynamic> currencyMap) async {
     final db = await _db;
-    return await db.transaction((txn) async {
+    final id = await db.transaction((txn) async {
       // 1. Determine next code_offset
       final result = await txn.rawQuery('SELECT MAX(code_offset) as max_offset FROM currencies');
       int nextOffset = 0;
@@ -41,12 +43,24 @@ class ReferenceDataRepository {
 
       return id;
     });
+    _clearBaseCurrencyCache();
+    return id;
   }
+
+  static const Map<String, String> _currencyOrderByWhitelist = {
+    'is_default DESC, code ASC': 'is_default DESC, code ASC',
+    'code ASC': 'code ASC',
+    'code DESC': 'code DESC',
+    'name_ar ASC': 'name_ar ASC',
+    'created_at DESC': 'created_at DESC',
+  };
 
   Future<List<Map<String, dynamic>>> getAllCurrencies(
       {String orderBy = 'is_default DESC, code ASC'}) async {
     final db = await _db;
-    return await db.query('currencies', orderBy: orderBy);
+    final safeOrderBy = _currencyOrderByWhitelist[orderBy] ??
+        _currencyOrderByWhitelist['is_default DESC, code ASC']!;
+    return await db.query('currencies', orderBy: safeOrderBy);
   }
 
   Future<Map<String, dynamic>?> getDefaultCurrency() async {
@@ -58,20 +72,50 @@ class ReferenceDataRepository {
 
   Future<int> updateCurrency(int id, Map<String, dynamic> currencyMap) async {
     final db = await _db;
-    return await db
+    final rows = await db
         .update('currencies', currencyMap, where: 'id = ?', whereArgs: [id]);
+    _clearBaseCurrencyCache();
+    return rows;
   }
 
   Future<int> deleteCurrency(int id) async {
     final db = await _db;
-    return await db.delete('currencies', where: 'id = ?', whereArgs: [id]);
+    final rows = await db.delete('currencies', where: 'id = ?', whereArgs: [id]);
+    _clearBaseCurrencyCache();
+    return rows;
   }
 
   Future<void> setDefaultCurrency(int id) async {
     final db = await _db;
-    await db.update('currencies', {'is_default': 0});
-    await db.update('currencies', {'is_default': 1},
-        where: 'id = ?', whereArgs: [id]);
+    await db.transaction((txn) async {
+      await txn.update('currencies', {'is_default': 0});
+      await txn.update('currencies', {'is_default': 1},
+          where: 'id = ?', whereArgs: [id]);
+
+      final rows = await txn.query('currencies',
+          columns: ['code'], where: 'id = ?', whereArgs: [id], limit: 1);
+      if (rows.isNotEmpty) {
+        await txn.insert(
+          'settings',
+          {
+            'key': 'default_currency',
+            'value': rows.first['code'] as String,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+    _clearBaseCurrencyCache();
+  }
+
+  void _clearBaseCurrencyCache() {
+    try {
+      locator<BaseCurrencyService>().clearCache();
+    } catch (_) {
+      // The repository can be used in isolated tests before GetIt is ready.
+      // In that case there is no process-wide cache to invalidate.
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -404,6 +448,17 @@ class ReferenceDataRepository {
     await db.delete('settings', where: 'key = ?', whereArgs: [key]);
   }
 
+  static const Map<String, String> _notificationOrderByWhitelist = {
+    'created_at DESC': 'created_at DESC',
+    'created_at ASC': 'created_at ASC',
+    'title ASC': 'title ASC',
+    'type ASC': 'type ASC',
+  };
+
+  String _safeNotificationOrderBy(String orderBy) =>
+      _notificationOrderByWhitelist[orderBy] ??
+      _notificationOrderByWhitelist['created_at DESC']!;
+
   // ══════════════════════════════════════════════════════════════
   //  Notification CRUD methods
   // ══════════════════════════════════════════════════════════════
@@ -416,14 +471,16 @@ class ReferenceDataRepository {
   Future<List<Map<String, dynamic>>> getAllNotifications(
       {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
-    return await db.query('notifications', orderBy: orderBy);
+    return await db.query('notifications', orderBy: _safeNotificationOrderBy(orderBy));
   }
 
   Future<List<Map<String, dynamic>>> getNotificationsByType(String type,
       {String orderBy = 'created_at DESC'}) async {
     final db = await _db;
     return await db.query('notifications',
-        where: 'type = ?', whereArgs: [type], orderBy: orderBy);
+        where: 'type = ?',
+        whereArgs: [type],
+        orderBy: _safeNotificationOrderBy(orderBy));
   }
 
   Future<int> markNotificationAsRead(int id) async {

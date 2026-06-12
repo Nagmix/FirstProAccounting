@@ -15,6 +15,28 @@ class CashBoxService {
 
   Future<Database> get _db => _dbHelper.database;
 
+  static const Map<String, String> _cashBoxOrderByWhitelist = {
+    'created_at DESC': 'created_at DESC',
+    'created_at ASC': 'created_at ASC',
+    'date DESC': 'date DESC',
+    'date ASC': 'date ASC',
+    'id DESC': 'id DESC',
+    'id ASC': 'id ASC',
+    'voucher_number DESC': 'voucher_number DESC',
+    'voucher_number ASC': 'voucher_number ASC',
+  };
+
+  String _safeAliasedOrderBy(String alias, String orderBy) {
+    final safe = _cashBoxOrderByWhitelist[orderBy] ??
+        _cashBoxOrderByWhitelist['created_at DESC']!;
+    final parts = safe.split(' ');
+    return '$alias.${parts.first} ${parts.last}';
+  }
+
+  String _safeOrderBy(String orderBy) =>
+      _cashBoxOrderByWhitelist[orderBy] ??
+      _cashBoxOrderByWhitelist['created_at DESC']!;
+
   // ══════════════════════════════════════════════════════════════
   //  Cash Boxes & Banks CRUD methods
   // ══════════════════════════════════════════════════════════════
@@ -1089,7 +1111,7 @@ class CashBoxService {
       FROM currency_exchanges ce
       LEFT JOIN cash_boxes from_cb ON ce.from_cash_box_id = from_cb.id
       LEFT JOIN cash_boxes to_cb ON ce.to_cash_box_id = to_cb.id
-      ORDER BY ce.$orderBy
+      ORDER BY ${_safeAliasedOrderBy('ce', orderBy)}
     ''');
   }
 
@@ -1269,7 +1291,7 @@ class CashBoxService {
       FROM cash_transfers ct
       LEFT JOIN cash_boxes from_cb ON ct.from_cash_box_id = from_cb.id
       LEFT JOIN cash_boxes to_cb ON ct.to_cash_box_id = to_cb.id
-      ORDER BY ct.$orderBy
+      ORDER BY ${_safeAliasedOrderBy('ct', orderBy)}
     ''');
   }
 
@@ -1479,9 +1501,11 @@ class CashBoxService {
     final db = await _db;
     if (type != null) {
       return await db.query('vouchers',
-          where: 'voucher_type = ?', whereArgs: [type], orderBy: orderBy);
+          where: 'voucher_type = ?',
+          whereArgs: [type],
+          orderBy: _safeOrderBy(orderBy));
     }
-    return await db.query('vouchers', orderBy: orderBy);
+    return await db.query('vouchers', orderBy: _safeOrderBy(orderBy));
   }
 
   /// جلب بنود سند معين

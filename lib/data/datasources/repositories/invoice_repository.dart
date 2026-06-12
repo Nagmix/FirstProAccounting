@@ -1766,9 +1766,21 @@ class InvoiceRepository {
     }
   }
 
+  static const Map<String, String> _invoiceOrderByWhitelist = {
+    'created_at DESC': 'i.created_at DESC',
+    'created_at ASC': 'i.created_at ASC',
+    'id DESC': 'i.id DESC',
+    'id ASC': 'i.id ASC',
+    'total DESC': 'i.total DESC',
+    'total ASC': 'i.total ASC',
+    'status ASC': 'i.status ASC',
+  };
+
   Future<List<Map<String, dynamic>>> getAllInvoices(
       {String orderBy = 'created_at DESC', int? limit, int offset = 0}) async {
     final db = await _db;
+    final safeOrderBy =
+        _invoiceOrderByWhitelist[orderBy] ?? _invoiceOrderByWhitelist['created_at DESC']!;
     String limitClause = '';
     final args = <dynamic>[];
     if (limit != null) {
@@ -1789,7 +1801,7 @@ class InvoiceRepository {
       FROM invoices i
       LEFT JOIN customers c ON i.customer_id = c.id
       LEFT JOIN suppliers s ON i.supplier_id = s.id
-      ORDER BY i.$orderBy$limitClause
+      ORDER BY $safeOrderBy$limitClause
     ''', args);
   }
 
