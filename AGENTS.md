@@ -380,7 +380,7 @@ git config user.email "nooraldeen.ahmed@nagmix.net"
 - لا تتم طباعة token في السجلات أو التقارير أو الردود النهائية.
 - استخدم بيانات الاعتماد عند الدفع بطريقة مؤقتة قدر الإمكان، مثل `GIT_ASKPASS` المؤقت أو credential helper محلي، مع حذف أي ملف مؤقت بعد الاستخدام.
 - إذا بدأت جلسة جديدة ولم تعد قيمة token متاحة في البيئة، يجب تذكير المستخدم بأن القاعدة محفوظة لكن قيمة السر نفسها قد لا تبقى محفوظة بشكل آمن بين الجلسات، وطلب توفيرها أو توفير آلية سرية مناسبة.
-- بعد كل push يجب متابعة GitHub Actions وسجلاتها للتحقق من نجاح البناء والتحليل والاختبارات.
+- بعد كل push يجب متابعة GitHub Actions حتى نجاح خطوتي `Run Flutter analyze` و `Run Flutter tests`. إذا نجحت هاتان الخطوتان وبدأت خطوة البناء (`Build Release APK` أو ما بعدها)، يكفي إيقاف الانتظار وتوثيق أن الفحص والاختبارات نجحا وأن البناء بدأ؛ لا يلزم انتظار اكتمال APK/AAB بالكامل إلا إذا طلب المستخدم ذلك صراحة أو كان التغيير متعلقًا بالبناء/التوقيع/Artifacts.
 
 ---
 
@@ -396,9 +396,13 @@ git config user.email "nooraldeen.ahmed@nagmix.net"
 
 - `flutter analyze --no-fatal-infos --no-fatal-warnings`
 - `flutter test`
-- `flutter build apk --release`
-- `flutter build appbundle --release`
-- رفع Artifacts للـ APK/AAB.
+
+حد الانتظار الافتراضي بعد كل push:
+
+1. انتظر حتى تنجح خطوة `Run Flutter analyze`.
+2. انتظر حتى تنجح خطوة `Run Flutter tests`.
+3. إذا بدأت خطوة `Build Release APK` أو أي خطوة بناء لاحقة بعد نجاح التحليل والاختبارات، أوقف الانتظار واعتبر تحقق CI المطلوب للمهمة منجزًا.
+4. لا تنتظر اكتمال `flutter build apk --release` أو `flutter build appbundle --release` أو رفع Artifacts إلا إذا كان التغيير متعلقًا بالبناء أو التوقيع أو ملفات Android/CI أو طلب المستخدم الانتظار الكامل صراحة.
 
 عند فشل CI:
 
