@@ -109,7 +109,10 @@ Future<void> setupLocator() async {
     () => BaseCurrencyService(locator<DatabaseHelper>()),
   );
   locator.registerLazySingleton<InventoryAlertService>(
-    () => InventoryAlertService(locator<DatabaseHelper>()),
+    () => InventoryAlertService(
+      locator<DatabaseHelper>(),
+      locator<ReferenceDataRepository>(),
+    ),
   );
 
   // ── ViewModels (factory — fresh instance per screen, no stale state) ──

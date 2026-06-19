@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 
@@ -28,7 +27,8 @@ import 'package:firstpro/data/datasources/repositories/reference_data_repository
 ///     expiry to start alerting.
 class InventoryAlertService {
   final DatabaseHelper _dbHelper;
-  InventoryAlertService(this._dbHelper);
+  final ReferenceDataRepository _refRepo;
+  InventoryAlertService(this._dbHelper, this._refRepo);
 
   Future<Database> get _db => _dbHelper.database;
 
@@ -44,7 +44,7 @@ class InventoryAlertService {
   /// alerts are inserted.
   Future<AlertScanResult> scanAndGenerateAlerts() async {
     final db = await _db;
-    final refRepo = locator<ReferenceDataRepository>();
+    final refRepo = _refRepo;
 
     // Load configuration from settings.
     final config = await _loadConfig(refRepo);

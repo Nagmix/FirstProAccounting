@@ -41,11 +41,10 @@ void main() {
     // InventoryAlertService (which uses DatabaseHelper) and
     // ReferenceDataRepository (which also uses DatabaseHelper) both
     // see the same in-memory db.
-    // We accomplish this by registering the singleton before the
-    // services are constructed.
     DatabaseHelper.useTestDatabase(db);
     refRepo = ReferenceDataRepository(DatabaseHelper());
-    alertService = InventoryAlertService(DatabaseHelper());
+    // Pass the refRepo directly to the service — no GetIt needed in tests.
+    alertService = InventoryAlertService(DatabaseHelper(), refRepo);
   });
 
   tearDown(() async {
