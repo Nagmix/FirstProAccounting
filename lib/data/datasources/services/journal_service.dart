@@ -501,6 +501,19 @@ class JournalService {
   ///
   /// Returns the account id of the GAINS account (for credits) or the
   /// LOSSES account (for debits), depending on [isGain].
+  ///
+  /// A-02 verification (2026-06-19):
+  /// Exchange gain/loss accounts are ALWAYS in the base currency (YER).
+  /// This is correct per IAS 21 — exchange differences arise from
+  /// converting a foreign-currency amount to the functional (base)
+  /// currency, so they are recognized IN the base currency, not in the
+  /// foreign currency. The account_code is fixed (4700 for gains,
+  /// 5300 for losses) WITHOUT the per-currency offset, because there
+  /// is only one base currency and one gain/loss account per base
+  /// currency. Callers (recordExchangeGainLoss,
+  /// VoucherAutoMappingService._handleExchangeDifference) correctly
+  /// stamp transactions with currency_code='YER', exchange_rate=1.0,
+  /// and amount_base = the gain/loss amount (already in YER).
   Future<int> getOrCreateExchangeAccount({bool isGain = true}) async {
     final db = await _db;
     final code = isGain ? '4700' : '5300';
