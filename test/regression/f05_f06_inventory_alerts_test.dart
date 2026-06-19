@@ -487,9 +487,10 @@ void main() {
 
       final summary = await alertService.getAlertSummary();
       expect(summary.lowStockCount, 2,
-          reason: '2 products with current<=min AND min>0.');
-      expect(summary.outOfStockCount, 3,
-          reason: '3 products with current<=0 (2 low-stock + 1 out).');
+          reason: '2 products with current<=min AND min>0 (P-LOW-0, P-LOW-1).');
+      expect(summary.outOfStockCount, 1,
+          reason: 'Only 1 product has current<=0 (P-OUT). The 2 low-stock '
+              'products have current=3 which is > 0.');
       expect(summary.expiringSoonCount, 1,
           reason: '1 product expiring within 30 days (not yet expired).');
       expect(summary.expiredCount, 1,
