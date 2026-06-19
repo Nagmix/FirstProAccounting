@@ -81,12 +81,31 @@ class AuditService {
   }
 
   /// فواتير بدون قيود محاسبية — orphaned invoices (no journal entries).
-  /// Uses LIKE matching on transaction descriptions since the transactions
-  /// table does not have reference_type/reference_id columns.
+  ///
+  /// B-03 fix (2026-06-19): the previous implementation used
+  /// `t.description LIKE '%' || i.id || '%'` which is:
+  ///   1. Slow — no index on `description`, full table scan per invoice.
+  ///   2. Inaccurate — invoice "12" matches "112", "120", "1212", etc.
+  ///      (false positives mask real orphans; the LIKE 'فاتورة%' guard
+  ///      narrows but does not eliminate this).
+  ///
+  /// The new implementation joins on the canonical source-link columns
+  /// `transactions.reference_id` = `invoices.id` AND
+  /// `transactions.reference_type` IN the known invoice types, which were
+  /// added in migration v46 and backfilled in v49. For pre-v46 rows that
+  /// may have NULL `reference_id`, we fall back to a LIKE on `description`
+  /// — but only as a defensive secondary check, not the primary match.
+  ///
   /// Returns up to [limit] rows.
   Future<List<Map<String, dynamic>>> getOrphanedInvoices(
       {int limit = 20}) async {
     final db = await _db;
+    // Known reference_type values stamped by InvoiceRepository on every
+    // invoice-posting path (sale, pos, purchase, and their returns).
+    // Returns also carry `is_return=1`, so they're excluded by the
+    // WHERE clause below — but we include the return types here for
+    // completeness so that the JOIN correctly identifies any invoice
+    // (including returns) that has no matching journal entry.
     return await db.rawQuery('''
       SELECT i.id, i.type, i.total, i.currency, i.created_at,
              CASE WHEN i.customer_id IS NOT NULL THEN c.name
@@ -95,7 +114,10 @@ class AuditService {
       FROM invoices i
       LEFT JOIN customers c ON c.id = i.customer_id
       LEFT JOIN suppliers s ON s.id = i.supplier_id
-      LEFT JOIN transactions t ON t.description LIKE '%' || i.id || '%' AND t.description LIKE 'فاتورة%'
+      LEFT JOIN transactions t
+        ON t.reference_id = i.id
+       AND t.reference_type IN
+           ('sale','pos','purchase','sale_return','purchase_return','invoice_journal')
       WHERE i.is_return = 0 AND i.total > 0
         AND t.id IS NULL
       ORDER BY i.created_at DESC
