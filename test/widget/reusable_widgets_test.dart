@@ -17,11 +17,16 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: StatCard(
-              title: 'مبيعات اليوم',
-              value: 1234.56,
-              icon: Icons.trending_up,
-              color: Colors.green,
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: StatCard(
+                  title: 'مبيعات اليوم',
+                  value: 1234.56,
+                  icon: Icons.trending_up,
+                  color: Colors.green,
+                ),
+              ),
             ),
           ),
         ),
@@ -35,12 +40,17 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: StatCard(
-              title: 'الفواتير',
-              value: 42,
-              icon: Icons.receipt,
-              color: Colors.blue,
-              subtitle: 'اليوم',
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: StatCard(
+                  title: 'الفواتير',
+                  value: 42,
+                  icon: Icons.receipt,
+                  color: Colors.blue,
+                  subtitle: 'اليوم',
+                ),
+              ),
             ),
           ),
         ),
@@ -54,12 +64,17 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: StatCard(
-              title: 'المبيعات',
-              value: 5000,
-              icon: Icons.trending_up,
-              color: Colors.green,
-              trendPercentage: 15.5,
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: StatCard(
+                  title: 'المبيعات',
+                  value: 5000,
+                  icon: Icons.trending_up,
+                  color: Colors.green,
+                  trendPercentage: 15.5,
+                ),
+              ),
             ),
           ),
         ),
@@ -73,12 +88,17 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: StatCard(
-              title: 'المنتجات',
-              value: 25,
-              icon: Icons.inventory,
-              color: Colors.orange,
-              isCount: true,
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: StatCard(
+                  title: 'المنتجات',
+                  value: 25,
+                  icon: Icons.inventory,
+                  color: Colors.orange,
+                  isCount: true,
+                ),
+              ),
             ),
           ),
         ),
