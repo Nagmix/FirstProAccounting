@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
@@ -186,6 +187,14 @@ class _BankReconciliationScreenState extends State<BankReconciliationScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('التسوية البنكية'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.file_upload),
+              tooltip: 'استيراد كشف حساب',
+              onPressed: () => Navigator.pushNamed(
+                  context, AppConstants.bankStatementImport),
+            ),
+          ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())

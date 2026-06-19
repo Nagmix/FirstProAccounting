@@ -134,6 +134,7 @@ class AppConstants {
   static const String vouchers = '/vouchers';
   static const String newVoucher = '/vouchers/new';
   static const String recurringInvoices = '/recurring-invoices';
+  static const String bankStatementImport = '/bank-statement-import';
   static const String dailyOperations = '/daily-operations';
   static const String stockTransfer = '/stock-transfer';
   static const String stocktaking = '/stocktaking';

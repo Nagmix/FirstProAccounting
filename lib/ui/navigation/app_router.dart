@@ -46,6 +46,7 @@ import 'package:firstpro/ui/screens/reports/trial_balance_screen.dart';
 import 'package:firstpro/ui/screens/reports/financial_statements_screen.dart';
 import 'package:firstpro/ui/screens/bank_reconciliation/bank_reconciliation_screen.dart';
 import 'package:firstpro/ui/screens/bank_reconciliation/bank_reconciliation_detail_screen.dart';
+import 'package:firstpro/ui/screens/bank_reconciliation/bank_statement_import_screen.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/data/models/account_model.dart';
@@ -99,6 +100,7 @@ class AppRouter {
         AppConstants.notifications: (_) => const NotificationsScreen(),
         AppConstants.vouchers: (_) => const VouchersScreen(),
         AppConstants.recurringInvoices: (_) => const RecurringInvoicesScreen(),
+        AppConstants.bankStatementImport: (_) => const BankStatementImportScreen(),
         AppConstants.newVoucher: (_) =>
             const CreateReceiptPaymentVoucherScreen(),
         AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),
