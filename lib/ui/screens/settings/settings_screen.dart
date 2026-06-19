@@ -12,6 +12,7 @@ import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/data/datasources/services/inventory_alert_service.dart';
 import 'package:firstpro/ui/screens/currency_exchange/currency_exchange_screen.dart';
 import 'package:firstpro/ui/screens/cash_transfers/cash_transfer_screen.dart';
 import 'package:firstpro/ui/screens/debts/debts_screen.dart';
@@ -63,6 +64,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _stockAlert = true;
   int _stockAlertThreshold = 5;
   bool _trackExpiryDate = false;
+
+  // ── Inventory alert settings (F-05 + F-06) ──────────────────────
+  bool _stockAlertEnabled = true;
+  bool _expiryAlertEnabled = true;
+  int _expiryAlertDays = 30;
+  bool _isScanningAlerts = false;
 
   // ── Display settings state ───────────────────────────────────────
   // Note: theme mode is now managed by ThemeProvider (app-wide, reactive).
@@ -116,6 +123,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final stockAlert = await refRepo.getSetting('stock_alert');
     final stockThreshold = await refRepo.getSetting('stock_alert_threshold');
     final trackExpiry = await refRepo.getSetting('track_expiry_date');
+    // F-05 + F-06: inventory alert service settings.
+    final stockAlertEnabled = await refRepo.getSetting('stock_alert_enabled');
+    final expiryAlertEnabled = await refRepo.getSetting('expiry_alert_enabled');
+    final expiryAlertDays = await refRepo.getSetting('expiry_alert_days');
     // Theme mode is now loaded by ThemeProvider.initialize() at app
     // startup; SettingsScreen reads it via locator<ThemeProvider>().
     final fontSize = await refRepo.getSetting('font_size_index');
@@ -164,6 +175,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _stockAlertThreshold = int.tryParse(stockThreshold) ?? 5;
         }
         if (trackExpiry != null) _trackExpiryDate = trackExpiry == '1';
+        if (stockAlertEnabled != null) {
+          _stockAlertEnabled = stockAlertEnabled == '1';
+        }
+        if (expiryAlertEnabled != null) {
+          _expiryAlertEnabled = expiryAlertEnabled == '1';
+        }
+        if (expiryAlertDays != null) {
+          _expiryAlertDays = int.tryParse(expiryAlertDays) ?? 30;
+        }
         if (fontSize != null) _fontSizeIndex = int.tryParse(fontSize) ?? 1;
         _pinEnabled = pinEnabled == '1';
         _biometricEnabled = biometricEnabled == '1';
@@ -178,6 +198,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveSetting(String key, String value) async {
     await locator<ReferenceDataRepository>().setSetting(key, value);
+  }
+
+  /// F-05 + F-06: manually trigger the inventory alert scan.
+  /// Shows a SnackBar with the result counts.
+  Future<void> _scanAlertsNow() async {
+    setState(() => _isScanningAlerts = true);
+    try {
+      final service = locator<InventoryAlertService>();
+      final result = await service.scanAndGenerateAlerts();
+      if (!mounted) return;
+      final msg = result.totalInserted > 0
+          ? 'تم توليد ${result.totalInserted} تنبيه جديد '
+              '(${result.stockInserted} مخزون، ${result.expiryInserted} صلاحية).'
+          : 'لا توجد تنبيهات جديدة. المنتجات ضمن الحدود الآمنة.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: result.totalInserted > 0
+              ? AppColors.warning
+              : AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل الفحص: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isScanningAlerts = false);
+    }
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -345,6 +398,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'تسوية كميات المخزون وضبط القيود المحاسبية',
                   onTap: () => Navigator.pushNamed(
                       context, AppConstants.inventoryVoucher),
+                  isDark: isDark,
+                ),
+                // ── F-05 + F-06: Inventory Alert Service settings ──
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 4),
+                  child: Text(
+                    'تنبيهات المخزون والصلاحية',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                  ),
+                ),
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.notifications_active,
+                    color: _stockAlertEnabled ? AppColors.primary : null,
+                  ),
+                  title: const Text('تنبيهات المخزون المنخفض'),
+                  subtitle: const Text(
+                      'إشعار عند وصول المنتج للحد الأدنى أو نفاد المخزون'),
+                  value: _stockAlertEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) {
+                    setState(() => _stockAlertEnabled = v);
+                    _saveSetting('stock_alert_enabled', v ? '1' : '0');
+                  },
+                ),
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.event_busy,
+                    color: _expiryAlertEnabled ? AppColors.primary : null,
+                  ),
+                  title: const Text('تنبيهات انتهاء الصلاحية'),
+                  subtitle: const Text('إشعار قبل انتهاء صلاحية المنتجات'),
+                  value: _expiryAlertEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) {
+                    setState(() => _expiryAlertEnabled = v);
+                    _saveSetting('expiry_alert_enabled', v ? '1' : '0');
+                  },
+                ),
+                if (_expiryAlertEnabled)
+                  NumberSetting(
+                    label: 'أيام قبل انتهاء الصلاحية',
+                    value: _expiryAlertDays,
+                    onChanged: (v) {
+                      // Clamp to a sensible range [1, 365].
+                      final clamped = v < 1 ? 1 : (v > 365 ? 365 : v);
+                      setState(() => _expiryAlertDays = clamped);
+                      _saveSetting('expiry_alert_days', clamped.toString());
+                    },
+                    isDark: isDark,
+                  ),
+                ActionTile(
+                  icon: _isScanningAlerts
+                      ? Icons.hourglass_top
+                      : Icons.search,
+                  title: _isScanningAlerts
+                      ? 'جاري فحص التنبيهات...'
+                      : 'فحص التنبيهات الآن',
+                  subtitle: 'فحص المنتجات وتوليد إشعارات المخزون والصلاحية',
+                  onTap: _isScanningAlerts ? null : _scanAlertsNow,
                   isDark: isDark,
                 ),
               ],

@@ -131,6 +131,36 @@ class DatabaseHelper {
     }
   }
 
+  /// Test-only: inject an in-memory database for integration tests.
+  ///
+  /// F-05 + F-06 regression tests (and any future test that needs to
+  /// exercise the real DatabaseHelper singleton with an in-memory db)
+  /// call this BEFORE constructing the services under test. The
+  /// injected db is returned by the `database` getter until
+  /// [clearTestDatabase] is called.
+  ///
+  /// This is intentionally a static method (not a constructor parameter)
+  /// because the production code uses `DatabaseHelper()` (factory →
+  /// singleton) everywhere, and we want tests to override that singleton
+  /// without changing every call site.
+  @visibleForTesting
+  static void useTestDatabase(Database db) {
+    _database = db;
+    _databaseFuture = null;
+  }
+
+  /// Test-only: clear the injected test database so the next `database`
+  /// getter call re-initializes from the real initDatabase() path.
+  /// Call this in tearDown() to avoid leaking the in-memory db between
+  /// tests.
+  @visibleForTesting
+  static void clearTestDatabase() {
+    // Do NOT close the db here — the test's own tearDown closes it.
+    // We only clear the cached reference so the singleton is reset.
+    _database = null;
+    _databaseFuture = null;
+  }
+
   /// Get the database file path (useful for backup/restore).
   Future<String> getDatabasePath() async {
     final dbPath = await getDatabasesPath();

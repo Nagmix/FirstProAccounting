@@ -14,6 +14,7 @@ import 'package:firstpro/core/license/license_models.dart';
 import 'package:firstpro/core/theme/app_theme.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/services/inventory_alert_service.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 import 'package:firstpro/ui/navigation/main_scaffold.dart';
 import 'package:firstpro/ui/screens/app_lock/app_lock_screen.dart';
@@ -98,6 +99,12 @@ class _FirstProAppState extends State<FirstProApp> {
             const Duration(seconds: 8),
             onTimeout: () {},
           );
+
+      // F-05 + F-06: scan inventory for low-stock and expiry alerts.
+      // Run in the background (fire-and-forget) — must NOT block the
+      // splash transition. Errors are caught and printed (non-critical).
+      // The scan is idempotent: only NEW alerts are inserted.
+      _runInventoryAlertScan();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('FirstProApp._startInit: $e');
@@ -110,6 +117,25 @@ class _FirstProAppState extends State<FirstProApp> {
         _initComplete = true;
       });
     }
+  }
+
+  /// F-05 + F-06: run the inventory alert scan in the background.
+  ///
+  /// Fire-and-forget — does NOT block the splash transition. The scan
+  /// is idempotent (only inserts NEW alerts; skips ones that already
+  /// exist as unread). Errors are caught and printed (non-critical:
+  /// alert generation must never prevent the app from launching).
+  void _runInventoryAlertScan() {
+    Future(() async {
+      try {
+        final service = locator<InventoryAlertService>();
+        await service.scanAndGenerateAlerts();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('FirstProApp._runInventoryAlertScan: $e');
+        }
+      }
+    });
   }
 
   /// Load PIN state from secure storage (with DB fallback migration).
