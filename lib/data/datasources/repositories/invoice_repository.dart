@@ -179,17 +179,82 @@ class InvoiceRepository {
               });
             } else {
               // Sale return: stock returns to warehouse (always in base units)
+              // A-01 fix: Return goods at their ORIGINAL cost (captured in
+              // invoice_items.unit_cost at sale time), NOT the current
+              // average_cost. Otherwise, if the average cost changed between
+              // sale and return (e.g. due to a later purchase at a different
+              // price), the returned goods would be valued at the wrong cost,
+              // corrupting the weighted-average cost going forward.
+              //
+              // Correct weighted-average formula on sale return:
+              //   newTotalValue = (currentStock × currentAvgCost)
+              //                 + (returnedQty × originalUnitCost)
+              //   newTotalStock = currentStock + returnedQty
+              //   newAvgCost    = newTotalValue / newTotalStock
+              //
+              // For FIFO/LIFO products, the cost layers were already restored
+              // by reverseCOGSAllocationsInTransaction above, so we only
+              // recalculate average_cost for weighted-average products.
+              final originalUnitCost = MoneyHelper.readMoney(item['unit_cost']);
+              final effectiveReturnCost =
+                  originalUnitCost > 0 ? originalUnitCost : averageCost;
+
+              // Read current stock BEFORE update (needed for avg cost recompute)
+              final preReturnRow = await txn.query('products',
+                  where: 'id = ?', whereArgs: [productId], limit: 1);
+              final currentStockBeforeReturn = preReturnRow.isNotEmpty
+                  ? (preReturnRow.first['current_stock'] as num?)
+                          ?.toDouble() ??
+                      0.0
+                  : 0.0;
+              final currentAvgCostBeforeReturn = preReturnRow.isNotEmpty
+                  ? MoneyHelper.readMoney(preReturnRow.first['average_cost'])
+                  : 0.0;
+
               await txn.rawUpdate(
                 'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
                 [baseQuantity, now, productId],
               );
+
+              // Recompute average_cost for weighted-average products only.
+              // FIFO/LIFO products manage their cost via inventory_cost_layers
+              // (already restored above); their average_cost field is kept in
+              // sync as a fallback display value but is not authoritative.
+              final costingMethodStr = preReturnRow.isNotEmpty
+                  ? (preReturnRow.first['costing_method'] as String? ??
+                      'weighted_average')
+                  : 'weighted_average';
+              final costingMethod =
+                  CostingMethodExt.fromValue(costingMethodStr);
+              if (costingMethod == CostingMethod.weightedAverage &&
+                  baseQuantity > 0 &&
+                  effectiveReturnCost > 0) {
+                final newTotalStock =
+                    currentStockBeforeReturn + baseQuantity;
+                final newTotalValue =
+                    (currentStockBeforeReturn * currentAvgCostBeforeReturn) +
+                        (baseQuantity * effectiveReturnCost);
+                final newAvgCost = newTotalStock > 0
+                    ? newTotalValue / newTotalStock
+                    : effectiveReturnCost;
+                await txn.rawUpdate(
+                  'UPDATE products SET average_cost = ?, cost_price = ?, updated_at = ? WHERE id = ?',
+                  [
+                    MoneyHelper.toCents(newAvgCost),
+                    MoneyHelper.toCents(newAvgCost),
+                    now,
+                    productId,
+                  ],
+                );
+              }
+
               await txn.insert('stock_movements', {
                 'product_id': productId,
                 'movement_type': 'return',
                 'quantity': baseQuantity,
                 'reference_type': 'sale_return',
                 'reference_id': invoiceIdStr,
-                'unit_cost': MoneyHelper.toCents(averageCost),
+                'unit_cost': MoneyHelper.toCents(effectiveReturnCost),
                 'created_at': now,
               });
             }
