@@ -1084,7 +1084,22 @@ class VoucherAutoMappingService {
     required String date,
     required String now,
   }) async {
-    // تحويل كلا المبلغين إلى العملة الوظيفية (YER) للمقارنة
+    // تحويل كلا المبلغين إلى العملة الوظيفية (YER) للمقارنة.
+    //
+    // A-05 verification (2026-06-19):
+    // Exchange rates are read from the currencies table via
+    // _getExchangeRates(txn). These are the CURRENT rates stored in
+    // the DB — the user is responsible for keeping them up to date
+    // (e.g. via the Currencies screen). This matches IAS 21: at
+    // settlement, the difference between the historical rate (used
+    // at original recognition) and the current rate (used at
+    // settlement) is recognized as an exchange gain/loss in the
+    // functional currency (YER).
+    //
+    // The difference is posted to account 4700 (gain) or 5300 (loss)
+    // in YER (see getOrCreateExchangeAccount — verified in A-02).
+    // This is correct: exchange differences are always recognized in
+    // the base currency, not in either of the original currencies.
     final rates = await _getExchangeRates(txn);
     final fromInYER = fromAmount * (rates[fromCurrency] ?? 1.0);
     final toInYER = toAmount * (rates[toCurrency] ?? 1.0);
