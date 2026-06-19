@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 
 import 'package:firstpro/core/constants/app_constants.dart';
@@ -9,6 +8,7 @@ import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/date_formatter.dart';
 import 'package:firstpro/core/utils/invoice_pdf_generator.dart';
+import 'package:firstpro/core/utils/invoice_share_service.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
@@ -37,6 +37,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   String _entityBalanceType = 'credit';
   String _cashBoxName = '—';
   bool _isLoading = true;
+
+  // F-04: entity contact info for direct WhatsApp/email sharing.
+  String? _entityPhone;
+  String? _entityEmail;
 
   // Linked invoice data
   Map<String, dynamic>? _originalInvoice;
@@ -73,6 +77,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         entityName = customer['name'] as String? ?? '—';
         entityBalance = MoneyHelper.readMoney(customer['balance']);
         entityBalanceType = customer['balance_type'] as String? ?? 'credit';
+        // F-04: load contact info for direct sharing.
+        _entityPhone = customer['phone'] as String?;
+        _entityEmail = customer['email'] as String?;
       }
     } else if (invoice['supplier_id'] != null) {
       final suppliers = await locator<SupplierRepository>().getAllSuppliers();
@@ -82,6 +89,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         entityName = supplier['name'] as String? ?? '—';
         entityBalance = MoneyHelper.readMoney(supplier['balance']);
         entityBalanceType = supplier['balance_type'] as String? ?? 'credit';
+        // F-04: load contact info for direct sharing.
+        _entityPhone = supplier['phone'] as String?;
+        _entityEmail = supplier['email'] as String?;
       }
     }
 
@@ -945,9 +955,19 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                   tooltip: 'واتساب',
                 ),
                 IconButton.outlined(
+                  onPressed: _shareViaEmail,
+                  icon: const Icon(Icons.email, color: AppColors.primary),
+                  tooltip: 'بريد إلكتروني',
+                ),
+                IconButton.outlined(
+                  onPressed: _shareAsPdf,
+                  icon: const Icon(Icons.picture_as_pdf, color: AppColors.error),
+                  tooltip: 'مشاركة PDF',
+                ),
+                IconButton.outlined(
                   onPressed: _shareInvoice,
                   icon: const Icon(Icons.share),
-                  tooltip: 'مشاركة',
+                  tooltip: 'مشاركة نص',
                 ),
                 const SizedBox(width: 4),
                 Expanded(
@@ -1158,46 +1178,43 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   // ── Share & Print ────────────────────────────────────────────────
   void _shareInvoice() {
     if (_invoice == null) return;
-    final buffer = StringBuffer();
-    buffer.writeln(_invoiceTypeAr);
-    buffer.writeln('──────────────────');
-    buffer.writeln('رقم: ${_displayInvoiceId(_invoice?['id'] as String?)}');
-    buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: $_entityName');
-    buffer.writeln(
-        'الإجمالي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['total']))}');
-    buffer.writeln(
-        'المدفوع: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['paid_amount']))}');
-    buffer.writeln(
-        'المتبقي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['remaining']))}');
-    buffer.writeln('──────────────────');
-    for (final item in _items) {
-      final itemModel = InvoiceItem.fromMap(item);
-      buffer.writeln(
-          '${itemModel.productName} × ${itemModel.quantity} = ${CurrencyFormatter.format(itemModel.totalPrice)}');
-    }
-    Share.share(buffer.toString(), subject: _invoiceTypeAr);
+    // F-04: delegate to InvoiceShareService for consistent formatting.
+    InvoiceShareService.shareAsText(
+      invoice: _invoice!,
+      items: _items,
+    );
   }
 
   void _shareInvoiceWhatsApp() {
     if (_invoice == null) return;
-    final buffer = StringBuffer();
-    buffer.writeln('*$_invoiceTypeAr*');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━');
-    buffer.writeln('رقم: ${_displayInvoiceId(_invoice?['id'] as String?)}');
-    buffer.writeln('${_isSale ? 'العميل' : 'المورد'}: *$_entityName*');
-    buffer.writeln(
-        '*الإجمالي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['total']))}*');
-    buffer.writeln(
-        'المدفوع: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['paid_amount']))}');
-    buffer.writeln(
-        'المتبقي: ${CurrencyFormatter.format(MoneyHelper.readMoney(_invoice?['remaining']))}');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━');
-    for (final item in _items) {
-      final itemModel = InvoiceItem.fromMap(item);
-      buffer.writeln(
-          '▫️ ${itemModel.productName} × ${itemModel.quantity} = ${CurrencyFormatter.format(itemModel.totalPrice)}');
-    }
-    Share.share(buffer.toString(), subject: _invoiceTypeAr);
+    // F-04: open WhatsApp directly with the customer's phone number
+    // (if available) and attach the PDF.
+    InvoiceShareService.shareViaWhatsApp(
+      invoice: _invoice!,
+      items: _items,
+      phone: _entityPhone,
+      includePdf: true,
+    );
+  }
+
+  /// F-04: share the invoice via email.
+  void _shareViaEmail() {
+    if (_invoice == null) return;
+    InvoiceShareService.shareViaEmail(
+      invoice: _invoice!,
+      items: _items,
+      email: _entityEmail,
+      includePdf: true,
+    );
+  }
+
+  /// F-04: share the invoice as a PDF file.
+  void _shareAsPdf() {
+    if (_invoice == null) return;
+    InvoiceShareService.shareAsPdf(
+      invoice: _invoice!,
+      items: _items,
+    );
   }
 
   Future<void> _printInvoice() async {
