@@ -100,5 +100,37 @@ void main() {
               'exist as a printer service. Found unexpected: '
               '${unexpected.map((f) => f.path).join(', ')}.');
     });
+
+    test('AppConstants.currency and AppConstants.currencyEn are not re-introduced (T-04)', () {
+      // T-04 guard: AppConstants.currency and AppConstants.currencyEn
+      // were mutable global constants that conflicted with the dynamic
+      // per-currency model (CurrencyConstants reads from the currency
+      // table at runtime). They were @Deprecated and finally removed
+      // on 2026-06-19.
+      //
+      // This guard catches accidental re-creation by checking the
+      // AppConstants source file for the field definitions.
+      final file = File('lib/core/constants/app_constants.dart');
+      expect(file.existsSync(), isTrue,
+          reason: 'lib/core/constants/app_constants.dart must exist.');
+      final source = file.readAsStringSync();
+
+      // The exact patterns that were removed:
+      //   static String currency = '...';
+      //   static String currencyEn = '...';
+      // We use regex to catch any re-introduction (with or without
+      // @Deprecated annotation, with any default value).
+      final currencyPattern = RegExp(r'static\s+String\s+currency\s*=');
+      final currencyEnPattern = RegExp(r'static\s+String\s+currencyEn\s*=');
+
+      expect(currencyPattern.hasMatch(source), isFalse,
+          reason: 'T-04: AppConstants.currency was removed on 2026-06-19. '
+              'Use CurrencyConstants.currencySymbol(code) instead. '
+              'Do not re-introduce this mutable global.');
+      expect(currencyEnPattern.hasMatch(source), isFalse,
+          reason: 'T-04: AppConstants.currencyEn was removed on 2026-06-19. '
+              'Use CurrencyConstants.currencyOptions or the currency table '
+              'instead. Do not re-introduce this mutable global.');
+    });
   });
 }

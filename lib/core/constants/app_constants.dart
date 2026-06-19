@@ -14,10 +14,11 @@ class AppConstants {
   static const int dbVersion = 53; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
-  @Deprecated('Use CurrencyConstants.currencySymbol() instead')
-  static String currency = 'ر.ي';
-  @Deprecated('Use CurrencyConstants.currencyOptions or the currency table instead')
-  static String currencyEn = 'YER';
+  // Note: AppConstants.currency and AppConstants.currencyEn were removed
+  // on 2026-06-19 (audit T-04). They were mutable globals that
+  // conflicted with the dynamic per-currency model. Use
+  // CurrencyConstants.currencySymbol(code) / CurrencyConstants.currencyOptions
+  // instead, which read from the currency table at runtime.
   static const String defaultLanguage = 'ar';
   static const String localeAr = 'ar';
   static const String localeEn = 'en';
