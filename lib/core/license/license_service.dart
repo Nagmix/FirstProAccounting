@@ -310,11 +310,35 @@ class LicenseService {
   }
 
   /// Save current state to local database.
+  ///
+  /// T-01 fix (2026-06-19): the previous implementation used
+  /// `DELETE FROM license_state` followed by `INSERT`. If the INSERT
+  /// failed (e.g. constraint violation, disk error, process kill
+  /// between the two statements), the user's license state was lost
+  /// — including the license key itself — causing the app to silently
+  /// revert to 'free' mode on the next launch.
+  ///
+  /// The new implementation uses `INSERT OR REPLACE` (SQLite UPSERT)
+  /// which atomically replaces the single row (id=1, enforced by the
+  /// table's `PRIMARY KEY CHECK (id = 1)` constraint) in one
+  /// statement. There is no window where the row is missing.
+  ///
+  /// The map from `_state.toMap()` already includes `id: 1` (set in
+  /// `LicenseStateModel.toMap`), so INSERT OR REPLACE will target
+  /// the existing row correctly.
   Future<void> _saveState() async {
     try {
       final db = await DatabaseHelper().database;
-      await db.delete('license_state');
-      await db.insert('license_state', _state.toMap());
+      final map = _state.toMap();
+      // Ensure the row id is 1 (the table's CHECK constraint requires
+      // it). toMap() should already set this, but we enforce it here
+      // defensively in case the model changes.
+      map['id'] = 1;
+      await db.insert(
+        'license_state',
+        map,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('Save license state error: $e');
     }
