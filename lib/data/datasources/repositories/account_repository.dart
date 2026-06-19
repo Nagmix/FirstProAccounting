@@ -540,12 +540,86 @@ class AccountRepository {
         final exp = expensePerCurrency[currency] ?? 0.0;
         final netForCurrency = rev - cost - exp;
 
-        // Find retained earnings account for this currency
-        final reAccount = retainedEarningsAccounts
+        // Find retained earnings account for this currency.
+        // A-03 fix (2026-06-19): previously, if the Retained Earnings
+        // account (2910+offset) was missing for a currency, the code
+        // silently `continue`d — skipping the closing entries for that
+        // currency entirely. This left REVENUE/COST/EXPENSE accounts
+        // un-closed and the net profit for that currency was lost.
+        //
+        // Now we auto-create the Retained Earnings account (and its
+        // parent Equity root 2900+offset if missing) using the same
+        // pattern as DatabaseSeeds.seedAccountsForCurrency. This
+        // ensures the annual posting always succeeds for every
+        // currency that has activity, matching the IAS 1 requirement
+        // that closing entries must transfer net profit to retained
+        // earnings.
+        Map<String, dynamic>? reAccount = retainedEarningsAccounts
             .where((a) => a['currency'] == currency)
             .firstOrNull;
-        if (reAccount == null) continue;
-        final reAccId = reAccount['id'] as int;
+        int reAccId;
+        if (reAccount != null) {
+          reAccId = reAccount['id'] as int;
+        } else {
+          // Get the code offset for this currency.
+          final codeOffset = await _getOrCreateCodeOffsetForCurrency(txn, currency);
+          // Ensure the Equity root (2900+offset) exists.
+          final equityRootCode = (2900 + codeOffset).toString();
+          var equityRootRows = await txn.query('accounts',
+              where: 'account_code = ? AND currency = ?',
+              whereArgs: [equityRootCode, currency],
+              limit: 1);
+          int? equityRootId;
+          if (equityRootRows.isNotEmpty) {
+            equityRootId = equityRootRows.first['id'] as int;
+          } else {
+            // Get the currency symbol for the account name.
+            final curRows = await txn.query('currencies',
+                where: 'code = ?', whereArgs: [currency], limit: 1);
+            final symbol = curRows.isNotEmpty
+                ? (curRows.first['symbol'] as String? ?? currency)
+                : currency;
+            equityRootId = await txn.insert('accounts', {
+              'name_ar': 'حقوق الملكية ($symbol)',
+              'name_en': 'Equity ($currency)',
+              'account_code': equityRootCode,
+              'account_type': 'EQUITY',
+              'balance': 0,
+              'currency': currency,
+              'balance_type': 'credit',
+              'base_code': 2900,
+              'parent_id': null,
+              'is_active': 1,
+              'is_system': 1,
+              'debt_ceiling': 0,
+              'created_at': now,
+              'updated_at': now,
+            });
+          }
+          // Create the Retained Earnings account (2910+offset).
+          final reCode = (2910 + codeOffset).toString();
+          final curRows = await txn.query('currencies',
+              where: 'code = ?', whereArgs: [currency], limit: 1);
+          final symbol = curRows.isNotEmpty
+              ? (curRows.first['symbol'] as String? ?? currency)
+              : currency;
+          reAccId = await txn.insert('accounts', {
+            'name_ar': 'الأرباح المحتجزة ($symbol)',
+            'name_en': 'Retained Earnings ($currency)',
+            'account_code': reCode,
+            'account_type': 'EQUITY',
+            'balance': 0,
+            'currency': currency,
+            'balance_type': 'credit',
+            'base_code': 2910,
+            'parent_id': equityRootId,
+            'is_active': 1,
+            'is_system': 1,
+            'debt_ceiling': 0,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
 
         // Close revenue accounts: Debit Revenue, Credit Retained Earnings
         for (final acc
@@ -793,5 +867,28 @@ class AccountRepository {
           {'balance': MoneyHelper.toCents(newBalance), 'updated_at': now},
           where: 'id = ?', whereArgs: [accountId]);
     }
+  }
+
+  /// Get the code_offset for a currency from the currencies table.
+  ///
+  /// Used by [performAnnualPosting] (A-03 fix) to compute the correct
+  /// account_code for the Retained Earnings account (2910+offset) and
+  /// its parent Equity root (2900+offset) when auto-creating them for
+  /// a currency that has activity but no Equity accounts yet.
+  ///
+  /// Returns 0 for YER (base currency), or the stored code_offset for
+  /// other currencies. Returns 0 as a fallback if the currency row is
+  /// missing or the column is NULL (defensive — should not happen after
+  /// migration v51 + the fresh-install seed fix in BaseCurrencyService).
+  Future<int> _getOrCreateCodeOffsetForCurrency(
+    Transaction txn, String currency) async {
+  final rows = await txn.query('currencies',
+      where: 'code = ?', whereArgs: [currency], limit: 1);
+  if (rows.isEmpty) return 0;
+  final offset = rows.first['code_offset'];
+  if (offset == null) return 0;
+  if (offset is int) return offset;
+  // SQLite may return num for INTEGER columns in some drivers.
+  return (offset as num).toInt();
   }
 }
