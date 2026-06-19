@@ -1439,4 +1439,210 @@ class ReportService {
       "FROM suppliers WHERE CAST(balance AS INTEGER) > 0 AND balance_type = 'credit'",
     );
   }
+
+  // ══════════════════════════════════════════════════════════════
+  //  VAT Return report (A-04)
+  //
+  //  Provides a VAT return summary for a given period and currency,
+  //  covering Output VAT (sales invoices) and Input VAT (purchase
+  //  invoices), with the net VAT payable or refundable.
+  //
+  //  Output VAT is posted to account 2300+offset (VAT Payable, Liability)
+  //  on sale/POS invoices; Input VAT is posted to account 1400+offset
+  //  (VAT Receivable, Asset) on purchase invoices. The report reads
+  //  invoices.tax_amount directly (captured at posting time) so it
+  //  matches the journal exactly.
+  //
+  //  Returns two result sets:
+  //    - summary: per-currency totals (output_vat, input_vat, net_vat)
+  //    - details: per-invoice rows (id, type, date, taxable_amount,
+  //               tax_amount, currency, entity_name)
+  //
+  //  All monetary values are raw DB integers (cents). The caller
+  //  converts with `MoneyHelper.readCalculatedMoney`.
+  // ══════════════════════════════════════════════════════════════
+
+  /// ملخص إقرار الضريبة — VAT return summary by currency.
+  ///
+  /// Returns one row per currency with:
+  ///   currency, output_vat, input_vat, net_vat,
+  ///   sales_taxable, sales_total, purchases_taxable, purchases_total,
+  ///   sales_count, purchases_count.
+  ///
+  /// `net_vat = output_vat - input_vat`. Positive = payable to tax
+  /// authority; negative = refundable.
+  ///
+  /// If [currency] is null, returns rows for ALL currencies that have
+  /// VAT activity in the period. If non-null, returns one row for that
+  /// currency only (or empty if no activity).
+  Future<List<Map<String, dynamic>>> getVatReturnSummary({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+  }) async {
+    final db = await _db;
+    final dateFilter = buildDateFilter(
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      column: 'i.created_at',
+    );
+    final currencyFilter = buildCurrencyFilter(
+      currency: currency,
+      column: 'i.currency',
+    );
+
+    // Aggregated per currency. We compute output_vat from sale/pos
+    // invoices and input_vat from purchase invoices, using tax_amount
+    // (captured at posting time). Returns are excluded from VAT totals
+    // because they reverse the original VAT entry (the transaction rows
+    // for a return carry the opposite sign), but for a true VAT return
+    // we want the NET output/input VAT after returns — which is exactly
+    // what SUM(invoices.tax_amount) gives us when we include returns
+    // with their signed tax_amount. However, the invoices table stores
+    // tax_amount as a positive number even for returns; we need to
+    // negate it for returns.
+    //
+    // Approach: use CASE to negate tax_amount for return invoices, so
+    // the SUM reflects the net VAT after returns.
+    return await db.rawQuery('''
+      SELECT
+        i.currency,
+        SUM(CASE WHEN i.type IN ('sale','pos') AND i.is_return = 0
+                 THEN CAST(i.tax_amount AS INTEGER) ELSE 0 END) AS output_vat,
+        SUM(CASE WHEN i.type IN ('sale','pos') AND i.is_return = 1
+                 THEN -CAST(i.tax_amount AS INTEGER) ELSE 0 END) AS output_vat_returns,
+        SUM(CASE WHEN i.type = 'purchase' AND i.is_return = 0
+                 THEN CAST(i.tax_amount AS INTEGER) ELSE 0 END) AS input_vat,
+        SUM(CASE WHEN i.type = 'purchase' AND i.is_return = 1
+                 THEN -CAST(i.tax_amount AS INTEGER) ELSE 0 END) AS input_vat_returns,
+        SUM(CASE WHEN i.type IN ('sale','pos') AND i.is_return = 0
+                 THEN CAST(i.subtotal AS INTEGER) - CAST(i.discount_amount AS INTEGER)
+                 ELSE 0 END) AS sales_taxable,
+        SUM(CASE WHEN i.type = 'purchase' AND i.is_return = 0
+                 THEN CAST(i.subtotal AS INTEGER) - CAST(i.discount_amount AS INTEGER)
+                 ELSE 0 END) AS purchases_taxable,
+        SUM(CASE WHEN i.type IN ('sale','pos') AND i.is_return = 0
+                 THEN CAST(i.total AS INTEGER) ELSE 0 END) AS sales_total,
+        SUM(CASE WHEN i.type = 'purchase' AND i.is_return = 0
+                 THEN CAST(i.total AS INTEGER) ELSE 0 END) AS purchases_total,
+        SUM(CASE WHEN i.type IN ('sale','pos') AND i.is_return = 0
+                 THEN 1 ELSE 0 END) AS sales_count,
+        SUM(CASE WHEN i.type = 'purchase' AND i.is_return = 0
+                 THEN 1 ELSE 0 END) AS purchases_count
+      FROM invoices i
+      WHERE 1=1
+        ${dateFilter.$1}
+        ${currencyFilter.$1}
+        AND CAST(i.tax_amount AS INTEGER) > 0
+      GROUP BY i.currency
+      ORDER BY i.currency
+    ''', [...dateFilter.$2, ...currencyFilter.$2]);
+  }
+
+  /// تفاصيل إقرار الضريبة — VAT return detail rows (per invoice).
+  ///
+  /// Returns one row per VAT-bearing invoice in the period with:
+  ///   id, type, is_return, created_at, currency,
+  ///   subtotal, discount_amount, taxable_amount (computed),
+  ///   tax_amount (signed: negative for returns),
+  ///   entity_name, exchange_rate.
+  ///
+  /// Use [vatDirection] to filter:
+  ///   - 'output' — sale/pos invoices only (Output VAT)
+  ///   - 'input'  — purchase invoices only (Input VAT)
+  ///   - null     — both (default)
+  Future<List<Map<String, dynamic>>> getVatReturnDetails({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? currency,
+    String? vatDirection,
+  }) async {
+    final db = await _db;
+    final dateFilter = buildDateFilter(
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      column: 'i.created_at',
+    );
+    final currencyFilter = buildCurrencyFilter(
+      currency: currency,
+      column: 'i.currency',
+    );
+
+    String directionFilter = '';
+    if (vatDirection == 'output') {
+      directionFilter = " AND i.type IN ('sale','pos')";
+    } else if (vatDirection == 'input') {
+      directionFilter = " AND i.type = 'purchase'";
+    }
+
+    return await db.rawQuery('''
+      SELECT
+        i.id, i.type, i.is_return, i.created_at, i.currency,
+        CAST(i.subtotal AS INTEGER) AS subtotal,
+        CAST(i.discount_amount AS INTEGER) AS discount_amount,
+        CAST(i.subtotal AS INTEGER) - CAST(i.discount_amount AS INTEGER) AS taxable_amount,
+        CASE WHEN i.is_return = 1
+             THEN -CAST(i.tax_amount AS INTEGER)
+             ELSE CAST(i.tax_amount AS INTEGER)
+        END AS tax_amount,
+        CAST(i.total AS INTEGER) AS total,
+        i.exchange_rate,
+        CASE WHEN i.customer_id IS NOT NULL THEN c.name
+             WHEN i.supplier_id IS NOT NULL THEN s.name
+             ELSE 'بدون عميل/مورد' END AS entity_name
+      FROM invoices i
+      LEFT JOIN customers c ON c.id = i.customer_id
+      LEFT JOIN suppliers s ON s.id = i.supplier_id
+      WHERE CAST(i.tax_amount AS INTEGER) > 0
+        ${dateFilter.$1}
+        ${currencyFilter.$1}
+        $directionFilter
+      ORDER BY i.created_at DESC, i.id
+    ''', [...dateFilter.$2, ...currencyFilter.$2]);
+  }
+
+  /// Compute the net VAT payable/refundable for a single currency.
+  ///
+  /// Returns a map with:
+  ///   output_vat, input_vat, net_vat, payable (bool), refundable (bool)
+  /// All values in raw DB cents.
+  Future<Map<String, dynamic>> getVatNetPayable({
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    required String currency,
+  }) async {
+    final summary = await getVatReturnSummary(
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      currency: currency,
+    );
+    if (summary.isEmpty) {
+      return {
+        'currency': currency,
+        'output_vat': 0,
+        'input_vat': 0,
+        'net_vat': 0,
+        'payable': false,
+        'refundable': false,
+      };
+    }
+    final row = summary.first;
+    final outputVat = (row['output_vat'] as num?)?.toInt() ?? 0;
+    final outputVatReturns =
+        (row['output_vat_returns'] as num?)?.toInt() ?? 0;
+    final inputVat = (row['input_vat'] as num?)?.toInt() ?? 0;
+    final inputVatReturns =
+        (row['input_vat_returns'] as num?)?.toInt() ?? 0;
+    final netOutput = outputVat - outputVatReturns;
+    final netInput = inputVat - inputVatReturns;
+    final netVat = netOutput - netInput;
+    return {
+      'currency': currency,
+      'output_vat': netOutput,
+      'input_vat': netInput,
+      'net_vat': netVat,
+      'payable': netVat > 0,
+      'refundable': netVat < 0,
+    };
+  }
 }

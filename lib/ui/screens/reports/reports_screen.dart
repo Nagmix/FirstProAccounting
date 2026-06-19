@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/ui/screens/reports/trial_balance_screen.dart';
 import 'package:firstpro/ui/screens/reports/financial_statements_screen.dart';
+import 'package:firstpro/ui/screens/reports/vat_return_screen.dart';
 import 'package:firstpro/ui/screens/reports/widgets/report_helpers.dart';
 import 'package:firstpro/ui/screens/reports/widgets/report_data_loader.dart';
 import 'package:firstpro/ui/screens/reports/widgets/report_card_widget.dart';
@@ -145,6 +146,11 @@ class _ReportsScreenState extends State<ReportsScreen>
               icon: Icons.balance,
               color: AppColors.primary,
               key: 'trial_balance_screen'),
+          const ReportItem(
+              name: 'إقرار ضريبة القيمة المضافة',
+              icon: Icons.receipt_long,
+              color: AppColors.secondary,
+              key: 'vat_return_screen'),
           const ReportItem(
               name: 'القوائم المالية',
               icon: Icons.account_balance,
@@ -368,6 +374,11 @@ class _ReportsScreenState extends State<ReportsScreen>
     if (item.key == 'financial_statements') {
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => const FinancialStatementsScreen()));
+      return;
+    }
+    if (item.key == 'vat_return_screen') {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const VatReturnScreen()));
       return;
     }
     setState(() {

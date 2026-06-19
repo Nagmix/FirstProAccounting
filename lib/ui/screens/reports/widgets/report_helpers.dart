@@ -79,6 +79,7 @@ const reportDescriptions = {
   'all_account_movement': 'كل حركات الحسابات',
   'trial_balance': 'ميزان المراجعة للتحقق',
   'trial_balance_screen': 'شاشة كاملة لميزان المراجعة',
+  'vat_return_screen': 'إقرار ضريبة القيمة المضافة (مخرجات - مدخلات)',
   'financial_statements': 'قائمة الدخل والمركزية المالي',
   'cash_box': 'أرصدة وحركة الصناديق',
   'accounts_no_movement': 'حسابات بلا قيود',
