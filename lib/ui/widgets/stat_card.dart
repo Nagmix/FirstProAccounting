@@ -36,13 +36,26 @@ class StatCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final effectiveAccentColor = accentBarColor ?? color;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: DesignSystem.borderRadius16,
-        boxShadow: DesignSystem.cardShadow(isLight: !isDark),
-      ),
+    // U-04: wrap in Semantics for screen reader accessibility.
+    // The label combines title + value + optional subtitle + trend
+    // so a screen reader user gets the full card content in one
+    // announcement.
+    final semanticsLabel = isCount
+        ? '$title: $value'
+        : '$title: $value'
+            '${subtitle != null ? ' ($subtitle)' : ''}'
+            '${trendPercentage != null ? '، التغيير ${trendPercentage!.abs().toStringAsFixed(1)}%${trendIsUp ? ' زيادة' : ' نقصان'}' : ''}';
+
+    return Semantics(
+      label: semanticsLabel,
+      button: false,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : AppColors.surface,
+          borderRadius: DesignSystem.borderRadius16,
+          boxShadow: DesignSystem.cardShadow(isLight: !isDark),
+        ),
       child: ClipRRect(
         borderRadius: DesignSystem.borderRadius16,
         child: Stack(
@@ -153,6 +166,7 @@ class StatCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

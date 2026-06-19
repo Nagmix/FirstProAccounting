@@ -32,10 +32,20 @@ class QuickActionButton extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final effectiveColor = color ?? AppColors.primary;
 
+    // U-04: wrap in Semantics for screen reader accessibility.
+    // The button is announced as a button with its label.
     if (isLarge) {
-      return _buildLargeButton(context, theme, isDark, effectiveColor);
+      return Semantics(
+        button: true,
+        label: label,
+        child: _buildLargeButton(context, theme, isDark, effectiveColor),
+      );
     }
-    return _buildNormalButton(context, theme, isDark, effectiveColor);
+    return Semantics(
+      button: true,
+      label: label,
+      child: _buildNormalButton(context, theme, isDark, effectiveColor),
+    );
   }
 
   Widget _buildNormalButton(

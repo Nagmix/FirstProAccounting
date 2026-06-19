@@ -25,12 +25,16 @@ class EmptyState extends StatelessWidget {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    // U-04: wrap in Semantics for screen reader accessibility.
+    return Semantics(
+      label: '$title. $subtitle'
+          '${actionLabel != null ? '. زر: $actionLabel' : ''}',
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // ── Large icon with gradient background ────────────────
             Container(
               width: 100,
@@ -111,7 +115,8 @@ class EmptyState extends StatelessWidget {
                 ),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );

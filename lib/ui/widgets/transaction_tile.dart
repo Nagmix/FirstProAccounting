@@ -33,25 +33,34 @@ class TransactionTile extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final color = _statusColor;
+    final statusLabel = _statusLabel;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: DesignSystem.borderRadius14,
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.1)
-                : AppColors.primary.withValues(alpha: 0.04),
-            offset: const Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+    // U-04: wrap in Semantics for screen reader accessibility.
+    final semanticsLabel =
+        '$customerName, المبلغ ${CurrencyFormatter.format(amount)}، '
+        'التاريخ ${DateFormatter.formatDate(date)}، الحالة: $statusLabel';
+
+    return Semantics(
+      label: semanticsLabel,
+      button: onTap != null,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : AppColors.surface,
+          borderRadius: DesignSystem.borderRadius14,
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.1)
+                  : AppColors.primary.withValues(alpha: 0.04),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
           onTap: onTap,
           borderRadius: DesignSystem.borderRadius14,
           child: Padding(
@@ -134,6 +143,7 @@ class TransactionTile extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
       ),
     );
