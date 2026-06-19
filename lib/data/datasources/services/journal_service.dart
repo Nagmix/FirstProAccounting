@@ -51,6 +51,16 @@ class JournalService {
     //   credit + !isDebit → +amount (credit increases credit accounts)
     //   debit  + isDebit  → +amount (debit increases debit accounts)
     //   debit  + !isDebit → -amount (credit decreases debit accounts)
+    //
+    // T-03 note (2026-06-19): the `balance_type = 'auto'` branches are
+    // kept as a DEFENSIVE fallback. Migration v50 resolved all 'auto'
+    // values to 'debit' or 'credit' based on account_type, so in
+    // practice these branches should never execute on a v50+ database.
+    // They remain here to avoid silently breaking balance updates if a
+    // future bug re-introduces 'auto' — the alternative (throwing)
+    // would be more strict but riskier for a financial app. The
+    // branches are documented and can be removed once a runtime
+    // invariant check is added (e.g. in DatabaseHelper.onOpen).
     await db.rawUpdate('''
       UPDATE accounts SET
         balance = balance + CASE
@@ -113,6 +123,11 @@ class JournalService {
     // Net delta in cents for each balance_type:
     //   credit-balance: +credit - debit  (credit increases, debit decreases)
     //   debit-balance:  +debit - credit  (debit increases, credit decreases)
+    //
+    // T-03 note (2026-06-19): the `balance_type = 'auto'` branches are
+    // kept as a DEFENSIVE fallback (see updateAccountBalance for full
+    // explanation). Migration v50 resolved all 'auto' values, so these
+    // branches should never execute on a v50+ database.
     await txn.rawUpdate('''
       UPDATE accounts SET
         balance = balance + CASE
