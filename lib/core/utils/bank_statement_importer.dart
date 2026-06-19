@@ -324,7 +324,9 @@ class BankStatementImporter {
     if (amountStr.isEmpty) return 0;
 
     // Remove currency symbols and spaces.
-    amountStr = amountStr.replaceAll(RegExp(r'[ر\.ي\$€£]|YER|SAR|USD'), '');
+    // Match "ر.ي" as a whole sequence first, then individual symbols.
+    // DO NOT put \. in a character class — it would strip decimal dots.
+    amountStr = amountStr.replaceAll(RegExp(r'ر\.ي|[ري\$€£]|YER|SAR|USD'), '');
     amountStr = amountStr.trim();
 
     // Handle European format: 1.234,56 → 1234.56
