@@ -87,7 +87,7 @@ void main() {
 
     test('product deletion considers inventory and costing history', () {
       expect(productRepositorySource.contains('dependencyTables'), isTrue);
-      for (const table in [
+      for (final table in [
         'invoice_items',
         'stock_movements',
         'inventory_cost_layers',
@@ -110,7 +110,7 @@ void main() {
       expect(
           accountRepositorySource.contains('لا يمكن حذف حساب يحتوي على حسابات فرعية'),
           isTrue);
-      for (const table in [
+      for (final table in [
         'transactions',
         'voucher_items',
         'cash_boxes',
