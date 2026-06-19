@@ -1102,5 +1102,58 @@ class DatabaseSchema {
       INSERT OR IGNORE INTO license_state (id, license_type, status, record_count)
       VALUES (1, 'free', 'free', 0)
     ''');
+
+    // ── F-03: Recurring invoices (v54) ──
+    // Templates for invoices that should be generated automatically on
+    // a schedule (daily/weekly/monthly/yearly). See migration_v54.dart
+    // for the full schema and RecurringInvoiceService for the logic.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS recurring_invoices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        invoice_type TEXT NOT NULL DEFAULT 'sale',
+        payment_mechanism TEXT NOT NULL DEFAULT 'credit',
+        frequency TEXT NOT NULL DEFAULT 'monthly',
+        interval_value INTEGER NOT NULL DEFAULT 1,
+        next_run_date TEXT NOT NULL,
+        end_date TEXT,
+        customer_id INTEGER,
+        supplier_id INTEGER,
+        cash_box_id INTEGER,
+        currency TEXT NOT NULL DEFAULT 'YER',
+        exchange_rate REAL NOT NULL DEFAULT 1.0,
+        vat_rate REAL NOT NULL DEFAULT 0.0,
+        discount_amount INTEGER NOT NULL DEFAULT 0,
+        transport_charges INTEGER NOT NULL DEFAULT 0,
+        notes TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        generated_count INTEGER NOT NULL DEFAULT 0,
+        last_generated_invoice_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS idx_recurring_next_run ON recurring_invoices(status, next_run_date)",
+    );
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS recurring_invoice_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recurring_invoice_id INTEGER NOT NULL,
+        product_id INTEGER,
+        product_name TEXT NOT NULL,
+        quantity REAL NOT NULL DEFAULT 1.0,
+        unit_price INTEGER NOT NULL DEFAULT 0,
+        total_price INTEGER NOT NULL DEFAULT 0,
+        unit_name TEXT,
+        conversion_factor REAL NOT NULL DEFAULT 1.0,
+        base_quantity REAL NOT NULL DEFAULT 1.0,
+        notes TEXT,
+        FOREIGN KEY (recurring_invoice_id) REFERENCES recurring_invoices(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS idx_recurring_items_ri ON recurring_invoice_items(recurring_invoice_id)",
+    );
   }
 }

@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 53; // Must match DatabaseHelper._databaseVersion
+  static const int dbVersion = 54; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
   // Note: AppConstants.currency and AppConstants.currencyEn were removed
@@ -133,6 +133,7 @@ class AppConstants {
   static const String notifications = '/notifications';
   static const String vouchers = '/vouchers';
   static const String newVoucher = '/vouchers/new';
+  static const String recurringInvoices = '/recurring-invoices';
   static const String dailyOperations = '/daily-operations';
   static const String stockTransfer = '/stock-transfer';
   static const String stocktaking = '/stocktaking';

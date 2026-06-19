@@ -15,6 +15,7 @@ import 'package:firstpro/core/theme/app_theme.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/inventory_alert_service.dart';
+import 'package:firstpro/data/datasources/services/recurring_invoice_service.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 import 'package:firstpro/ui/navigation/main_scaffold.dart';
 import 'package:firstpro/ui/screens/app_lock/app_lock_screen.dart';
@@ -105,6 +106,11 @@ class _FirstProAppState extends State<FirstProApp> {
       // splash transition. Errors are caught and printed (non-critical).
       // The scan is idempotent: only NEW alerts are inserted.
       _runInventoryAlertScan();
+
+      // F-03: process due recurring invoices. Generate real invoices
+      // for any template whose next_run_date <= today. Fire-and-forget
+      // (non-blocking). Errors are caught and printed (non-critical).
+      _runRecurringInvoiceProcessing();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('FirstProApp._startInit: $e');
@@ -133,6 +139,24 @@ class _FirstProAppState extends State<FirstProApp> {
       } catch (e) {
         if (kDebugMode) {
           debugPrint('FirstProApp._runInventoryAlertScan: $e');
+        }
+      }
+    });
+  }
+
+  /// F-03: process due recurring invoices in the background.
+  ///
+  /// Fire-and-forget — generates real invoices for any template whose
+  /// next_run_date <= today. Errors are caught and printed (non-critical:
+  /// recurring generation must never prevent the app from launching).
+  void _runRecurringInvoiceProcessing() {
+    Future(() async {
+      try {
+        final service = locator<RecurringInvoiceService>();
+        await service.processDueTemplates();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('FirstProApp._runRecurringInvoiceProcessing: $e');
         }
       }
     });

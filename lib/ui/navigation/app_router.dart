@@ -40,6 +40,7 @@ import 'package:firstpro/ui/screens/vouchers/vouchers_screen.dart';
 import 'package:firstpro/ui/screens/vouchers/create_receipt_payment_voucher_screen.dart';
 import 'package:firstpro/ui/screens/daily_ops/daily_operations_screen.dart';
 import 'package:firstpro/ui/screens/vouchers/inventory_voucher_screen.dart';
+import 'package:firstpro/ui/screens/recurring_invoices/recurring_invoices_screen.dart';
 import 'package:firstpro/ui/screens/reports/annual_posting_screen.dart';
 import 'package:firstpro/ui/screens/reports/trial_balance_screen.dart';
 import 'package:firstpro/ui/screens/reports/financial_statements_screen.dart';
@@ -97,6 +98,7 @@ class AppRouter {
         AppConstants.appLock: (_) => const AppLockScreen(),
         AppConstants.notifications: (_) => const NotificationsScreen(),
         AppConstants.vouchers: (_) => const VouchersScreen(),
+        AppConstants.recurringInvoices: (_) => const RecurringInvoicesScreen(),
         AppConstants.newVoucher: (_) =>
             const CreateReceiptPaymentVoucherScreen(),
         AppConstants.dailyOperations: (_) => const DailyOperationsScreen(),

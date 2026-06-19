@@ -13,6 +13,7 @@ import 'package:firstpro/data/datasources/migrations/migration_v50.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v51.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v52.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v53.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v54.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -98,5 +99,8 @@ class MigrationRunner {
 
     // v53 — Add default_currency to settings
     if (oldVersion < 53) await MigrationV53.migrate(db);
+
+    // v54 — F-03: Recurring invoices (templates + items tables)
+    if (oldVersion < 54) await MigrationV54.migrate(db);
   }
 }

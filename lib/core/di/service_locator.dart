@@ -23,6 +23,7 @@ import 'package:firstpro/data/datasources/services/costing_engine_service.dart';
 import 'package:firstpro/data/datasources/services/bank_reconciliation_service.dart';
 import 'package:firstpro/data/datasources/services/voucher_auto_mapping_service.dart';
 import 'package:firstpro/data/datasources/services/inventory_alert_service.dart';
+import 'package:firstpro/data/datasources/services/recurring_invoice_service.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
@@ -111,6 +112,13 @@ Future<void> setupLocator() async {
   locator.registerLazySingleton<InventoryAlertService>(
     () => InventoryAlertService(
       locator<DatabaseHelper>(),
+      locator<ReferenceDataRepository>(),
+    ),
+  );
+  locator.registerLazySingleton<RecurringInvoiceService>(
+    () => RecurringInvoiceService(
+      locator<DatabaseHelper>(),
+      locator<InvoiceRepository>(),
       locator<ReferenceDataRepository>(),
     ),
   );

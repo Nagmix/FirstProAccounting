@@ -175,6 +175,11 @@ class _MainScaffoldState extends State<MainScaffold>
         route: AppConstants.vouchers,
         color: Color(0xFF7B1FA2)),
     _DrawerMenuItem(
+        icon: Icons.repeat,
+        label: 'الفواتير المتكررة',
+        route: AppConstants.recurringInvoices,
+        color: Color(0xFF00897B)),
+    _DrawerMenuItem(
         icon: Icons.local_shipping,
         label: 'الموردين',
         route: AppConstants.suppliers,
