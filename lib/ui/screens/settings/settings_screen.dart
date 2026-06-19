@@ -10,6 +10,7 @@ import 'package:firstpro/core/license/license_constants.dart';
 import 'package:firstpro/core/license/license_models.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 import 'package:firstpro/ui/screens/currency_exchange/currency_exchange_screen.dart';
 import 'package:firstpro/ui/screens/cash_transfers/cash_transfer_screen.dart';
@@ -64,7 +65,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _trackExpiryDate = false;
 
   // ── Display settings state ───────────────────────────────────────
-  int _themeModeIndex = 0; // 0=فاتح, 1=ليلي, 2=تلقائي
+  // Note: theme mode is now managed by ThemeProvider (app-wide, reactive).
+  // We read it via locator<ThemeProvider>() and update via setThemeMode().
   int _fontSizeIndex = 1; // 0=صغير, 1=متوسط, 2=كبير
 
   // ── App Lock settings state ──────────────────────────────────────
@@ -114,7 +116,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final stockAlert = await refRepo.getSetting('stock_alert');
     final stockThreshold = await refRepo.getSetting('stock_alert_threshold');
     final trackExpiry = await refRepo.getSetting('track_expiry_date');
-    final themeMode = await refRepo.getSetting('theme_mode_index');
+    // Theme mode is now loaded by ThemeProvider.initialize() at app
+    // startup; SettingsScreen reads it via locator<ThemeProvider>().
     final fontSize = await refRepo.getSetting('font_size_index');
     // Read PIN enabled from secure storage with DB fallback for migration
     String? pinEnabled = await _secureStorage.read(key: 'pin_enabled');
@@ -161,7 +164,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _stockAlertThreshold = int.tryParse(stockThreshold) ?? 5;
         }
         if (trackExpiry != null) _trackExpiryDate = trackExpiry == '1';
-        if (themeMode != null) _themeModeIndex = int.tryParse(themeMode) ?? 0;
         if (fontSize != null) _fontSizeIndex = int.tryParse(fontSize) ?? 1;
         _pinEnabled = pinEnabled == '1';
         _biometricEnabled = biometricEnabled == '1';
@@ -676,6 +678,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     const labels = ['فاتح', 'ليلي', 'تلقائي'];
     const icons = [Icons.light_mode, Icons.dark_mode, Icons.wb_twilight];
 
+    // Read the current theme mode from the app-wide ThemeProvider so the
+    // selector reflects the live state (audit U-01 fix). Updates go through
+    // ThemeProvider.setThemeMode which persists + notifies listeners, so
+    // MaterialApp rebuilds with the new ThemeMode instantly.
+    final themeProvider = locator<ThemeProvider>();
+    final currentThemeModeIndex = themeProvider.themeModeIndex;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -692,10 +701,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icon(icons[i], size: 18),
               ),
             ),
-            selected: {_themeModeIndex},
+            selected: {currentThemeModeIndex},
             onSelectionChanged: (s) {
-              setState(() => _themeModeIndex = s.first);
-              _saveSetting('theme_mode_index', s.first.toString());
+              // Defer to ThemeProvider — it persists to DB and notifies
+              // listeners. MaterialApp (wrapped in ListenableBuilder in
+              // main.dart) rebuilds with the new ThemeMode, which in turn
+              // rebuilds this screen with the new isDark value. No local
+              // setState is needed; the rebuild is driven by the provider.
+              themeProvider.setThemeMode(s.first);
             },
           ),
         ],

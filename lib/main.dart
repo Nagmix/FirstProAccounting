@@ -12,6 +12,7 @@ import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/license/license_models.dart';
 import 'package:firstpro/core/theme/app_theme.dart';
+import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 import 'package:firstpro/ui/navigation/main_scaffold.dart';
@@ -39,8 +40,11 @@ class _FirstProAppState extends State<FirstProApp> {
   /// null = still on splash, true = PIN enabled, false = PIN disabled
   bool? _pinEnabled;
 
-  /// Theme mode loaded from settings: 0=light, 1=dark, 2=system
-  int _themeModeIndex = 2; // Default to system
+  /// Theme provider (app-wide, reactive). Initialized in [_startInit] via
+  /// `locator<ThemeProvider>().initialize()`. The MaterialApp listens to it
+  /// via ChangeNotifierProvider so theme changes from SettingsScreen apply
+  /// instantly without an app restart (audit U-01 fix).
+  final ThemeProvider _themeProvider = locator<ThemeProvider>();
 
   /// Whether initialization is complete (splash can transition)
   bool _initComplete = false;
@@ -72,24 +76,28 @@ class _FirstProAppState extends State<FirstProApp> {
   /// Initialize app data in parallel with splash screen.
   Future<void> _startInit() async {
     bool? pinEnabled;
-    int themeMode = 2;
 
     try {
       // Initialize dynamic currency constants
       await CurrencyConstants.refresh();
 
-      // Initialize license service alongside other inits
-      final settingsResult = await _loadAppSettings().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => (null, 2),
-      );
+      // Initialize theme provider (loads theme_mode_index from DB)
+      await _themeProvider.initialize().timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {},
+          );
+
+      // Load PIN state from secure storage / DB
+      pinEnabled = await _loadPinState().timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => null,
+          );
+
+      // Initialize license service
       await _licenseProvider.initialize().timeout(
             const Duration(seconds: 8),
             onTimeout: () {},
           );
-
-      pinEnabled = settingsResult.$1;
-      themeMode = settingsResult.$2;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('FirstProApp._startInit: $e');
@@ -99,14 +107,15 @@ class _FirstProAppState extends State<FirstProApp> {
     if (mounted) {
       setState(() {
         _pinEnabled = pinEnabled;
-        _themeModeIndex = themeMode;
         _initComplete = true;
       });
     }
   }
 
-  /// Load PIN state and theme from secure storage and database.
-  Future<(bool?, int)> _loadAppSettings() async {
+  /// Load PIN state from secure storage (with DB fallback migration).
+  /// Theme mode is now loaded by [ThemeProvider.initialize] and is no
+  /// longer read here (audit U-01 refactor).
+  Future<bool?> _loadPinState() async {
     final db = locator<DatabaseHelper>();
 
     String? pinEnabled;
@@ -133,56 +142,40 @@ class _FirstProAppState extends State<FirstProApp> {
       }
     }
 
-    int themeMode = 2;
-    try {
-      final themeModeStr = await db.getSetting('theme_mode_index');
-      if (themeModeStr != null) {
-        themeMode = int.tryParse(themeModeStr) ?? 2;
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('FirstProApp: theme load failed: $e');
-    }
-
-    return (
-      pinEnabled == '1' ? true : (pinEnabled == '0' ? false : null),
-      themeMode
-    );
+    return pinEnabled == '1' ? true : (pinEnabled == '0' ? false : null);
   }
 
   /// Whether we can transition away from the splash screen.
   bool get _canTransition => _initComplete && _splashTimerDone;
 
-  ThemeMode _getThemeMode() {
-    switch (_themeModeIndex) {
-      case 0:
-        return ThemeMode.light;
-      case 1:
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LicenseProvider>.value(
-      value: _licenseProvider,
-      child: MaterialApp(
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        locale: const Locale('ar'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: _getThemeMode(),
-        home: _buildHome(),
-        routes: AppRouter.routes,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<LicenseProvider>.value(value: _licenseProvider),
+        ChangeNotifierProvider<ThemeProvider>.value(value: _themeProvider),
+      ],
+      child: ListenableBuilder(
+        listenable: _themeProvider,
+        builder: (context, _) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            locale: const Locale('ar'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: _themeProvider.themeMode,
+            home: _buildHome(),
+            routes: AppRouter.routes,
+          );
+        },
       ),
     );
   }

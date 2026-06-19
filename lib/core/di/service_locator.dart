@@ -22,6 +22,7 @@ import 'package:firstpro/data/datasources/services/audit_service.dart';
 import 'package:firstpro/data/datasources/services/costing_engine_service.dart';
 import 'package:firstpro/data/datasources/services/bank_reconciliation_service.dart';
 import 'package:firstpro/data/datasources/services/voucher_auto_mapping_service.dart';
+import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
 import 'package:firstpro/core/viewmodels/invoice_viewmodel.dart';
@@ -33,6 +34,12 @@ final GetIt locator = GetIt.instance;
 Future<void> setupLocator() async {
   // ── Core ──
   locator.registerLazySingleton<DatabaseHelper>(() => DatabaseHelper());
+
+  // ── Theme Provider (reactive, app-wide) ──
+  // Registered BEFORE repositories so SettingsScreen can resolve it
+  // independently of DB init order. initialize() is called from main.dart
+  // after DatabaseHelper is ready.
+  locator.registerLazySingleton<ThemeProvider>(() => ThemeProvider());
 
   // ── Repositories ──
   locator.registerLazySingleton<AccountRepository>(
