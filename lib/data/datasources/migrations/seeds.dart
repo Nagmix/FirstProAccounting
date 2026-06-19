@@ -27,7 +27,16 @@ class DatabaseSeeds {
         'is_default': 0,
         'is_active': 1,
         'code_offset': 1,
-        'vat_rate': 0.0,
+        // B-04 fix: SAR VAT is 15% in Saudi Arabia. The previous seed
+        // value (0.0) was inconsistent with migration_v52.dart which
+        // sets SAR to 15.0 on existing databases, causing fresh installs
+        // to silently skip VAT on Saudi invoices. Match migration_v52
+        // here so fresh installs and upgrades behave identically.
+        // NOTE: vat_rate is stored as a PERCENTAGE (15.0 = 15%), not a
+        // fraction (0.15). This matches how it is consumed in
+        // InvoiceViewModel.taxAmount = subtotal * (vatRate / 100) and
+        // PosViewModel.tax = taxable * (vatRate / 100).
+        'vat_rate': 15.0,
         'created_at': now
       },
       {
