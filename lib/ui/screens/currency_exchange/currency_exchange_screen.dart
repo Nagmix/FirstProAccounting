@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/currency_exchange_calculator.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
@@ -120,20 +121,16 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
 
   /// Get the exchange_rate value from the currencies table for a given currency code.
   double _getCurrencyRate(String code) {
-    for (final c in _currencies) {
-      if (c['code'] == code) {
-        return (c['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-      }
-    }
-    return 1.0;
+    return CurrencyExchangeCalculator.getCurrencyRate(_currencies, code);
   }
 
   /// Calculate the cross rate: to_amount = from_amount * (from_rate / to_rate)
   double _calculateCrossRate() {
-    final fromRate = _getCurrencyRate(_fromCurrency);
-    final toRate = _getCurrencyRate(_toCurrency);
-    if (toRate == 0) return 0;
-    return fromRate / toRate;
+    return CurrencyExchangeCalculator.calculateCrossRateFromCurrencies(
+      currencies: _currencies,
+      fromCurrency: _fromCurrency,
+      toCurrency: _toCurrency,
+    );
   }
 
   /// Update exchange rate field when currencies change (unless manually edited).
@@ -183,54 +180,34 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   // ═══════════════════════════════════════════════════════════════════
 
   /// Calculate gain/loss based on difference between manual rate and system rate.
-  /// Gain/loss is expressed in the TO currency.
-  _GainLossResult _calculateGainLoss() {
+  /// Gain/loss is expressed in the TO currency, then converted to base (YER)
+  /// for accounting purposes (the journal entry is posted to 4700/5300 in YER).
+  ///
+  /// U-03 refactor (2026-06-19): delegates the math to
+  /// CurrencyExchangeCalculator so it's testable in isolation.
+  GainLossResult _calculateGainLoss() {
     final fromAmount = double.tryParse(_fromAmountController.text) ?? 0.0;
     final manualRate = double.tryParse(_exchangeRateController.text) ?? 0.0;
     final systemRate = _calculateCrossRate();
-
-    if (fromAmount == 0 || systemRate == 0) {
-      return _GainLossResult(amount: 0, type: 'none');
-    }
-
-    final systemToAmount = fromAmount * systemRate;
-    final actualToAmount = fromAmount * manualRate;
-    final diff = actualToAmount - systemToAmount;
-
-    if ((diff).abs() < 0.01) {
-      return _GainLossResult(amount: 0, type: 'none');
-    }
-
-    // Convert diff to base currency (YER) for gain/loss accounting
-    final toRate = _getCurrencyRate(_toCurrency);
-    final diffInBase = diff * toRate;
-
-    if (diff > 0) {
-      return _GainLossResult(amount: diffInBase, type: 'gain');
-    } else {
-      return _GainLossResult(amount: diffInBase.abs(), type: 'loss');
-    }
+    final toCurrencyRateToBase = _getCurrencyRate(_toCurrency);
+    return CurrencyExchangeCalculator.calculateGainLoss(
+      fromAmount: fromAmount,
+      manualRate: manualRate,
+      systemRate: systemRate,
+      toCurrencyRateToBase: toCurrencyRateToBase,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════
   //  FORMATTING HELPERS
+  // U-03 refactor (2026-06-19): formatting logic moved to
+  // CurrencyExchangeCalculator.formatRate / formatAmount.
   // ═══════════════════════════════════════════════════════════════════
-  String _formatRate(double value) {
-    if (value == value.roundToDouble()) {
-      return value.toStringAsFixed(0);
-    }
-    return value
-        .toStringAsFixed(4)
-        .replaceAll(RegExp(r'0+$'), '')
-        .replaceAll(RegExp(r'\.$'), '');
-  }
+  String _formatRate(double value) =>
+      CurrencyExchangeCalculator.formatRate(value);
 
-  String _formatAmount(double value) {
-    if (value == value.roundToDouble()) {
-      return value.toStringAsFixed(0);
-    }
-    return value.toStringAsFixed(2);
-  }
+  String _formatAmount(double value) =>
+      CurrencyExchangeCalculator.formatAmount(value);
 
   String _currencySymbol(String code) => CurrencyConstants.currencyInfo[code]?['symbol'] ?? code;
 
@@ -300,7 +277,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
         'from_cash_box_id': _fromCashBoxId!,
         'to_cash_box_id': _toCashBoxId!,
         'gain_loss': gainLoss.amount,
-        'gain_loss_type': gainLoss.type == 'none' ? null : gainLoss.type,
+        'gain_loss_type': gainLoss.isNone
+            ? null
+            : (gainLoss.isGain ? 'gain' : 'loss'),
         'notes': _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -963,9 +942,9 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   // ── Gain/Loss Indicator ────────────────────────────────────────────
   Widget _buildGainLossIndicator(ThemeData theme) {
     final gainLoss = _calculateGainLoss();
-    if (gainLoss.type == 'none') return const SizedBox.shrink();
+    if (gainLoss.isNone) return const SizedBox.shrink();
 
-    final isGain = gainLoss.type == 'gain';
+    final isGain = gainLoss.isGain;
     final color = isGain ? AppColors.success : AppColors.error;
     final icon = isGain ? Icons.trending_up : Icons.trending_down;
     final label = isGain ? 'أرباح صرافة' : 'خسائر صرافة';
@@ -1530,12 +1509,7 @@ class _CurrencyExchangeScreenState extends State<CurrencyExchangeScreen>
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  HELPER: Gain/Loss calculation result
-// ═══════════════════════════════════════════════════════════════════════════════
-class _GainLossResult {
-  final double amount;
-  final String type; // 'gain', 'loss', or 'none'
-
-  const _GainLossResult({required this.amount, required this.type});
-}
+// U-03 refactor (2026-06-19): the _GainLossResult helper class was
+// removed. Gain/loss calculation now uses the shared
+// CurrencyExchangeCalculator.GainLossResult from
+// lib/core/utils/currency_exchange_calculator.dart.
