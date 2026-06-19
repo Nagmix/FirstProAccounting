@@ -136,11 +136,11 @@ void main() {
     expect(row['purchases_count'], 1);
   });
 
-  test('A-04: VAT details return all 4 invoices with signed tax_amount', () async {
+  test('A-04: VAT details return all 5 invoices with signed tax_amount', () async {
     final details = await db.rawQuery(detailsQuery);
 
-    expect(details, hasLength(4),
-        reason: 'Seed data has 4 VAT-bearing invoices: 2 sales, 1 sale '
+    expect(details, hasLength(5),
+        reason: 'Seed data has 5 VAT-bearing invoices: 2 sales, 1 sale '
             'return, 1 purchase, 1 purchase return.');
 
     // Build a map of id -> signed tax_amount for easy verification.
