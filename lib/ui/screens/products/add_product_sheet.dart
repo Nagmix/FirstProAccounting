@@ -828,6 +828,13 @@ class _AddProductSheetState extends State<AddProductSheet> {
     if (!mounted) return;
     setState(() => _isSaving = false);
 
+    // T-02: invalidate the record count cache so the next canAddRecord
+    // check reflects the new product immediately. Only needed for new
+    // products (edits don't change the count).
+    if (!_isEditMode) {
+      context.read<LicenseProvider>().invalidateRecordCountCache();
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

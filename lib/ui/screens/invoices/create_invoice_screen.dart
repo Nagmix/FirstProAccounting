@@ -920,6 +920,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     }
 
     if (mounted) {
+      // T-02: invalidate the record count cache so the next canAddRecord
+      // check reflects the new invoice immediately. Applies to both new
+      // invoices and returns (returns create a new invoices row too).
+      context.read<LicenseProvider>().invalidateRecordCountCache();
       context.showSuccessSnackBar('تم حفظ الفاتورة بنجاح');
       Navigator.pop(context);
     }

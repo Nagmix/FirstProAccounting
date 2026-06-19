@@ -145,6 +145,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     if (!mounted) return;
     setState(() => _isSaving = false);
 
+    // T-02: invalidate the record count cache so the next canAddRecord
+    // check reflects the new customer immediately.
+    context.read<LicenseProvider>().invalidateRecordCountCache();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
           content: Text('تم إضافة العميل "${_nameController.text}" بنجاح'),

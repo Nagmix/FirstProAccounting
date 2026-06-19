@@ -323,6 +323,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       }
 
       if (mounted) {
+        // T-02: invalidate the record count cache so the next
+        // canAddRecord check reflects the new expense immediately.
+        // Only needed for new expenses (edits don't change the count).
+        if (!_isEditing) {
+          context.read<LicenseProvider>().invalidateRecordCountCache();
+        }
         context.showSuccessSnackBar(
             _isEditing ? 'تم تحديث المصروف بنجاح' : 'تم حفظ المصروف بنجاح');
         Navigator.pop(context, true);

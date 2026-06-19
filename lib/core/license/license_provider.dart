@@ -70,6 +70,16 @@ class LicenseProvider extends ChangeNotifier {
     return LicenseService.instance.canAddRecord();
   }
 
+  /// Invalidate the in-memory record count cache.
+  ///
+  /// T-02: call this after a successful record insert/delete (product,
+  /// customer, invoice, expense) so the next `canAddRecord` check
+  /// reflects the updated count immediately, rather than waiting for
+  /// the 60-second cache TTL to expire.
+  void invalidateRecordCountCache() {
+    LicenseService.instance.invalidateRecordCountCache();
+  }
+
   /// Refresh the license state (re-validate with server).
   Future<void> refresh() async {
     _loading = true;

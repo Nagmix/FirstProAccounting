@@ -24,6 +24,38 @@ class LicenseService {
   bool _initialized = false;
   bool get initialized => _initialized;
 
+  /// T-02 fix (2026-06-19): in-memory cache for the total record count.
+  ///
+  /// `_getTotalRecordCount` runs 4 `COUNT(*)` queries (one per table:
+  /// products, customers, invoices, expenses) every time `canAddRecord`
+  /// is called. `canAddRecord` is called on EVERY add-product,
+  /// add-customer, add-invoice, and add-expense attempt, so on a busy
+  /// day this could be dozens of times per minute — each time hitting
+  /// the DB with 4 queries plus a `_saveState` write.
+  ///
+  /// To avoid this, we cache the count for 60 seconds. The cache is:
+  ///   - Read on every `canAddRecord` call.
+  ///   - Refreshed from DB if older than 60 seconds (or never populated).
+  ///   - Invalidated immediately when a record is added (so the limit
+  ///     is enforced precisely right after a successful add).
+  ///
+  /// The 60-second window is a deliberate trade-off: it's short enough
+  /// that the user can't bypass the limit by rapid-fire adding records
+  /// (the cache refreshes within a minute), but long enough to eliminate
+  /// the DB hit during normal UI navigation (e.g. opening multiple
+  /// "add" forms in quick succession without actually saving).
+  int? _cachedRecordCount;
+  DateTime? _cachedRecordCountAt;
+  static const Duration _recordCountCacheTtl = Duration(seconds: 60);
+
+  /// Invalidate the record count cache. Call this after a successful
+  /// record insert/delete so the next `canAddRecord` check sees the
+  /// updated count.
+  void invalidateRecordCountCache() {
+    _cachedRecordCount = null;
+    _cachedRecordCountAt = null;
+  }
+
   /// Initialize the license service.
   /// Loads state from local database and secure storage.
   Future<void> initialize() async {
@@ -241,6 +273,12 @@ class LicenseService {
 
   /// Check if the user can add a new record.
   /// Returns true if allowed, false if the record limit is reached.
+  ///
+  /// T-02: uses an in-memory cache (60-second TTL) to avoid running
+  /// 4 `COUNT(*)` queries on every add attempt. The cache is
+  /// invalidated explicitly via [invalidateRecordCountCache] after a
+  /// successful record insert/delete, so the limit is enforced
+  /// precisely right after the user adds a record.
   Future<bool> canAddRecord() async {
     if (_state.isPremium) return true;
 
@@ -249,7 +287,24 @@ class LicenseService {
   }
 
   /// Get the total record count across all major tables.
-  Future<int> _getTotalRecordCount() async {
+  ///
+  /// T-02: returns the cached count if it's younger than 60 seconds;
+  /// otherwise queries the DB and refreshes the cache.
+  ///
+  /// Pass [forceRefresh] = true to bypass the cache (used by
+  /// [syncWithServer] which needs the exact current count for server
+  /// reporting, and by tests that need deterministic counts).
+  Future<int> _getTotalRecordCount({bool forceRefresh = false}) async {
+    // Check cache first.
+    if (!forceRefresh &&
+        _cachedRecordCount != null &&
+        _cachedRecordCountAt != null) {
+      final age = DateTime.now().difference(_cachedRecordCountAt!);
+      if (age < _recordCountCacheTtl) {
+        return _cachedRecordCount!;
+      }
+    }
+
     try {
       final db = await DatabaseHelper().database;
 
@@ -262,7 +317,13 @@ class LicenseService {
         total += Sqflite.firstIntValue(result) ?? 0;
       }
 
-      // Update state
+      // Update cache.
+      _cachedRecordCount = total;
+      _cachedRecordCountAt = DateTime.now();
+
+      // Update persisted state (for cross-launch persistence).
+      // Note: _saveState is now an atomic INSERT OR REPLACE (T-01 fix),
+      // so this write is safe even if it happens on every cache refresh.
       _state = _state.copyWith(recordCount: total);
       await _saveState();
 
@@ -296,7 +357,7 @@ class LicenseService {
           connectivityResult.any((r) => r != ConnectivityResult.none);
       if (!hasInternet) return;
 
-      final count = await _getTotalRecordCount();
+      final count = await _getTotalRecordCount(forceRefresh: true);
       await LicenseApiClient.instance.reportUsage(
         installationId: _state.installationId ?? '',
         recordCount: count,
