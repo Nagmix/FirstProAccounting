@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 

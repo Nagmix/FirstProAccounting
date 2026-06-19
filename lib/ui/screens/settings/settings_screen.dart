@@ -462,7 +462,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'جاري فحص التنبيهات...'
                       : 'فحص التنبيهات الآن',
                   subtitle: 'فحص المنتجات وتوليد إشعارات المخزون والصلاحية',
-                  onTap: _isScanningAlerts ? null : _scanAlertsNow,
+                  onTap: _isScanningAlerts ? null : () => _scanAlertsNow(),
                   isDark: isDark,
                 ),
               ],
