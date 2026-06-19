@@ -4,6 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Guards for the second full rescan critical/high findings:
 /// C-01, H-01, H-02, H-03, H-04, M-02, M-03, M-04, L-01.
+///
+/// Note: The historical "repository audit report is marked as historical"
+/// guard was removed when docs/audit_report.md was deleted per project owner
+/// request (archived audit reports are no longer kept in the repo). The
+/// active audit reference now lives at agent-ctx/AUDIT.md (gitignored).
 void main() {
   group('Security, deletion, and report source guards', () {
     late String appLockSource;
@@ -15,7 +20,7 @@ void main() {
     late String reportServiceSource;
     late String supportSource;
 
-    setUpAll() {
+    setUpAll(() {
       appLockSource = File('lib/ui/screens/app_lock/app_lock_screen.dart')
           .readAsStringSync();
       licenseApiSource = File('lib/core/license/license_api_client.dart')
@@ -31,8 +36,9 @@ void main() {
       accountRepositorySource = File(
         'lib/data/datasources/repositories/account_repository.dart',
       ).readAsStringSync();
-      reportServiceSource = File('lib/data/datasources/services/report_service.dart')
-          .readAsStringSync();
+      reportServiceSource =
+          File('lib/data/datasources/services/report_service.dart')
+              .readAsStringSync();
       supportSource = File('lib/ui/screens/support/support_screen.dart')
           .readAsStringSync();
     });
@@ -43,7 +49,8 @@ void main() {
       expect(appLockSource.contains('F1r5tPr0_Fallback_2024_Salt'), isFalse,
           reason: 'Static fallback PIN salts are not allowed.');
 
-      final catchIdx = appLockSource.indexOf('AppLockScreen._initializeScreen: SECURITY ERROR');
+      final catchIdx = appLockSource.indexOf(
+          'AppLockScreen._initializeScreen: SECURITY ERROR');
       expect(catchIdx, greaterThanOrEqualTo(0));
       final catchBlock = appLockSource.substring(catchIdx, catchIdx + 500);
       expect(catchBlock.contains('_navigateToApp'), isFalse,
@@ -56,7 +63,8 @@ void main() {
       expect(licenseApiSource.contains('responseBody: true'), isFalse);
       expect(licenseApiSource.contains('License API request'), isTrue);
       expect(licenseModelSource.contains("'session_token': null"), isTrue,
-          reason: 'session_token must not be persisted to license_state DB rows.');
+          reason:
+              'session_token must not be persisted to license_state DB rows.');
       expect(licenseModelSource.contains('sessionToken: null'), isTrue,
           reason: 'session_token should be loaded from secure storage only.');
     });
@@ -79,7 +87,7 @@ void main() {
 
     test('product deletion considers inventory and costing history', () {
       expect(productRepositorySource.contains('dependencyTables'), isTrue);
-      for (final table in [
+      for (const table in [
         'invoice_items',
         'stock_movements',
         'inventory_cost_layers',
@@ -94,11 +102,15 @@ void main() {
           reason: 'Products with history should be soft-deleted.');
     });
 
-    test('account deletion checks critical dependencies before hard delete', () {
+    test('account deletion checks critical dependencies before hard delete',
+        () {
       expect(accountRepositorySource.contains('blockingChecks'), isTrue);
-      expect(accountRepositorySource.contains('لا يمكن حذف حساب نظامي'), isTrue);
-      expect(accountRepositorySource.contains('لا يمكن حذف حساب يحتوي على حسابات فرعية'), isTrue);
-      for (final table in [
+      expect(
+          accountRepositorySource.contains('لا يمكن حذف حساب نظامي'), isTrue);
+      expect(
+          accountRepositorySource.contains('لا يمكن حذف حساب يحتوي على حسابات فرعية'),
+          isTrue);
+      for (const table in [
         'transactions',
         'voucher_items',
         'cash_boxes',
@@ -110,8 +122,12 @@ void main() {
     });
 
     test('sales report type filter is whitelisted', () {
-      expect(reportServiceSource.contains('_salesReportTypeFilterWhitelist'), isTrue);
-      expect(reportServiceSource.contains('String whereClause = typeFilter'), isFalse);
+      expect(
+          reportServiceSource.contains('_salesReportTypeFilterWhitelist'),
+          isTrue);
+      expect(
+          reportServiceSource.contains('String whereClause = typeFilter'),
+          isFalse);
       expect(reportServiceSource.contains('ArgumentError.value'), isTrue);
     });
 
@@ -122,11 +138,16 @@ void main() {
       expect(supportSource.contains('_ComplaintSearchDelegate'), isTrue);
     });
 
-    test('account code generation is currency-aware in repository and UI', () {
-      expect(accountRepositorySource.contains('getNextAccountCode(String accountType, {String? currency})'), isTrue);
+    test(
+        'account code generation is currency-aware in repository and UI', () {
+      expect(
+          accountRepositorySource.contains(
+              'getNextAccountCode(String accountType, {String? currency})'),
+          isTrue);
       expect(accountRepositorySource.contains('AND currency = ?'), isTrue);
-      final addAccountSource = File('lib/ui/screens/accounts/add_account_sheet.dart')
-          .readAsStringSync();
+      final addAccountSource =
+          File('lib/ui/screens/accounts/add_account_sheet.dart')
+              .readAsStringSync();
       expect(addAccountSource.contains('currency: _currency'), isTrue);
       expect(addAccountSource.contains('_generateCode();'), isTrue);
     });
