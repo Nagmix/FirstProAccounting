@@ -703,21 +703,27 @@ class _VatReturnScreenState extends State<VatReturnScreen> {
       };
     }).toList();
 
-    final totals = <String, dynamic>{
-      'إجمالي ضريبة المخرجات': _summaryRows.isEmpty
-          ? '0.00'
-          : CurrencyFormatter.formatValue(
-              MoneyHelper.readCalculatedMoney(_summaryRows.first['output_vat']) -
-              MoneyHelper.readCalculatedMoney(_summaryRows.first['output_vat_returns'])),
-      'إجمالي ضريبة المدخلات': _summaryRows.isEmpty
-          ? '0.00'
-          : CurrencyFormatter.formatValue(
-              MoneyHelper.readCalculatedMoney(_summaryRows.first['input_vat']) -
-              MoneyHelper.readCalculatedMoney(_summaryRows.first['input_vat_returns'])),
-    };
+    // ExcelExporter.exportGenericReport expects Map<String, double> for
+    // totals. We compute the numeric values (in human-readable currency
+    // units, not cents) so Excel can format them as numbers.
+    final totals = <String, double>{};
+    if (_summaryRows.isNotEmpty) {
+      final s = _summaryRows.first;
+      totals['إجمالي ضريبة المخرجات'] =
+          MoneyHelper.readCalculatedMoney(s['output_vat']) -
+          MoneyHelper.readCalculatedMoney(s['output_vat_returns']);
+      totals['إجمالي ضريبة المدخلات'] =
+          MoneyHelper.readCalculatedMoney(s['input_vat']) -
+          MoneyHelper.readCalculatedMoney(s['input_vat_returns']);
+    } else {
+      totals['إجمالي ضريبة المخرجات'] = 0.0;
+      totals['إجمالي ضريبة المدخلات'] = 0.0;
+    }
     if (_netPayable != null) {
-      totals['الصافي المستحق'] = CurrencyFormatter.formatValue(
-          MoneyHelper.readMoney(_netPayable!['net_vat']));
+      totals['الصافي المستحق'] =
+          MoneyHelper.readMoney(_netPayable!['net_vat']);
+    } else {
+      totals['الصافي المستحق'] = 0.0;
     }
 
     try {
