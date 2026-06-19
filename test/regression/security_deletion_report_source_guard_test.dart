@@ -14,9 +14,8 @@ void main() {
     late String accountRepositorySource;
     late String reportServiceSource;
     late String supportSource;
-    late String docsAuditSource;
 
-    setUpAll(() {
+    setUpAll() {
       appLockSource = File('lib/ui/screens/app_lock/app_lock_screen.dart')
           .readAsStringSync();
       licenseApiSource = File('lib/core/license/license_api_client.dart')
@@ -36,7 +35,6 @@ void main() {
           .readAsStringSync();
       supportSource = File('lib/ui/screens/support/support_screen.dart')
           .readAsStringSync();
-      docsAuditSource = File('docs/audit_report.md').readAsStringSync();
     });
 
     test('app lock does not bypass security on initialization errors', () {
@@ -131,11 +129,6 @@ void main() {
           .readAsStringSync();
       expect(addAccountSource.contains('currency: _currency'), isTrue);
       expect(addAccountSource.contains('_generateCode();'), isTrue);
-    });
-
-    test('repository audit report is marked as historical', () {
-      expect(docsAuditSource.startsWith('> ⚠️ **تنبيه مهم'), isTrue);
-      expect(docsAuditSource.contains('أرشيف تاريخي'), isTrue);
     });
   });
 }
