@@ -203,5 +203,11 @@ class _MockRefRepo implements ReferenceDataRepository {
 
 class _MockCashBoxService implements CashBoxService {
   @override
+  Future<List<Map<String, dynamic>>> getCashBoxesByCurrency(
+      String currency) async {
+    return [];
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
