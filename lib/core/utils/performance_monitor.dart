@@ -113,7 +113,7 @@ class PerformanceRecord {
   final int elapsedMs;
   final DateTime timestamp;
 
-  const PerformanceRecord({
+  PerformanceRecord({
     required this.name,
     required this.elapsedMs,
     DateTime? timestamp,

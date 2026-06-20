@@ -79,7 +79,7 @@ void main() {
       PerformanceMonitor.end('test');
 
       final records = PerformanceMonitor.records;
-      expect(() => records.add(const PerformanceRecord(name: 'x', elapsedMs: 0)),
+      expect(() => records.add(PerformanceRecord(name: 'x', elapsedMs: 0)),
           throwsUnsupportedError);
     });
   });
@@ -93,7 +93,7 @@ void main() {
     });
 
     test('toString includes name and elapsedMs', () {
-      const record = PerformanceRecord(name: 'my-op', elapsedMs: 123);
+      final record = PerformanceRecord(name: 'my-op', elapsedMs: 123);
       expect(record.toString(), contains('my-op'));
       expect(record.toString(), contains('123'));
     });
