@@ -28,6 +28,7 @@ import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
 import 'package:firstpro/core/viewmodels/invoice_viewmodel.dart';
+import 'package:firstpro/core/viewmodels/currency_exchange_viewmodel.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -127,6 +128,8 @@ Future<void> setupLocator() async {
   locator.registerFactory<DashboardViewModel>(() => DashboardViewModel());
   locator.registerFactory<PosViewModel>(() => PosViewModel());
   locator.registerFactory<InvoiceViewModel>(() => InvoiceViewModel());
+  locator.registerFactory<CurrencyExchangeViewModel>(
+      () => CurrencyExchangeViewModel());
 
   // ── Mark locator as ready so DatabaseHelper resolves via locator ──
   // This ensures all sub-service getters in DatabaseHelper return the same
