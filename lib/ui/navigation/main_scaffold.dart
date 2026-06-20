@@ -96,124 +96,143 @@ class _MainScaffoldState extends State<MainScaffold>
     ),
   ];
 
-  final _drawerItems = const <_DrawerMenuItem>[
-    _DrawerMenuItem(
-        icon: Icons.receipt,
-        label: 'فاتورة بيع جديدة',
-        route: AppConstants.newSaleInvoice,
-        color: AppColors.accentBlue),
-    _DrawerMenuItem(
-        icon: Icons.shopping_cart,
-        label: 'فاتورة شراء جديدة',
-        route: AppConstants.newPurchaseInvoice,
-        color: AppColors.accentPink),
-    _DrawerMenuItem(
-        icon: Icons.description,
-        label: 'عروض الأسعار',
-        route: AppConstants.quotations,
-        color: Colors.purple),
-    _DrawerMenuItem(
-        icon: Icons.shopping_cart,
-        label: 'طلبات الشراء',
-        route: AppConstants.purchaseOrders,
-        color: Colors.teal),
-    _DrawerMenuItem(
-        icon: Icons.inventory_2,
-        label: 'طلبات البيع',
-        route: AppConstants.salesOrders,
-        color: Colors.indigo),
-    _DrawerMenuItem(
-        icon: Icons.history,
-        label: 'الورديات',
-        route: AppConstants.shifts,
-        color: Colors.brown),
-    _DrawerMenuItem(
-        icon: Icons.people,
-        label: 'قائمة العملاء',
-        route: AppConstants.customers,
-        color: AppColors.primaryLight),
-    _DrawerMenuItem(
-        icon: Icons.inventory_2,
-        label: 'المنتجات والمخزون',
-        route: AppConstants.products,
-        color: AppColors.secondary),
-    _DrawerMenuItem(
-        icon: Icons.attach_money,
-        label: 'المصروفات',
-        route: AppConstants.expenses,
-        color: AppColors.error),
-    _DrawerMenuItem(
-        icon: Icons.person,
-        label: 'الموظفين',
-        route: AppConstants.employees,
-        color: AppColors.accentBlue),
-    _DrawerMenuItem(
-        icon: Icons.account_balance_wallet,
-        label: 'الصناديق والبنوك',
-        route: AppConstants.cashBoxes,
-        color: AppColors.success),
-    // ── New: Currency Exchange, Cash Transfers, Debt Tracking ─────
-    _DrawerMenuItem(
-        icon: Icons.swap_horiz,
-        label: 'مصارفة عملات',
-        route: AppConstants.currencyExchange,
-        color: Color(0xFF00ACC1)),
-    _DrawerMenuItem(
-        icon: Icons.swap_horiz,
-        label: 'تحويل بين الصناديق',
-        route: AppConstants.cashTransfers,
-        color: Color(0xFF1E88E5)),
-    _DrawerMenuItem(
-        icon: Icons.savings,
-        label: 'تتبع الديون',
-        route: AppConstants.debts,
-        color: Color(0xFFE65100)),
-    // ───────────────────────────────────────────────────────────────
-    _DrawerMenuItem(
-        icon: Icons.receipt_long,
-        label: 'السندات',
-        route: AppConstants.vouchers,
-        color: Color(0xFF7B1FA2)),
-    _DrawerMenuItem(
-        icon: Icons.repeat,
-        label: 'الفواتير المتكررة',
-        route: AppConstants.recurringInvoices,
-        color: Color(0xFF00897B)),
-    _DrawerMenuItem(
-        icon: Icons.local_shipping,
-        label: 'الموردين',
-        route: AppConstants.suppliers,
-        color: AppColors.info),
-    _DrawerMenuItem(
-        icon: Icons.warehouse,
-        label: 'المستودعات',
-        route: AppConstants.warehouses,
-        color: AppColors.secondaryDark),
-    _DrawerMenuItem(
-        icon: Icons.pie_chart,
-        label: 'دليل الحسابات',
-        route: AppConstants.chartOfAccounts,
-        color: AppColors.primary),
-    _DrawerMenuItem(
-        icon: Icons.balance,
-        label: 'التسوية البنكية',
-        route: AppConstants.bankReconciliation,
-        color: Color(0xFF00897B)),
-    _DrawerMenuItem(
-        icon: Icons.attach_money,
-        label: 'إدارة العملات',
-        route: AppConstants.currencies,
-        color: AppColors.success),
-    _DrawerMenuItem(
-        icon: Icons.show_chart,
-        label: 'تقرير المبيعات اليومية',
-        route: AppConstants.dailySalesReport,
-        color: AppColors.warning),
-    _DrawerMenuItem(
-        icon: Icons.settings,
-        label: 'الإعدادات',
-        route: AppConstants.settings,
-        color: AppColors.textSecondary),
+  // UI-13: Drawer items organized into categorized sections.
+  final _drawerSections = const <_DrawerSection>[
+    _DrawerSection(
+      title: 'المبيعات والمشتريات',
+      items: [
+        _DrawerMenuItem(
+            icon: Icons.receipt,
+            label: 'فاتورة بيع جديدة',
+            route: AppConstants.newSaleInvoice,
+            color: AppColors.accentBlue),
+        _DrawerMenuItem(
+            icon: Icons.shopping_cart,
+            label: 'فاتورة شراء جديدة',
+            route: AppConstants.newPurchaseInvoice,
+            color: AppColors.accentPink),
+        _DrawerMenuItem(
+            icon: Icons.description,
+            label: 'عروض الأسعار',
+            route: AppConstants.quotations,
+            color: Colors.purple),
+        _DrawerMenuItem(
+            icon: Icons.shopping_cart,
+            label: 'طلبات الشراء',
+            route: AppConstants.purchaseOrders,
+            color: Colors.teal),
+        _DrawerMenuItem(
+            icon: Icons.inventory_2,
+            label: 'طلبات البيع',
+            route: AppConstants.salesOrders,
+            color: Colors.indigo),
+        _DrawerMenuItem(
+            icon: Icons.history,
+            label: 'الورديات',
+            route: AppConstants.shifts,
+            color: Colors.brown),
+        _DrawerMenuItem(
+            icon: Icons.repeat,
+            label: 'الفواتير المتكررة',
+            route: AppConstants.recurringInvoices,
+            color: Color(0xFF00897B)),
+      ],
+    ),
+    _DrawerSection(
+      title: 'الكيانات والمخزون',
+      items: [
+        _DrawerMenuItem(
+            icon: Icons.people,
+            label: 'قائمة العملاء',
+            route: AppConstants.customers,
+            color: AppColors.primaryLight),
+        _DrawerMenuItem(
+            icon: Icons.local_shipping,
+            label: 'الموردين',
+            route: AppConstants.suppliers,
+            color: AppColors.info),
+        _DrawerMenuItem(
+            icon: Icons.inventory_2,
+            label: 'المنتجات والمخزون',
+            route: AppConstants.products,
+            color: AppColors.secondary),
+        _DrawerMenuItem(
+            icon: Icons.warehouse,
+            label: 'المستودعات',
+            route: AppConstants.warehouses,
+            color: AppColors.secondaryDark),
+        _DrawerMenuItem(
+            icon: Icons.person,
+            label: 'الموظفين',
+            route: AppConstants.employees,
+            color: AppColors.accentBlue),
+        _DrawerMenuItem(
+            icon: Icons.attach_money,
+            label: 'المصروفات',
+            route: AppConstants.expenses,
+            color: AppColors.error),
+      ],
+    ),
+    _DrawerSection(
+      title: 'المالية والحسابات',
+      items: [
+        _DrawerMenuItem(
+            icon: Icons.account_balance_wallet,
+            label: 'الصناديق والبنوك',
+            route: AppConstants.cashBoxes,
+            color: AppColors.success),
+        _DrawerMenuItem(
+            icon: Icons.swap_horiz,
+            label: 'مصارفة عملات',
+            route: AppConstants.currencyExchange,
+            color: Color(0xFF00ACC1)),
+        _DrawerMenuItem(
+            icon: Icons.swap_horiz,
+            label: 'تحويل بين الصناديق',
+            route: AppConstants.cashTransfers,
+            color: Color(0xFF1E88E5)),
+        _DrawerMenuItem(
+            icon: Icons.savings,
+            label: 'تتبع الديون',
+            route: AppConstants.debts,
+            color: Color(0xFFE65100)),
+        _DrawerMenuItem(
+            icon: Icons.receipt_long,
+            label: 'السندات',
+            route: AppConstants.vouchers,
+            color: Color(0xFF7B1FA2)),
+        _DrawerMenuItem(
+            icon: Icons.pie_chart,
+            label: 'دليل الحسابات',
+            route: AppConstants.chartOfAccounts,
+            color: AppColors.primary),
+        _DrawerMenuItem(
+            icon: Icons.balance,
+            label: 'التسوية البنكية',
+            route: AppConstants.bankReconciliation,
+            color: Color(0xFF00897B)),
+        _DrawerMenuItem(
+            icon: Icons.attach_money,
+            label: 'إدارة العملات',
+            route: AppConstants.currencies,
+            color: AppColors.success),
+      ],
+    ),
+    _DrawerSection(
+      title: 'التقارير والإعدادات',
+      items: [
+        _DrawerMenuItem(
+            icon: Icons.show_chart,
+            label: 'تقرير المبيعات اليومية',
+            route: AppConstants.dailySalesReport,
+            color: AppColors.warning),
+        _DrawerMenuItem(
+            icon: Icons.settings,
+            label: 'الإعدادات',
+            route: AppConstants.settings,
+            color: AppColors.textSecondary),
+      ],
+    ),
   ];
 
   @override
@@ -471,68 +490,89 @@ class _MainScaffoldState extends State<MainScaffold>
             ),
             const SizedBox(height: 8),
 
-            // ── Drawer items ───────────────────────────────────────
+            // ── Drawer items (UI-13: categorized sections) ──────────
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                itemCount: _drawerItems.length,
-                itemBuilder: (context, index) {
-                  final item = _drawerItems[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          AppRouter.push(context, item.route);
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          child: Row(
-                            children: [
-                              // Icon with colored background
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: item.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  item.icon,
-                                  color: item.color,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    color: isDark
-                                        ? AppColors.darkTextPrimary
-                                        : AppColors.textPrimary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_back_ios,
-                                size: 14,
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.textHint,
-                              ),
-                            ],
+                itemCount: _drawerSections.length,
+                itemBuilder: (context, sectionIndex) {
+                  final section = _drawerSections[sectionIndex];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Section header
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            top: 16, bottom: 4, right: 12, left: 12),
+                        child: Text(
+                          section.title,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textHint,
                           ),
                         ),
                       ),
-                    ),
+                      // Section items
+                      for (final item in section.items)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                AppRouter.push(context, item.route);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: item.color.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        item.icon,
+                                        color: item.color,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        item.label,
+                                        style:
+                                            theme.textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color: isDark
+                                              ? AppColors.darkTextPrimary
+                                              : AppColors.textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_back_ios,
+                                      size: 14,
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.textHint,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -572,6 +612,13 @@ class _DrawerMenuItem {
   final String label;
   final String route;
   final Color color;
+}
+
+/// UI-13: A categorized section of drawer items.
+class _DrawerSection {
+  const _DrawerSection({required this.title, required this.items});
+  final String title;
+  final List<_DrawerMenuItem> items;
 }
 
 class _MoreTab extends StatelessWidget {

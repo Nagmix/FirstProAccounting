@@ -457,7 +457,6 @@ class _SupplierCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          onLongPress: onDelete,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -590,25 +589,44 @@ class _SupplierCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
 
-                // ── Arrow icon ──────────────────────────────────
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: isLight
-                        ? AppColors.surfaceVariant
-                        : AppColors.darkSurfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.arrow_back_ios,
-                    size: 12,
+                // UI-09: replace hidden long-press delete with a
+                // discoverable PopupMenuButton (more_vert icon).
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 20,
                     color: isLight
                         ? AppColors.textHint
                         : AppColors.darkTextSecondary,
                   ),
+                  tooltip: 'خيارات',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'detail',
+                      child: Row(children: [
+                        Icon(Icons.visibility, size: 18),
+                        SizedBox(width: 8),
+                        Text('عرض التفاصيل'),
+                      ]),
+                    ),
+                    if (onDelete != null)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(children: [
+                          Icon(Icons.delete, size: 18, color: AppColors.error),
+                          const SizedBox(width: 8),
+                          Text('حذف', style: TextStyle(color: AppColors.error)),
+                        ]),
+                      ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'detail' && onTap != null) onTap!();
+                    if (value == 'delete' && onDelete != null) onDelete!();
+                  },
                 ),
               ],
             ),
