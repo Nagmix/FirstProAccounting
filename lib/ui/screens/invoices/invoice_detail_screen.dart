@@ -5,6 +5,7 @@ import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/extensions/context_extensions.dart';
 import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/utils/app_shortcuts.dart';
 import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/date_formatter.dart';
 import 'package:firstpro/core/utils/invoice_pdf_generator.dart';
@@ -159,9 +160,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+    // U-04 Phase 2: keyboard shortcuts (Ctrl+P print, Escape back).
+    return AppShortcuts.wrap(
+      onPrint: _invoice != null ? _printInvoice : null,
+      onEscape: () => Navigator.of(context).maybePop(),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
         appBar: AppBar(
           title: const Text('تفاصيل الفاتورة'),
           actions: [
@@ -200,6 +205,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     ),
                   ),
         bottomNavigationBar: _invoice != null ? _buildBottomActions() : null,
+      ),
       ),
     );
   }
