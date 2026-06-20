@@ -427,7 +427,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             PopupMenuItem(
                 value: 'print',
                 child: _popupItem(
-                    Icons.print_rounded, 'طباعة PDF', const AppColors.invoiceAccent)),
+                    Icons.print_rounded, 'طباعة PDF', AppColors.invoiceAccent)),
             PopupMenuItem(
                 value: 'bluetooth',
                 child: _popupItem(Icons.bluetooth_rounded, 'طباعة حرارية',
