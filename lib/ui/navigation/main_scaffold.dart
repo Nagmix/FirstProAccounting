@@ -267,30 +267,9 @@ class _MainScaffoldState extends State<MainScaffold>
                 ],
               ),
               actions: [
-                IconButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('هذه الميزة قيد التطوير'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.chat),
-                  tooltip: 'واتساب',
-                ),
-                IconButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('هذه الميزة قيد التطوير'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.notifications),
-                  tooltip: 'الإشعارات',
-                ),
+                // UI-06: removed placeholder "under development" chat
+                // and notifications buttons. The notifications screen
+                // is accessible from the Drawer instead.
                 IconButton(
                   onPressed: () => _openDrawer(context),
                   icon: const Icon(Icons.list),

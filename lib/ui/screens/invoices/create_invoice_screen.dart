@@ -152,8 +152,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   // ── Design helpers ──────────────────────────────────────────────
-  static const Color _accentBlue = Color(0xFF4F6AF0);
-  static const Color _accentPurple = Color(0xFF7C3AED);
+  static const Color _accentBlue = AppColors.invoiceAccent;
+  static const Color _accentPurple = AppColors.invoiceAccentSecondary;
 
   LinearGradient get _primaryGradient => const LinearGradient(
         colors: [_accentBlue, _accentPurple],
@@ -427,7 +427,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             PopupMenuItem(
                 value: 'print',
                 child: _popupItem(
-                    Icons.print_rounded, 'طباعة PDF', const Color(0xFF4F6AF0))),
+                    Icons.print_rounded, 'طباعة PDF', const AppColors.invoiceAccent)),
             PopupMenuItem(
                 value: 'bluetooth',
                 child: _popupItem(Icons.bluetooth_rounded, 'طباعة حرارية',

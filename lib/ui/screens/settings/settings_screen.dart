@@ -723,6 +723,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               final navigator = Navigator.of(ctx);
               final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+              // UI-08: validate rates before saving.
+              final changes = <String, (double oldRate, double newRate)>{};
+              for (final c in currencies) {
+                final code = c['code'] as String;
+                final isDefault = (c['is_default'] as int?) == 1;
+                if (isDefault) continue;
+                final oldRate = (c['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+                final newRate =
+                    double.tryParse(controllers[code]?.text ?? '1.0') ?? 1.0;
+                // Validate: rate must be > 0.
+                if (newRate <= 0) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('سعر صرف غير صالح لـ $code: $newRate'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                  return;
+                }
+                if ((newRate - oldRate).abs() > 0.0001) {
+                  changes[code] = (oldRate, newRate);
+                }
+              }
+
+              // If there are changes, confirm.
+              if (changes.isNotEmpty) {
+                final confirmed = await showDialog<bool>(
+                  context: ctx,
+                  builder: (confirmCtx) => AlertDialog(
+                    title: const Text('تأكيد تغيير أسعار الصرف'),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: changes.entries.map((e) {
+                          return ListTile(
+                            dense: true,
+                            title: Text(e.key),
+                            subtitle: Text(
+                              '${e.value.$1.toStringAsFixed(4)} → ${e.value.$2.toStringAsFixed(4)}'),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pop(confirmCtx, false),
+                        child: const Text('إلغاء'),
+                      ),
+                      FilledButton(
+                        onPressed: () =>
+                            Navigator.pop(confirmCtx, true),
+                        child: const Text('تأكيد'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed != true) return;
+              }
+
               for (final c in currencies) {
                 final code = c['code'] as String;
                 final rate =

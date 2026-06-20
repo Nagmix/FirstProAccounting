@@ -96,8 +96,8 @@ class InvoicePaymentSection extends StatelessWidget {
   final VoidCallback onPaidChanged;
 
   // ── Design constants (duplicated from parent) ────────────────────
-  static const Color _accentBlue = Color(0xFF4F6AF0);
-  static const Color _accentPurple = Color(0xFF7C3AED);
+  static const Color _accentBlue = AppColors.invoiceAccent;
+  static const Color _accentPurple = AppColors.invoiceAccentSecondary;
 
   LinearGradient get _primaryGradient => const LinearGradient(
         colors: [_accentBlue, _accentPurple],
@@ -634,7 +634,7 @@ class InvoicePaymentSection extends StatelessWidget {
       ('cash', 'نقدي', Icons.payments_rounded, AppColors.success),
       ('check', 'شيك', Icons.sticky_note_2_rounded, AppColors.accentBlue),
       ('transfer', 'حوالة', Icons.swap_horiz_rounded, AppColors.secondary),
-      ('bank', 'بنك', Icons.account_balance_rounded, Color(0xFF4F6AF0)),
+      ('bank', 'بنك', Icons.account_balance_rounded, AppColors.invoiceAccent),
       (
         'ewallet',
         'محفظة',

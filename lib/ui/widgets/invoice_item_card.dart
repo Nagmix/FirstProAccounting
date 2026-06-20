@@ -25,8 +25,8 @@ class InvoiceItemCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
 
-  static const Color _accentBlue = Color(0xFF4F6AF0);
-  static const Color _accentPurple = Color(0xFF7C3AED);
+  static const Color _accentBlue = AppColors.invoiceAccent;
+  static const Color _accentPurple = AppColors.invoiceAccentSecondary;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +35,7 @@ class InvoiceItemCard extends StatelessWidget {
 
     return Dismissible(
       key: ValueKey(item.productId),
-      direction: DismissDirection.startToEnd,
+      direction: DismissDirection.horizontal,
       onDismissed: onDelete != null ? (_) => onDelete!() : null,
       background: Container(
         alignment: Alignment.centerRight,
@@ -254,7 +254,7 @@ class _QuantityStepper extends StatelessWidget {
   final ValueChanged<double> onChanged;
   final bool isDark;
 
-  static const Color _accentBlue = Color(0xFF4F6AF0);
+  static const Color _accentBlue = AppColors.invoiceAccent;
 
   @override
   Widget build(BuildContext context) {

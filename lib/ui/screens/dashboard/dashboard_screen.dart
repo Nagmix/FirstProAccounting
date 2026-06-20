@@ -110,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _ActionItem(
             label: 'نقطة البيع',
             icon: Icons.point_of_sale_rounded,
-            color: const Color(0xFF4F6AF0),
+            color: const AppColors.invoiceAccent,
             bgColor: const Color(0xFFEEF0FF),
             route: AppConstants.pos),
         _ActionItem(
@@ -154,7 +154,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _ActionItem(
             label: 'الفواتير',
             icon: Icons.receipt_rounded,
-            color: const Color(0xFF4F6AF0),
+            color: const AppColors.invoiceAccent,
             bgColor: const Color(0xFFEEF0FF),
             route: AppConstants.invoices),
         _ActionItem(
@@ -186,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _ActionItem(
             label: 'التقارير',
             icon: Icons.bar_chart_rounded,
-            color: const Color(0xFF4F6AF0),
+            color: const AppColors.invoiceAccent,
             bgColor: const Color(0xFFEEF0FF),
             route: AppConstants.reports),
         _ActionItem(
@@ -316,12 +316,12 @@ class _DashboardScreenState extends State<DashboardScreen>
               gradient: LinearGradient(
                 colors: isDark
                     ? [
-                        const Color(0xFF4F6AF0),
+                        const AppColors.invoiceAccent,
                         const Color(0xFF8B5CF6),
                         const Color(0xFFEC4899)
                       ]
                     : [
-                        const Color(0xFF4F6AF0),
+                        const AppColors.invoiceAccent,
                         const Color(0xFF6C8CFF),
                         const Color(0xFF22C55E)
                       ],
@@ -345,9 +345,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isDark
-                            ? [const Color(0xFF4F6AF0), const Color(0xFF8B5CF6)]
+                            ? [const AppColors.invoiceAccent, const Color(0xFF8B5CF6)]
                             : [
-                                const Color(0xFF4F6AF0),
+                                const AppColors.invoiceAccent,
                                 const Color(0xFF6C8CFF)
                               ],
                         begin: Alignment.topLeft,
@@ -357,7 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       boxShadow: [
                         BoxShadow(
                           color:
-                              const Color(0xFF4F6AF0).withValues(alpha: 0.25),
+                              const AppColors.invoiceAccent.withValues(alpha: 0.25),
                           offset: const Offset(0, 3),
                           blurRadius: 10,
                         ),
@@ -823,7 +823,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 height: 20,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)],
+                    colors: [AppColors.invoiceAccent, AppColors.invoiceAccentSecondary],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -858,7 +858,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   height: 7,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF4F6AF0)
+                        ? const AppColors.invoiceAccent
                         : (isDark
                                 ? AppColors.darkTextTertiary
                                 : AppColors.textTertiary)
@@ -891,7 +891,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             height: 18,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                  colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)]),
+                  colors: [AppColors.invoiceAccent, AppColors.invoiceAccentSecondary]),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -919,7 +919,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4F6AF0).withValues(alpha: 0.08),
+                  color: const AppColors.invoiceAccent.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -928,12 +928,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
-                      color: const Color(0xFF4F6AF0),
+                      color: const AppColors.invoiceAccent,
                     ),
                   ),
                   const SizedBox(width: 2),
                   const Icon(Icons.arrow_back_ios_rounded,
-                      size: 10, color: Color(0xFF4F6AF0)),
+                      size: 10, color: AppColors.invoiceAccent),
                 ]),
               ),
             ),
@@ -1048,13 +1048,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               child: Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                      colors: [Color(0xFF4F6AF0), Color(0xFF7C3AED)],
+                      colors: [AppColors.invoiceAccent, AppColors.invoiceAccentSecondary],
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                        color: const Color(0xFF4F6AF0).withValues(alpha: 0.25),
+                        color: const AppColors.invoiceAccent.withValues(alpha: 0.25),
                         offset: const Offset(0, 4),
                         blurRadius: 12),
                   ],

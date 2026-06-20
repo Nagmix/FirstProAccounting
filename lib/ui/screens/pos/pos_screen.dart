@@ -681,12 +681,46 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                   onStartCheckout: _startCheckout,
                   onHoldOrder: _holdOrder,
                   onClearInvoice: () {
-                    _vm.resetForNewInvoice();
-                    _searchController.clear();
-                    _isSearching = false;
-                    _sheetController.animateTo(0.12,
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut);
+                    // UI-05: confirm before clearing a non-empty cart.
+                    if (_vm.cartItems.isEmpty) {
+                      _vm.resetForNewInvoice();
+                      _searchController.clear();
+                      _isSearching = false;
+                      _sheetController.animateTo(0.12,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut);
+                      return;
+                    }
+                    showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('تأكيد المسح'),
+                        content: const Text(
+                            'هل تريد مسح كل العناصر من السلة؟ لا يمكن التراجع.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('إلغاء'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.error),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('مسح',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ).then((confirmed) {
+                      if (confirmed == true) {
+                        _vm.resetForNewInvoice();
+                        _searchController.clear();
+                        _isSearching = false;
+                        _sheetController.animateTo(0.12,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut);
+                      }
+                    });
                   },
                 ),
               ],
@@ -925,7 +959,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.local_shipping, color: Color(0xFF4F6AF0)),
+            Icon(Icons.local_shipping, color: AppColors.invoiceAccent),
             SizedBox(width: 8),
             Text('أجور النقل'),
           ],

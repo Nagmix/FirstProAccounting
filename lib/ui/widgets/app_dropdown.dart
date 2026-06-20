@@ -57,7 +57,7 @@ class AppDropdown<T> extends StatelessWidget {
       validator: validator,
       menuMaxHeight: 300,
       itemHeight: 48,
-      dropdownColor: Colors.white,
+      dropdownColor: Theme.of(context).colorScheme.surface,
       style: Theme.of(context).textTheme.bodyMedium,
     );
   }

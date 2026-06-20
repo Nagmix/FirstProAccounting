@@ -48,8 +48,8 @@ class _AddInvoiceItemSheetState extends State<AddInvoiceItemSheet> {
   double get _baseQuantity => _quantity * _conversionFactor;
   String get _unitName => (_selectedUnit?['unit_name'] as String?) ?? '';
 
-  static const Color _accentBlue = Color(0xFF4F6AF0);
-  static const Color _accentPurple = Color(0xFF7C3AED);
+  static const Color _accentBlue = AppColors.invoiceAccent;
+  static const Color _accentPurple = AppColors.invoiceAccentSecondary;
 
   @override
   void initState() {

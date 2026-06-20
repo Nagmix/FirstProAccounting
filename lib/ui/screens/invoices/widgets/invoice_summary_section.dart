@@ -54,8 +54,8 @@ class InvoiceSummarySection extends StatelessWidget {
   final VoidCallback onTransportChanged;
 
   // ── Design constants (duplicated from parent) ────────────────────
-  static const Color _accentBlue = Color(0xFF4F6AF0);
-  static const Color _accentPurple = Color(0xFF7C3AED);
+  static const Color _accentBlue = AppColors.invoiceAccent;
+  static const Color _accentPurple = AppColors.invoiceAccentSecondary;
 
   LinearGradient get _primaryGradient => const LinearGradient(
         colors: [_accentBlue, _accentPurple],

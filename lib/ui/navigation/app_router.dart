@@ -7,6 +7,7 @@ import 'package:firstpro/ui/screens/products/products_screen.dart';
 import 'package:firstpro/ui/screens/products/add_product_sheet.dart';
 import 'package:firstpro/ui/screens/products/units_screen.dart';
 import 'package:firstpro/ui/screens/invoices/invoices_screen.dart';
+import 'package:firstpro/ui/screens/invoices/create_invoice_screen.dart';
 import 'package:firstpro/ui/screens/invoices/sales_invoices_screen.dart';
 import 'package:firstpro/ui/screens/invoices/purchase_invoices_screen.dart';
 import 'package:firstpro/ui/screens/invoices/invoice_detail_screen.dart';
@@ -74,7 +75,9 @@ class AppRouter {
         AppConstants.stocktaking: (_) => const StocktakingScreen(),
         AppConstants.expenses: (_) => const ExpensesScreen(),
         AppConstants.employees: (_) => const EmployeesScreen(),
-        AppConstants.newSaleInvoice: (_) => const SalesInvoicesScreen(),
+        // UI-07: route "new sale invoice" to the creation form, not the list.
+        AppConstants.newSaleInvoice: (_) => const CreateInvoiceScreen(
+            invoiceType: AppConstants.saleInvoice),
         AppConstants.newPurchaseInvoice: (_) => const PurchaseInvoicesScreen(),
         AppConstants.salesInvoices: (_) => const SalesInvoicesScreen(),
         AppConstants.purchaseInvoices: (_) => const PurchaseInvoicesScreen(),

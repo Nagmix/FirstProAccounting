@@ -13,6 +13,10 @@ class AppColors {
   static const Color primaryGradientStart = Color(0xFF2633C5);
   static const Color primaryGradientEnd = Color(0xFF6A88E5);
 
+  // ── Invoice Accent (UI-02: replaces hard-coded AppColors.invoiceAccent) ──
+  static const Color invoiceAccent = AppColors.invoiceAccent;
+  static const Color invoiceAccentSecondary = AppColors.invoiceAccentSecondary;
+
   // ── Secondary (Warm Amber/Gold) ──────────────────────────────────
   static const Color secondary = Color(0xFFF1B440);
   static const Color secondaryLight = Color(0xFFFFD54F);
