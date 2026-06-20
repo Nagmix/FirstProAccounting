@@ -1,0 +1,29 @@
+# dartdoc configuration for FirstPro Accounting
+# https://dart.dev/tools/dartdoc
+
+# Generate docs for all libraries under lib/
+include: ['lib/**/*.dart']
+
+# Exclude generated files and internal test helpers
+exclude: ['lib/l10n/generated/**']
+
+# Output directory
+output: doc/api
+
+# Show private members (useful for internal API documentation)
+showUndocumentedCategories: true
+
+# Categories for organizing the documentation
+categories:
+  "Core Utils":
+    markdown: doc/core_utils.md
+    name: Core Utilities
+  "Data Layer":
+    markdown: doc/data_layer.md
+    name: Data Layer (Repositories + Services)
+  "UI Widgets":
+    markdown: doc/ui_widgets.md
+    name: Reusable UI Widgets
+  "Models":
+    markdown: doc/models.md
+    name: Data Models
