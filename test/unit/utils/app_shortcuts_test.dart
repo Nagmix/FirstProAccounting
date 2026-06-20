@@ -32,33 +32,19 @@ void main() {
       expect(find.byType(Actions), findsOneWidget);
     });
 
-    testWidgets('Ctrl+S triggers onSave', (tester) async {
-      var savePressed = false;
+    testWidgets('Shortcuts widget is created when onSave provided',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: AppShortcuts.wrap(
-            onSave: () => savePressed = true,
-            child: const Scaffold(body: TextField()),
+            onSave: () {},
+            child: const Scaffold(body: Text('test')),
           ),
         ),
       );
-
-      // Focus the text field.
-      await tester.tap(find.byType(TextField));
-      await tester.pump();
-
-      // Send Ctrl+S.
-      await tester.sendKeyDownEvent(
-          const LogicalKeyboardKey(0x00000053)); // key S
-      await tester.sendKeyDownEvent(
-          const LogicalKeyboardKey(0x000000e0)); // control left
-      await tester.pumpAndSettle();
-
-      // The shortcut may or may not fire depending on the test
-      // framework's keyboard handling. We verify the widget structure
-      // is correct — the actual shortcut dispatch is tested in
-      // integration.
+      // Verify the Shortcuts + Actions widgets are in the tree.
       expect(find.byType(Shortcuts), findsOneWidget);
+      expect(find.byType(Actions), findsOneWidget);
     });
 
     testWidgets('AppShortcuts.formSection wraps with FocusTraversalGroup',
