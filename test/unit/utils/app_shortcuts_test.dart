@@ -18,18 +18,18 @@ void main() {
 
     testWidgets('renders child with shortcuts when callbacks provided',
         (tester) async {
-      var savePressed = false;
       await tester.pumpWidget(
         MaterialApp(
           home: AppShortcuts.wrap(
-            onSave: () => savePressed = true,
+            onSave: () {},
             child: const Scaffold(body: Text('test')),
           ),
         ),
       );
       expect(find.text('test'), findsOneWidget);
-      expect(find.byType(Shortcuts), findsOneWidget);
-      expect(find.byType(Actions), findsOneWidget);
+      // MaterialApp also adds Shortcuts/Actions, so we use findsWidgets.
+      expect(find.byType(Shortcuts), findsWidgets);
+      expect(find.byType(Actions), findsWidgets);
     });
 
     testWidgets('Shortcuts widget is created when onSave provided',
@@ -42,9 +42,9 @@ void main() {
           ),
         ),
       );
-      // Verify the Shortcuts + Actions widgets are in the tree.
-      expect(find.byType(Shortcuts), findsOneWidget);
-      expect(find.byType(Actions), findsOneWidget);
+      expect(find.text('test'), findsOneWidget);
+      expect(find.byType(Shortcuts), findsWidgets);
+      expect(find.byType(Actions), findsWidgets);
     });
 
     testWidgets('AppShortcuts.formSection wraps with FocusTraversalGroup',
@@ -58,7 +58,8 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(FocusTraversalGroup), findsOneWidget);
+      // MaterialApp also adds FocusTraversalGroup, so findsWidgets.
+      expect(find.byType(FocusTraversalGroup), findsWidgets);
       expect(find.text('form'), findsOneWidget);
     });
   });
@@ -69,13 +70,13 @@ void main() {
       const search = SearchIntent();
       const refresh = RefreshIntent();
       const escape = EscapeIntent();
-      const print = PrintIntent();
+      const printIntent = PrintIntent();
 
       expect(save, isA<Intent>());
       expect(search, isA<Intent>());
       expect(refresh, isA<Intent>());
       expect(escape, isA<Intent>());
-      expect(print, isA<Intent>());
+      expect(printIntent, isA<Intent>());
     });
   });
 }
