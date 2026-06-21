@@ -17,14 +17,16 @@ Future<void> showEditQuantityDialog(
         content: TextField(
           controller: controller,
           autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: false),
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+          ],
           decoration: const InputDecoration(
             labelText: 'الكمية',
             prefixIcon: Icon(Icons.format_list_numbered),
           ),
           onSubmitted: (v) {
-            final qty = int.tryParse(v);
+            final qty = double.tryParse(v)?.round();
             Navigator.pop(ctx, qty);
           },
         ),
@@ -35,7 +37,7 @@ Future<void> showEditQuantityDialog(
           ),
           ElevatedButton(
             onPressed: () {
-              final qty = int.tryParse(controller.text);
+              final qty = double.tryParse(controller.text)?.round();
               Navigator.pop(ctx, qty);
             },
             child: const Text('تأكيد'),

@@ -44,8 +44,8 @@ class PosActionButtons extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
       child: Column(
         children: [
-          // Add payment button
-          if (cartLength > 0 && paymentsLength == 0)
+          // Add payment button (UI-24: hide for credit — no payment needed)
+          if (cartLength > 0 && paymentsLength == 0 && activePaymentMethod != 'credit')
             SizedBox(
               width: double.infinity,
               height: 44,

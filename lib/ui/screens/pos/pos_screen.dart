@@ -182,7 +182,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
                 tooltip: 'مسح باركود',
-                child: const Icon(Icons.qr_code),
+                child: const Icon(Icons.barcode_reader),
               )
             : null,
       ),
@@ -388,7 +388,7 @@ class _PosScreenState extends State<PosScreen> with TickerProviderStateMixin {
             height: 46,
             child: ElevatedButton.icon(
               onPressed: _scanBarcode,
-              icon: const Icon(Icons.qr_code, size: 20),
+              icon: const Icon(Icons.barcode_reader, size: 20),
               label: const Text('مسح'),
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(

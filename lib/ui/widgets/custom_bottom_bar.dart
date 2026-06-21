@@ -164,8 +164,10 @@ class CenterFabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return Tooltip(
+      message: 'إنشاء جديد',
+      child: GestureDetector(
+        onTap: onTap,
       child: Container(
         width: 56,
         height: 56,
@@ -192,6 +194,7 @@ class CenterFabButton extends StatelessWidget {
           color: Colors.white,
           size: 28,
         ),
+      ),
       ),
     );
   }

@@ -432,11 +432,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       _HeaderActionIcon(
                           icon: Icons.notifications_none_rounded,
+                          tooltip: 'الإشعارات',
                           isDark: isDark,
                           onTap: () => _navigateTo(AppConstants.notifications)),
                       const SizedBox(width: 8),
                       _HeaderActionIcon(
                           icon: Icons.menu_rounded,
+                          tooltip: 'القائمة',
                           isDark: isDark,
                           onTap: () => Scaffold.of(context).openEndDrawer()),
                     ],
@@ -1158,14 +1160,15 @@ class _SparkleIcon extends StatelessWidget {
 // ── Header action icon ─────────────────────────────────────────────
 class _HeaderActionIcon extends StatelessWidget {
   const _HeaderActionIcon(
-      {required this.icon, required this.isDark, required this.onTap});
+      {required this.icon, required this.isDark, required this.onTap, this.tooltip});
   final IconData icon;
   final bool isDark;
   final VoidCallback onTap;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final child = Container(
       width: 42,
       height: 42,
       decoration: BoxDecoration(
@@ -1191,6 +1194,9 @@ class _HeaderActionIcon extends StatelessWidget {
         ),
       ),
     );
+    return tooltip != null
+        ? Tooltip(message: tooltip!, child: child)
+        : child;
   }
 }
 
