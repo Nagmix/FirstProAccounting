@@ -312,8 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('رقم الفاتورة التلقائي'),
                   subtitle: const Text('توليد رقم فاتورة تلقائياً عند الإنشاء'),
                   value: _autoInvoiceNumber,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _autoInvoiceNumber = v);
                     _saveSetting('auto_invoice_number', v ? '1' : '0');
@@ -327,8 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   title: const Text('طباعة تلقائية بعد البيع'),
                   value: _autoPrintAfterSale,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _autoPrintAfterSale = v);
                     _saveSetting('auto_print_after_sale', v ? '1' : '0');
@@ -337,8 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   title: const Text('عرض الضريبة في الفاتورة'),
                   value: _showTaxInInvoice,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _showTaxInInvoice = v);
                     _saveSetting('show_tax_in_invoice', v ? '1' : '0');
@@ -369,8 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle:
                       const Text('إشعار عند وصول كمية المنتج للحد الأدنى'),
                   value: _stockAlert,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _stockAlert = v);
                     _saveSetting('stock_alert', v ? '1' : '0');
@@ -390,8 +386,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle:
                       const Text('تنبيه عند اقتراب انتهاء صلاحية المنتجات'),
                   value: _trackExpiryDate,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _trackExpiryDate = v);
                     _saveSetting('track_expiry_date', v ? '1' : '0');
@@ -427,8 +422,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: const Text(
                       'إشعار عند وصول المنتج للحد الأدنى أو نفاد المخزون'),
                   value: _stockAlertEnabled,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _stockAlertEnabled = v);
                     _saveSetting('stock_alert_enabled', v ? '1' : '0');
@@ -442,8 +436,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('تنبيهات انتهاء الصلاحية'),
                   subtitle: const Text('إشعار قبل انتهاء صلاحية المنتجات'),
                   value: _expiryAlertEnabled,
-                  activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+                  activeColor: AppColors.primary,
                   onChanged: (v) {
                     setState(() => _expiryAlertEnabled = v);
                     _saveSetting('expiry_alert_enabled', v ? '1' : '0');
@@ -846,8 +839,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             min: 0,
             max: 25,
             divisions: 25,
-            activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                  thumbColor: AppColors.primary,
+            activeColor: AppColors.primary,
             label: '${_taxRate.toStringAsFixed(0)}%',
             onChanged: (v) {
               setState(() => _taxRate = v);
