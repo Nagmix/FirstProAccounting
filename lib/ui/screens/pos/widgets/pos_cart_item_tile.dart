@@ -82,6 +82,7 @@ class PosCartItemTile extends StatelessWidget {
                   children: [
                     _qtyButton(
                       icon: Icons.remove,
+                      tooltip: 'إنقاص الكمية',
                       onTap: onDecrement,
                     ),
                     Container(
@@ -111,6 +112,7 @@ class PosCartItemTile extends StatelessWidget {
                     ),
                     _qtyButton(
                       icon: Icons.add,
+                      tooltip: 'زيادة الكمية',
                       onTap: onIncrement,
                     ),
                   ],
@@ -149,13 +151,16 @@ class PosCartItemTile extends StatelessWidget {
     );
   }
 
-  Widget _qtyButton({required IconData icon, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(icon, size: 14),
+  Widget _qtyButton({required IconData icon, required String tooltip, required VoidCallback onTap}) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(icon, size: 14),
+        ),
       ),
     );
   }

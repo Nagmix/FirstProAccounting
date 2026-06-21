@@ -956,6 +956,34 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
+    // UI-37: show error state with retry button when errorMessage is set.
+    if (_viewModel.errorMessage != null) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 48,
+                  color: AppColors.error.withValues(alpha: 0.5)),
+              const SizedBox(height: 12),
+              Text('تعذّر تحميل المعاملات',
+                  style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(_viewModel.errorMessage!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _viewModel.refresh(),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('إعادة المحاولة'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_viewModel.recentInvoices.isEmpty) {
       return SliverToBoxAdapter(
         child: AnimatedEntry(

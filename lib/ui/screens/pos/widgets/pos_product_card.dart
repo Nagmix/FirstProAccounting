@@ -87,7 +87,7 @@ class PosProductCard extends StatelessWidget {
                   outOfStock
                       ? 'نفذ'
                       : product.currentStock <= 0
-                          ? 'مسموح'
+                          ? 'سالب'
                           : lowStock
                               ? 'منخفض'
                               : '${product.currentStock.toStringAsFixed(0)}',

@@ -234,6 +234,7 @@ class _InvoicesScreenState extends State<InvoicesScreen>
               ),
         floatingActionButton: FloatingActionButton(
           onPressed: _showAddInvoiceMenu,
+          tooltip: 'إنشاء فاتورة',
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           child: const Icon(Icons.add),
