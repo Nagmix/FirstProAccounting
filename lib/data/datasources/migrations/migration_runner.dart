@@ -14,6 +14,7 @@ import 'package:firstpro/data/datasources/migrations/migration_v51.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v52.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v53.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v54.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v55.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -102,5 +103,8 @@ class MigrationRunner {
 
     // v54 — F-03: Recurring invoices (templates + items tables)
     if (oldVersion < 54) await MigrationV54.migrate(db);
+
+    // v55 — Recurring invoice generation idempotency
+    if (oldVersion < 55) await MigrationV55.migrate(db);
   }
 }

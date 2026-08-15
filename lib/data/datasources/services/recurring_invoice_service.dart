@@ -89,8 +89,12 @@ class RecurringInvoiceService {
         dbItem['total_price'] =
             MoneyHelper.toCents(MoneyHelper.readMoney(item['total_price']));
         dbItem['conversion_factor'] ??= 1.0;
-        dbItem['base_quantity'] ??=
-            (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        dbItem['base_quantity'] ??= (() {
+          final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          final conversion =
+              (item['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+          return quantity * conversion;
+        })();
         await txn.insert('recurring_invoice_items', dbItem);
       }
 
@@ -128,8 +132,12 @@ class RecurringInvoiceService {
         dbItem['total_price'] =
             MoneyHelper.toCents(MoneyHelper.readMoney(item['total_price']));
         dbItem['conversion_factor'] ??= 1.0;
-        dbItem['base_quantity'] ??=
-            (item['quantity'] as num?)?.toDouble() ?? 1.0;
+        dbItem['base_quantity'] ??= (() {
+          final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          final conversion =
+              (item['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+          return quantity * conversion;
+        })();
         await txn.insert('recurring_invoice_items', dbItem);
       }
     });
@@ -238,8 +246,52 @@ class RecurringInvoiceService {
 
     for (final template in dueTemplates) {
       try {
+        final templateId = template['id'] as int;
+        final scheduledFor = template['next_run_date'] as String;
+        final existingRun = await db.query(
+          'recurring_invoice_runs',
+          where: 'recurring_invoice_id = ? AND scheduled_for = ?',
+          whereArgs: [templateId, scheduledFor],
+          limit: 1,
+        );
+        if (existingRun.isNotEmpty) {
+          // Recovery path: the invoice/run was committed but the template
+          // update was interrupted. Advance the schedule without generating
+          // another invoice.
+          final frequency = template['frequency'] as String? ?? 'monthly';
+          final interval =
+              (template['interval_value'] as num?)?.toInt() ?? 1;
+          final nextRun = _advanceNextRunDate(
+            DateTime.parse(scheduledFor),
+            frequency,
+            interval,
+          );
+          await db.update(
+            'recurring_invoices',
+            {
+              'next_run_date': nextRun.toIso8601String().substring(0, 10),
+              'last_generated_invoice_id': existingRun.first['invoice_id'],
+              'updated_at': DateTime.now().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [templateId],
+          );
+          skipped++;
+          continue;
+        }
+
         final invoiceId = await _generateInvoiceFromTemplate(template, today);
         if (invoiceId != null) {
+          await db.insert(
+            'recurring_invoice_runs',
+            {
+              'recurring_invoice_id': templateId,
+              'scheduled_for': scheduledFor,
+              'invoice_id': invoiceId,
+              'created_at': DateTime.now().toIso8601String(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
           generated++;
           // Advance next_run_date.
           final frequency = template['frequency'] as String? ?? 'monthly';
@@ -300,8 +352,9 @@ class RecurringInvoiceService {
   Future<String?> _generateInvoiceFromTemplate(
     Map<String, dynamic> template,
     DateTime runDate,
-  ) async {
+  }) async {
     final templateId = template['id'] as int;
+    final db = await _db;
 
     // Load items.
     final items = await getTemplateItems(templateId);
@@ -313,10 +366,12 @@ class RecurringInvoiceService {
         template['payment_mechanism'] as String? ?? 'credit';
     final isSale = invoiceType == 'sale' || invoiceType == 'pos';
 
-    // Generate invoice ID.
-    final datePrefix = _formatDatePrefix(runDate);
-    final seq = await _invoiceRepo.getNextInvoiceSequence(datePrefix, invoiceType);
-    final invoiceId = '${invoiceType.toUpperCase()}-$datePrefix-${seq.toString().padLeft(4, '0')}';
+    // Generate a deterministic invoice ID from template + scheduled date.
+    // This protects against duplicate invoices if the app stops after the
+    // invoice transaction commits but before the recurring template advances.
+    final scheduledDate = template['next_run_date'] as String;
+    final invoiceId =
+        'REC-${templateId.toString()}-${scheduledDate.replaceAll('-', '')}';
 
     // Compute totals from items.
     double subtotal = 0;
@@ -370,16 +425,29 @@ class RecurringInvoiceService {
 
     // Generate the invoice via the standard path (posts journal entries,
     // updates stock, updates entity balances).
-    await _invoiceRepo.saveInvoiceWithJournalEntries(
-      invoiceMap,
-      itemsMaps,
-      invoiceType: invoiceType,
-      paymentMechanism: paymentMechanism,
-      isReturn: false,
-      cashBoxId: template['cash_box_id'] as int?,
-      transportChargesParam: transportCharges,
-      paidAmount: paidAmount,
-    );
+    try {
+      await _invoiceRepo.saveInvoiceWithJournalEntries(
+        invoiceMap,
+        itemsMaps,
+        invoiceType: invoiceType,
+        paymentMechanism: paymentMechanism,
+        isReturn: false,
+        cashBoxId: template['cash_box_id'] as int?,
+        transportChargesParam: transportCharges,
+        paidAmount: paidAmount,
+      );
+    } catch (e) {
+      // A deterministic ID means a prior committed generation is safe to
+      // recover after an interrupted run. Re-throw unrelated failures.
+      final existing = await db.query(
+        'invoices',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [invoiceId],
+        limit: 1,
+      );
+      if (existing.isEmpty) rethrow;
+    }
 
     return invoiceId;
   }

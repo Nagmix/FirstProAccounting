@@ -107,8 +107,11 @@ class LicenseService {
         await _saveState();
       }
 
-      // Try to validate with server if we have internet
-      await _tryServerValidation();
+      // Core accounting is intentionally local-first. Do not contact a remote
+      // service during startup: the app must open and remain usable without
+      // internet. Explicit activation/refresh may still use the API when the
+      // user chooses it from Settings.
+      // await _tryServerValidation();
 
       _initialized = true;
       if (kDebugMode) {

@@ -58,6 +58,27 @@ class InvoiceRepository {
     double? paidAmount,
   }) async {
     try {
+      if (items.isEmpty) {
+        throw ArgumentError('لا يمكن حفظ فاتورة بلا أصناف');
+      }
+      if (transportChargesParam < -0.005) {
+        throw ArgumentError('أجور النقل لا يمكن أن تكون سالبة');
+      }
+      for (final item in items) {
+        final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+        final conversion =
+            (item['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+        final baseQuantity =
+            (item['base_quantity'] as num?)?.toDouble() ?? quantity * conversion;
+        final unitPrice = MoneyHelper.readMoney(item['unit_price']);
+        final totalPrice = MoneyHelper.readMoney(item['total_price']);
+        if (quantity <= 0 || conversion <= 0 || baseQuantity <= 0) {
+          throw ArgumentError('كمية أو معامل تحويل غير صالح في بند الفاتورة');
+        }
+        if (unitPrice < -0.005 || totalPrice < -0.005) {
+          throw ArgumentError('سعر أو إجمالي بند الفاتورة لا يمكن أن يكون سالباً');
+        }
+      }
       final db = await _db;
       final total = MoneyHelper.readMoney(invoiceMap['total']);
       final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
@@ -65,6 +86,14 @@ class InvoiceRepository {
           (invoiceMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final double effectiveExchangeRate = exchangeRate > 0 ? exchangeRate : 1.0;
       final now = DateTime.now().toIso8601String();
+      if (total < -0.005) {
+        throw ArgumentError('إجمالي الفاتورة لا يمكن أن يكون سالباً');
+      }
+      final requestedPaid = paidAmount ??
+          MoneyHelper.readMoney(invoiceMap['paid_amount']);
+      if (requestedPaid < -0.005 || requestedPaid > total + 0.005) {
+        throw ArgumentError('المبلغ المدفوع خارج نطاق إجمالي الفاتورة');
+      }
 
       // ── التحقق من قفل الفترة المحاسبية ──
       final invoiceDate = invoiceMap['date'] as String? ??
@@ -1284,6 +1313,7 @@ class InvoiceRepository {
                 baseQuantity: baseQuantity,
                 invoiceId: invoiceMap['id'] as String,
                 codeOffset: codeOffset,
+                warehouseId: (invoiceMap['warehouse_id'] as num?)?.toInt(),
               );
             } else {
               // Weighted average: use average_cost / cost_price directly
@@ -2754,28 +2784,39 @@ class InvoiceRepository {
 
           if (cogsAccountId != null && inventoryAccountId != null) {
             double totalCogs = 0.0;
-            for (final item in items) {
-              final productId = (item['product_id'] as num?)?.toInt();
-              if (productId == null) continue;
-
-              // Fix #7: Use stored unit_cost from invoice_items (captured at sale time)
-              // and base_quantity (for multi-unit products) instead of current cost_price.
-              // This ensures COGS reversal matches the original COGS entry exactly.
-              final storedUnitCost = MoneyHelper.readMoney(item['unit_cost']);
-              final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
-              final baseQuantity =
-                  (item['base_quantity'] as num?)?.toDouble() ?? quantity;
-
-              if (storedUnitCost > 0) {
-                totalCogs += storedUnitCost * baseQuantity;
-              } else {
-                // Fallback to current cost_price if unit_cost wasn't stored
-                final productRow = await txn.query('products',
-                    where: 'id = ?', whereArgs: [productId], limit: 1);
-                if (productRow.isEmpty) continue;
-                final costPrice =
-                    MoneyHelper.readMoney(productRow.first['cost_price']);
-                totalCogs += costPrice * baseQuantity;
+            final allocations = await txn.query(
+              'movement_cost_allocations',
+              columns: ['total_cost'],
+              where: 'invoice_id = ?',
+              whereArgs: [id],
+            );
+            if (allocations.isNotEmpty) {
+              // The original sale may have consumed multiple FIFO/LIFO layers.
+              // Reverse exactly the recorded allocation total, not today's cost.
+              totalCogs = allocations.fold<double>(
+                0.0,
+                (sum, row) => sum + MoneyHelper.readMoney(row['total_cost']),
+              );
+            } else {
+              for (final item in items) {
+                final productId = (item['product_id'] as num?)?.toInt();
+                if (productId == null) continue;
+                final storedUnitCost =
+                    MoneyHelper.readMoney(item['unit_cost']);
+                final quantity =
+                    (item['quantity'] as num?)?.toDouble() ?? 1.0;
+                final baseQuantity =
+                    (item['base_quantity'] as num?)?.toDouble() ?? quantity;
+                if (storedUnitCost > 0) {
+                  totalCogs += storedUnitCost * baseQuantity;
+                } else {
+                  final productRow = await txn.query('products',
+                      where: 'id = ?', whereArgs: [productId], limit: 1);
+                  if (productRow.isEmpty) continue;
+                  final costPrice =
+                      MoneyHelper.readMoney(productRow.first['cost_price']);
+                  totalCogs += costPrice * baseQuantity;
+                }
               }
             }
 
@@ -2851,6 +2892,13 @@ class InvoiceRepository {
               }
             }
           }
+        }
+
+        if ((invoiceType == 'sale' || invoiceType == 'pos') && !isReturn) {
+          await _dbHelper.costingEngine.reverseCOGSAllocationsInTransaction(
+            txn,
+            invoiceId: id,
+          );
         }
 
         // 3. Transport charges reversal
@@ -2950,6 +2998,8 @@ class InvoiceRepository {
         for (final item in items) {
           final productId = (item['product_id'] as num?)?.toInt();
           final quantity = (item['quantity'] as num?)?.toDouble() ?? 1.0;
+          final baseQuantity =
+              (item['base_quantity'] as num?)?.toDouble() ?? quantity;
           if (productId == null) continue;
           // Check allow_negative for this product
           final prodRow = await txn.query('products',
@@ -2963,17 +3013,17 @@ class InvoiceRepository {
               // Was decremented, now restore
               await txn.rawUpdate(
                   'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-                  [quantity, now, productId]);
+                  [baseQuantity, now, productId]);
             } else {
               // Was incremented (return), now decrement
               if (allowNeg) {
                 await txn.rawUpdate(
                     'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-                    [quantity, now, productId]);
+                    [baseQuantity, now, productId]);
               } else {
                 await txn.rawUpdate(
                     'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-                    [quantity, now, productId]);
+                    [baseQuantity, now, productId]);
               }
             }
           } else if (invoiceType == 'purchase') {
@@ -2982,22 +3032,25 @@ class InvoiceRepository {
               if (allowNeg) {
                 await txn.rawUpdate(
                     'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-                    [quantity, now, productId]);
+                    [baseQuantity, now, productId]);
               } else {
                 await txn.rawUpdate(
                     'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-                    [quantity, now, productId]);
+                    [baseQuantity, now, productId]);
               }
             } else {
               // Was decremented (return), now restore
               await txn.rawUpdate(
                   'UPDATE products SET current_stock = current_stock + ?, updated_at = ? WHERE id = ?',
-                  [quantity, now, productId]);
+                  [baseQuantity, now, productId]);
             }
           }
         }
+        await _dbHelper.journal.validateJournalBalanceInTransaction(
+          txn,
+          journalId,
+        );
       });
-
       // Log audit event for invoice cancellation
       await _dbHelper.audit.logAuditEvent(
         action: 'cancel',

@@ -202,23 +202,39 @@ extension InvoiceRepositoryReports on InvoiceRepository {
       );
       for (final item in returnItems2) {
         final productId = (item['product_id'] as num?)?.toInt() ?? 0;
-        final qty = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+        final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+        final conversionFactor =
+            (item['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+        final baseQuantity =
+            (item['base_quantity'] as num?)?.toDouble() ??
+                quantity * conversionFactor;
         returnedQuantities[productId] =
-            (returnedQuantities[productId] ?? 0.0) + qty;
+            (returnedQuantities[productId] ?? 0.0) + baseQuantity;
       }
     }
 
     // Check each return item against original - returned
     for (final item in returnItems) {
       final productId = (item['product_id'] as num?)?.toInt() ?? 0;
-      final returnQty = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+      final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+      final conversionFactor =
+          (item['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+      final returnQty =
+          (item['base_quantity'] as num?)?.toDouble() ??
+              quantity * conversionFactor;
 
       // Find original quantity for this product
       double originalQty = 0.0;
       for (final origItem in originalItems) {
         final origProductId = (origItem['product_id'] as num?)?.toInt() ?? 0;
         if (origProductId == productId) {
-          originalQty = (origItem['quantity'] as num?)?.toDouble() ?? 0.0;
+          final originalQuantity =
+              (origItem['quantity'] as num?)?.toDouble() ?? 0.0;
+          final originalConversion =
+              (origItem['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+          originalQty =
+              (origItem['base_quantity'] as num?)?.toDouble() ??
+                  originalQuantity * originalConversion;
           break;
         }
       }
@@ -226,7 +242,7 @@ extension InvoiceRepositoryReports on InvoiceRepository {
       final alreadyReturned = returnedQuantities[productId] ?? 0.0;
       if (returnQty > originalQty - alreadyReturned) {
         errors[productId.toString()] =
-            'الكمية المرتجعة ($returnQty) تتجاوز الكمية المتبقية (${originalQty - alreadyReturned})';
+            'الكمية الأساسية المرتجعة ($returnQty) تتجاوز الكمية الأساسية المتبقية (${originalQty - alreadyReturned})';
       }
     }
 

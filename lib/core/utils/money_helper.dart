@@ -115,10 +115,11 @@ class MoneyHelper {
   /// Non-existent keys are silently skipped, so it's safe to pass
   /// a superset of field names.
   ///
-  /// IDEMPOTENT: If the value is already an int and is extremely large
-  /// (> 100 million cents = 1 million currency units), it is assumed to
-  /// already be in cents and is left untouched. This prevents double-
-  /// conversion when the same map passes through the pipeline twice.
+  /// Contract: maps passed to this method use human-readable doubles from
+  /// the domain/UI layer. An integer in a money field is treated as an
+  /// already-persisted cents value. This deterministic contract avoids a
+  /// magnitude threshold that could silently mis-handle legitimate large
+  /// amounts.
   static Map<String, dynamic> toCentsMap(
     Map<String, dynamic> map,
     List<String> moneyFields,
@@ -129,17 +130,9 @@ class MoneyHelper {
       if (value is double) {
         result[field] = toCents(value);
       } else if (value is int) {
-        // IDEMPOTENCY GUARD: If the int is already in cents scale (very large),
-        // do NOT convert again. This prevents ×100 double-conversion when
-        // a model's toMap() (which now returns human-readable doubles) is
-        // passed through toCentsMap, but also protects against legacy paths
-        // where the int may legitimately already be in cents.
-        // Threshold: 100,000,000 cents = 1,000,000 currency units.
-        if (value > 100000000) {
-          result[field] = value; // already in cents, keep as-is
-        } else {
-          result[field] = toCents(value.toDouble());
-        }
+        // Integer money values are already stored in cents. All new domain
+        // inputs should use double for human-readable currency amounts.
+        result[field] = value;
       } else if (value is num && value.toDouble() != value.toInt()) {
         // num with decimal part — convert
         result[field] = toCents(value.toDouble());

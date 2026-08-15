@@ -104,7 +104,7 @@ class DatabaseHelper {
   static Database? _database;
   static Future<Database>? _databaseFuture;
 
-  static const int _databaseVersion = 54;
+  static const int _databaseVersion = 55;
   static const String _databaseName = 'firstpro.db';
 
   Future<Database> get database async {
@@ -165,6 +165,25 @@ class DatabaseHelper {
   Future<String> getDatabasePath() async {
     final dbPath = await getDatabasesPath();
     return join(dbPath, _databaseName);
+  }
+
+  /// Delete all local business data atomically by replacing the encrypted
+  /// database with a freshly-created database using the same installation key.
+  ///
+  /// The encryption key is intentionally preserved in secure storage so a
+  /// subsequent database remains protected without creating a second key.
+  /// Callers must clear file attachments and cached UI state separately.
+  Future<void> clearAllData() async {
+    await resetInstance();
+    final dbPath = await getDatabasePath();
+    for (final path in <String>[dbPath, '$dbPath-wal', '$dbPath-shm']) {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+    // Recreate schema and reference data immediately so the app is usable.
+    await database;
   }
 
   Future<Database> initDatabase() async {

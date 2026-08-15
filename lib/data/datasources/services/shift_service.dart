@@ -754,6 +754,7 @@ class ShiftService {
                 baseQuantity: baseQuantity,
                 invoiceId: invoiceId,
                 codeOffset: codeOffset,
+                warehouseId: (invoice['warehouse_id'] as num?)?.toInt(),
               );
             } else {
               if (storedUnitCost > 0) {

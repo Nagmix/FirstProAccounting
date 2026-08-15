@@ -11,6 +11,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/security/db_encryption.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/core/services/portable_backup_service.dart';
 import 'package:firstpro/core/utils/excel_exporter.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/repositories/account_repository.dart';
@@ -51,7 +52,8 @@ class SettingsDataSection extends StatefulWidget {
   State<SettingsDataSection> createState() => _SettingsDataSectionState();
 }
 
-class _SettingsDataSectionState extends State<SettingsDataSection> {
+class _SettingsDataSectionState extends State<SettingsDataSection>
+    with WidgetsBindingObserver {
   late bool _autoBackupEnabled;
   late int _autoBackupFrequencyIndex;
   String? _lastBackupDate;
@@ -60,6 +62,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _autoBackupEnabled = widget.initialAutoBackupEnabled;
     _autoBackupFrequencyIndex = widget.initialAutoBackupFrequencyIndex;
     _lastBackupDate = widget.initialLastBackupDate;
@@ -85,7 +88,15 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkAndPerformAutoBackup();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _autoBackupTimer?.cancel();
     super.dispose();
   }
@@ -156,7 +167,11 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
 
   /// Save a backup copy to the auto-backup directory and clean up old ones.
   Future<void> _saveAutoBackup(File dbFile) async {
+    final dbHelper = locator<DatabaseHelper>();
     try {
+      // Snapshot only after closing the active SQLCipher connection. This
+      // avoids copying a partially-written database file.
+      await dbHelper.resetInstance();
       final dir = await getApplicationDocumentsDirectory();
       final backupDir = Directory(p.join(dir.path, 'auto_backups'));
       if (!await backupDir.exists()) {
@@ -186,6 +201,8 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       }
     } catch (e) {
       debugPrint('SettingsDataSection._saveAutoBackup: $e');
+    } finally {
+      await dbHelper.database;
     }
   }
 
@@ -201,91 +218,185 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
   //  BACKUP ACTION
   // ════════════════════════════════════════════════════════════════
 
-  Future<void> _onBackup() async {
+  Future<String?> _promptBackupPassword({required bool confirm}) async {
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
     try {
-      final dbHelper = locator<DatabaseHelper>();
-      final dbPath = await dbHelper.getDatabasePath();
-      final dbFile = File(dbPath);
-      if (!await dbFile.exists()) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لم يتم العثور على قاعدة البيانات')),
-          );
-        }
-        return;
-      }
+      return await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(confirm ? 'حماية النسخة الاحتياطية' : 'كلمة مرور النسخة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'كلمة المرور (8 أحرف على الأقل)',
+                ),
+              ),
+              if (confirm)
+                TextField(
+                  controller: confirmController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور'),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final password = passwordController.text;
+                if (password.length < 8 ||
+                    (confirm && password != confirmController.text)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تحقق من كلمة المرور وتأكيدها')),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx, password);
+              },
+              child: const Text('متابعة'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      passwordController.dispose();
+      confirmController.dispose();
+    }
+  }
 
-      // Save auto-backup copy (internal, always)
-      await _saveAutoBackup(dbFile);
-
-      // Let the user choose where to save the backup file
-      final timestamp = DateTime.now()
-          .toIso8601String()
-          .replaceAll(':', '-')
-          .split('.')
-          .first;
-      final suggestedName = 'firstpro_backup_$timestamp.db';
-
+  Future<void> _onBackup() async {
+    final password = await _promptBackupPassword(confirm: true);
+    if (password == null || !mounted) return;
+    try {
+      final suggestedName = 'firstpro_backup_${DateTime.now().millisecondsSinceEpoch}.fpb';
       String? savePath;
       try {
         savePath = await FilePicker.platform.saveFile(
-          dialogTitle: 'اختر مجلد الحفظ للنسخة الاحتياطية',
+          dialogTitle: 'اختر مكان حفظ النسخة المحمولة',
           fileName: suggestedName,
           type: FileType.any,
         );
       } on PlatformException catch (e) {
-        if (kDebugMode) debugPrint('_onBackup: saveFile picker failed: $e');
-        // Fallback: save to app documents and share
+        if (kDebugMode) debugPrint('_onBackup picker failed: $e');
       }
-
-      if (savePath != null) {
-        // User selected a path → save directly
-        await dbFile.copy(savePath);
-      } else {
-        // User cancelled the save dialog OR saveFile unavailable
-        // Fallback to share method
+      if (savePath == null) {
         final dir = await getApplicationDocumentsDirectory();
-        final backupPath = p.join(dir.path, suggestedName);
-        await dbFile.copy(backupPath);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم الحفظ في المجلد الافتراضي - يمكنك مشاركته'),
-              backgroundColor: AppColors.info,
-            ),
-          );
-        }
+        savePath = p.join(dir.path, suggestedName);
       }
 
-      // Update last backup date
+      await PortableBackupService(locator<DatabaseHelper>()).createBackup(
+        password: password,
+        outputPath: savePath,
+      );
       final now = DateTime.now().toIso8601String();
       await widget.saveSetting('last_backup_date', now);
-      if (mounted) {
-        setState(() => _lastBackupDate = now);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إنشاء النسخة الاحتياطية بنجاح'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _lastBackupDate = now);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم إنشاء نسخة محمولة مشفرة بنجاح'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر إنشاء النسخة المحمولة'),
+          backgroundColor: AppColors.error,
+        ),
+      );
       if (kDebugMode) debugPrint('_onBackup error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ أثناء النسخ الاحتياطي: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
     }
   }
 
   // ════════════════════════════════════════════════════════════════
   //  RESTORE ACTION
   // ════════════════════════════════════════════════════════════════
+  Future<void> _restorePortableBackup(String backupFilePath) async {
+    final password = await _promptBackupPassword(confirm: false);
+    if (password == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('استعادة نسخة محمولة'),
+        content: const Text(
+          'سيتم استبدال البيانات الحالية بالنسخة المشفرة. لا يمكن التراجع عن ذلك.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('استعادة'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('جارٍ التحقق والاستعادة...'),
+            ],
+          ),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await PortableBackupService(locator<DatabaseHelper>()).restoreBackup(
+        inputPath: backupFilePath,
+        password: password,
+      );
+      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تمت الاستعادة'),
+          content: const Text(
+            'تمت استعادة القاعدة والمرفقات. سيُعاد تحميل البيانات عند إعادة فتح الشاشة.',
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('حسناً'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('فشل التحقق من النسخة المحمولة أو استعادتها'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      if (kDebugMode) debugPrint('_restorePortableBackup: $e');
+    }
+  }
 
   Future<void> _onRestore() async {
     // Show restore source options
@@ -299,7 +410,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
             ListTile(
               leading: const Icon(Icons.folder_open, color: AppColors.primary),
               title: const Text('اختيار ملف من الجهاز'),
-              subtitle: const Text('اختر ملف .db من تخزين الجهاز'),
+              subtitle: const Text('اختر ملف .fpb مشفراً أو ملف .db قديم'),
               onTap: () => Navigator.pop(ctx, 'file'),
             ),
             ListTile(
@@ -328,7 +439,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
       try {
         final result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
-          allowedExtensions: ['db'],
+          allowedExtensions: ['fpb', 'db'],
           dialogTitle: 'اختر ملف النسخة الاحتياطية',
         );
         if (result != null && result.files.single.path != null) {
@@ -352,6 +463,10 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
     }
 
     if (backupFilePath == null || !mounted) return;
+    if (p.extension(backupFilePath!).toLowerCase() == '.fpb') {
+      await _restorePortableBackup(backupFilePath!);
+      return;
+    }
 
     // Show warning dialog
     final confirmed = await showDialog<bool>(
@@ -695,6 +810,35 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
   //  CLEAR ALL DATA ACTION
   // ════════════════════════════════════════════════════════════════
 
+  Future<void> _clearAllData() async {
+    try {
+      await locator<DatabaseHelper>().clearAllData();
+      final documentsDir = await getApplicationDocumentsDirectory();
+      for (final directoryName in const ['attachments', 'auto_backups']) {
+        final directory = Directory(p.join(documentsDir.path, directoryName));
+        if (await directory.exists()) {
+          await directory.delete(recursive: true);
+        }
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم مسح جميع البيانات والمرفقات بنجاح'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر مسح البيانات بالكامل. لم يتم اعتماد العملية.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      if (kDebugMode) debugPrint('_clearAllData: $e');
+    }
+  }
+
   void _onClearAllData() {
     showDialog(
       context: context,
@@ -702,7 +846,7 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
         icon: const Icon(Icons.warning, color: AppColors.error, size: 48),
         title: const Text('مسح جميع البيانات'),
         content: const Text(
-          'هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.',
+          'سيتم حذف قاعدة البيانات والمرفقات والنسخ التلقائية نهائياً. لا يمكن التراجع عن هذا الإجراء.',
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -711,19 +855,12 @@ class _SettingsDataSectionState extends State<SettingsDataSection> {
             child: const Text('إلغاء'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('تم مسح جميع البيانات'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              _clearAllData();
             },
-            child: const Text('مسح'),
+            child: const Text('حذف نهائياً'),
           ),
         ],
       ),

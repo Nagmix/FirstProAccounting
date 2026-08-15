@@ -47,4 +47,20 @@ class DbEncryption {
       );
     }
   }
+
+  /// Replace the installation key only after a password-protected backup has
+  /// been authenticated and its database snapshot has passed validation.
+  static Future<void> setKey(String key) async {
+    if (key.length != 64 || !RegExp(r'^[0-9a-fA-F]+$').hasMatch(key)) {
+      throw const SecurityException('مفتاح قاعدة البيانات المستعاد غير صالح');
+    }
+    try {
+      await _secureStorage.write(key: _keyStorageKey, value: key);
+    } catch (e) {
+      debugPrint('DbEncryption.setKey: secure storage unavailable: $e');
+      throw const SecurityException(
+        'فشل حفظ مفتاح قاعدة البيانات المستعاد في مخزن المفاتيح الآمن.',
+      );
+    }
+  }
 }

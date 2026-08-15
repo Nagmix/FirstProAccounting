@@ -29,6 +29,12 @@ class StockService {
     final quantity = (transferMap['quantity'] as num).toDouble();
     final fromWarehouseId = transferMap['from_warehouse_id'] as int;
     final toWarehouseId = transferMap['to_warehouse_id'] as int;
+    if (quantity <= 0) {
+      throw ArgumentError.value(quantity, 'quantity', 'يجب أن تكون الكمية أكبر من صفر');
+    }
+    if (fromWarehouseId == toWarehouseId) {
+      throw ArgumentError('لا يمكن تحويل المخزون إلى نفس المستودع');
+    }
 
     return await db.transaction<int>((txn) async {
       final now = DateTime.now().toIso8601String();
@@ -39,7 +45,15 @@ class StockService {
       // جلب تكلفة المنتج المصدر — A-09: استخدام محرك التكلفة لـ FIFO/LIFO
       final sourceProductRow = await txn.query(
         'products',
-        columns: ['average_cost', 'costing_method', 'cost_price'],
+        columns: [
+          'average_cost',
+          'costing_method',
+          'cost_price',
+          'allow_negative',
+          'name_ar',
+          'item_code',
+          'barcode',
+        ],
         where: 'id = ?',
         whereArgs: [productId],
         limit: 1,
@@ -76,15 +90,24 @@ class StockService {
         whereArgs: [productId, fromWarehouseId],
         limit: 1,
       );
+      if (fromProducts.isEmpty) {
+        throw StateError('الصنف غير موجود في مستودع المصدر');
+      }
 
       if (fromProducts.isNotEmpty) {
         final currentStock =
             (fromProducts.first['current_stock'] as num?)?.toDouble() ?? 0.0;
+        final allowNegative =
+            (fromProducts.first['allow_negative'] as int?) == 1;
+        if (!allowNegative && quantity > currentStock + 0.005) {
+          throw StateError(
+            'الكمية المطلوبة تتجاوز مخزون المصدر: المتاح $currentStock، المطلوب $quantity',
+          );
+        }
         await txn.update(
           'products',
           {
-            'current_stock':
-                (currentStock - quantity).clamp(0.0, double.infinity),
+            'current_stock': currentStock - quantity,
             'updated_at': now,
           },
           where: 'id = ?',
@@ -113,13 +136,33 @@ class StockService {
       );
 
       if (sourceProduct.isNotEmpty) {
-        final productName = sourceProduct.first['name_ar'] as String;
-        final toProduct = await txn.query(
-          'products',
-          where: 'name_ar = ? AND warehouse_id = ?',
-          whereArgs: [productName, toWarehouseId],
-          limit: 1,
-        );
+        final source = sourceProduct.first;
+        final itemCode = source['item_code'] as String?;
+        final barcode = source['barcode'] as String?;
+        final productName = source['name_ar'] as String;
+        List<Map<String, dynamic>> toProduct;
+        if (itemCode != null && itemCode.isNotEmpty) {
+          toProduct = await txn.query(
+            'products',
+            where: 'item_code = ? AND warehouse_id = ?',
+            whereArgs: [itemCode, toWarehouseId],
+            limit: 1,
+          );
+        } else if (barcode != null && barcode.isNotEmpty) {
+          toProduct = await txn.query(
+            'products',
+            where: 'barcode = ? AND warehouse_id = ?',
+            whereArgs: [barcode, toWarehouseId],
+            limit: 1,
+          );
+        } else {
+          toProduct = await txn.query(
+            'products',
+            where: 'name_ar = ? AND warehouse_id = ?',
+            whereArgs: [productName, toWarehouseId],
+            limit: 1,
+          );
+        }
 
         if (toProduct.isNotEmpty) {
           final currentStock =
@@ -360,13 +403,31 @@ class StockService {
     // Check if fiscal period is closed before completing stocktaking
     final sessionRows = await db.query('stocktaking_sessions',
         where: 'id = ?', whereArgs: [sessionId], limit: 1);
-    if (sessionRows.isNotEmpty) {
-      final sessionDate = sessionRows.first['date'] as String? ??
-          DateTime.now().toIso8601String();
-      await _dbHelper.journal.checkFiscalPeriodOpen(sessionDate);
+    if (sessionRows.isEmpty) {
+      throw StateError('جلسة الجرد غير موجودة');
     }
+    final session = sessionRows.first;
+    final sessionStatus = session['status'] as String? ?? 'draft';
+    if (sessionStatus == 'completed') {
+      throw StateError('جلسة الجرد مكتملة مسبقاً ولا يمكن تطبيقها مرة أخرى');
+    }
+    final warehouseId = (session['warehouse_id'] as num?)?.toInt();
+    final sessionDate = session['date'] as String? ??
+        DateTime.now().toIso8601String();
+    await _dbHelper.journal.checkFiscalPeriodOpen(sessionDate);
 
     await db.transaction((txn) async {
+      final lockedSession = await txn.query(
+        'stocktaking_sessions',
+        columns: ['status'],
+        where: 'id = ?',
+        whereArgs: [sessionId],
+        limit: 1,
+      );
+      if (lockedSession.isEmpty ||
+          (lockedSession.first['status'] as String? ?? 'draft') == 'completed') {
+        throw StateError('جلسة الجرد أُغلقت أو أُكملت من عملية أخرى');
+      }
       // جلب عناصر الجرد
       final items = await txn.query(
         'stocktaking_items',
@@ -461,8 +522,9 @@ class StockService {
         final systemQuantity =
             (item['system_quantity'] as num?)?.toDouble() ?? 0.0;
         final actualQuantity = (item['actual_quantity'] as num).toDouble();
-        // ignore: unused_local_variable
-        final difference = (item['difference'] as num?)?.toDouble() ?? 0.0;
+        if (actualQuantity < 0) {
+          throw ArgumentError('الكمية الفعلية في الجرد لا يمكن أن تكون سالبة');
+        }
 
         // حساب الفرق (variance) بين الكمية بالنظام والكمية الفعلية
         final variance = actualQuantity - systemQuantity;
@@ -471,10 +533,22 @@ class StockService {
         // P-09: Also fetch product-specific inventory account
         final productRows = await txn.query(
           'products',
-          columns: ['current_stock', 'average_cost', 'inventory_account_id'],
-          where: 'id = ?',
-          whereArgs: [productId],
+          columns: [
+            'current_stock',
+            'average_cost',
+            'inventory_account_id',
+            'warehouse_id',
+          ],
+          where: warehouseId == null
+              ? 'id = ?'
+              : 'id = ? AND warehouse_id = ?',
+          whereArgs: warehouseId == null
+              ? [productId]
+              : [productId, warehouseId],
         );
+        if (productRows.isEmpty) {
+          throw StateError('الصنف لا ينتمي إلى مستودع جلسة الجرد');
+        }
         final oldStock = productRows.isNotEmpty
             ? (productRows.first['current_stock'] as num?)?.toDouble() ?? 0.0
             : 0.0;
@@ -623,8 +697,14 @@ class StockService {
         }
       }
 
-      // تحديث حالة الجرد إلى مكتمل
-      await txn.update(
+      if (mismatched > 0) {
+        await _dbHelper.journal.validateJournalBalanceInTransaction(
+          txn,
+          journalId,
+        );
+      }
+      // تحديث حالة الجرد إلى مكتمل مع شرط عدم إكماله من عملية أخرى.
+      final updated = await txn.update(
         'stocktaking_sessions',
         {
           'status': 'completed',
@@ -632,9 +712,12 @@ class StockService {
           'mismatched_items': mismatched,
           'total_items': items.length,
         },
-        where: 'id = ?',
-        whereArgs: [sessionId],
+        where: 'id = ? AND status != ?',
+        whereArgs: [sessionId, 'completed'],
       );
+      if (updated != 1) {
+        throw StateError('تعذر اعتماد جلسة الجرد؛ ربما أُكملت مسبقاً');
+      }
     });
   }
 

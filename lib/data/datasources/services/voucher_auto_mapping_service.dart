@@ -447,6 +447,12 @@ class VoucherAutoMappingService {
     required String date,
     String? description,
   }) async {
+    if (amount <= 0) {
+      throw ArgumentError.value(amount, 'amount', 'يجب أن يكون مبلغ السند أكبر من صفر');
+    }
+    if (voucherType != 'receipt' && voucherType != 'payment') {
+      throw ArgumentError.value(voucherType, 'voucherType', 'نوع سند غير مدعوم');
+    }
     // التحقق من قفل الفترة المحاسبية
     await _dbHelper.journal.checkFiscalPeriodOpen(date);
 
@@ -589,7 +595,11 @@ class VoucherAutoMappingService {
 
       // تحديث رصيد الكيان
       await _updateEntityBalance(
-          txn, entityType, entityId, amount, voucherType, now);
+        txn, entityType, entityId, amount, voucherType, now);
+      await _dbHelper.journal.validateJournalBalanceInTransaction(
+        txn,
+        journalId,
+      );
     });
 
     return voucherId;
@@ -618,6 +628,9 @@ class VoucherAutoMappingService {
     required String date,
     String? description,
   }) async {
+    if (fromAmount <= 0 || toAmount <= 0) {
+      throw ArgumentError('يجب أن يكون طرفا القيد العام أكبر من صفر');
+    }
     // M-04: Validate that fromAmount == toAmount when currencies are the same
     if (fromCurrency == toCurrency && (fromAmount - toAmount).abs() >= 0.005) {
       throw Exception(
@@ -786,6 +799,17 @@ class VoucherAutoMappingService {
         toCurrency,
         now,
       );
+      if (fromCurrency == toCurrency) {
+        await _dbHelper.journal.validateJournalBalanceInTransaction(
+          txn,
+          journalId,
+        );
+      } else {
+        await _dbHelper.journal.validateJournalBaseBalanceInTransaction(
+          txn,
+          journalId,
+        );
+      }
     });
 
     return voucherId;

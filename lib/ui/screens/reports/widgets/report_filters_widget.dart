@@ -312,69 +312,68 @@ class _EntityFiltersRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
-    final theme = Theme.of(context);
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (needsCurrencyFilter(selectedReportKey))
-          SizedBox(
-              width: 100,
-              child: _CurrencyDropdown(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final wideFieldWidth = compact
+            ? (constraints.maxWidth - 8) / 2
+            : 180.0;
+        final narrowFieldWidth = compact
+            ? (constraints.maxWidth - 8) / 2
+            : 140.0;
+
+        Widget field(double width, Widget child) => SizedBox(
+              width: width > constraints.maxWidth ? constraints.maxWidth : width,
+              child: child,
+            );
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (needsCurrencyFilter(selectedReportKey))
+              field(100, _CurrencyDropdown(
                 value: selectedCurrency,
                 onChanged: onCurrencyChanged,
               )),
-        if (needsAccountFilter(selectedReportKey))
-          SizedBox(
-              width: 180,
-              child: _AccountDropdown(
+            if (needsAccountFilter(selectedReportKey))
+              field(wideFieldWidth, _AccountDropdown(
                 value: selectedAccountId,
                 onChanged: onAccountChanged,
               )),
-        if (needsCustomerFilter(selectedReportKey))
-          SizedBox(
-              width: 180,
-              child: _CustomerDropdown(
+            if (needsCustomerFilter(selectedReportKey))
+              field(wideFieldWidth, _CustomerDropdown(
                 value: selectedCustomerId,
                 onChanged: onCustomerChanged,
               )),
-        if (needsSupplierFilter(selectedReportKey))
-          SizedBox(
-              width: 180,
-              child: _SupplierDropdown(
+            if (needsSupplierFilter(selectedReportKey))
+              field(wideFieldWidth, _SupplierDropdown(
                 value: selectedSupplierId,
                 onChanged: onSupplierChanged,
               )),
-        if (needsCashBoxFilter(selectedReportKey))
-          SizedBox(
-              width: 180,
-              child: _CashBoxDropdown(
+            if (needsCashBoxFilter(selectedReportKey))
+              field(wideFieldWidth, _CashBoxDropdown(
                 value: selectedCashBoxId,
                 onChanged: onCashBoxChanged,
               )),
-        if (needsWarehouseFilter(selectedReportKey))
-          SizedBox(
-              width: 140,
-              child: _WarehouseDropdown(
+            if (needsWarehouseFilter(selectedReportKey))
+              field(narrowFieldWidth, _WarehouseDropdown(
                 value: selectedWarehouseId,
                 onChanged: onWarehouseChanged,
               )),
-        if (needsCategoryFilter(selectedReportKey))
-          SizedBox(
-              width: 140,
-              child: _CategoryDropdown(
+            if (needsCategoryFilter(selectedReportKey))
+              field(narrowFieldWidth, _CategoryDropdown(
                 value: selectedCategoryId,
                 onChanged: onCategoryChanged,
               )),
-        if (needsAccountTypeFilter(selectedReportKey))
-          SizedBox(
-              width: 140,
-              child: _AccountTypeDropdown(
+            if (needsAccountTypeFilter(selectedReportKey))
+              field(narrowFieldWidth, _AccountTypeDropdown(
                 value: selectedAccountType,
                 onChanged: onAccountTypeChanged,
               )),
-      ],
+          ],
+        );
+      },
     );
   }
 }

@@ -1545,9 +1545,11 @@ class CashBoxService {
       final voucherCurrency = (voucherData['currency'] as String?) ?? 'YER';
       final voucherRate = await _getExchangeRate(txn, voucherCurrency);
 
-      // جلب بنود السند وعكس القيود
+      // جلب بنود السند وعكس القيود في Journal واحد حتى يبقى العكس
+      // متوازناً وقابلاً للتدقيق كسند مستقل.
       final items = await txn.query('voucher_items',
           where: 'voucher_id = ?', whereArgs: [voucherId]);
+      final reversalJournalId = generateUniqueJournalId();
       for (final item in items) {
         final accountId = (item['account_id'] as num?)?.toInt();
         final debit = MoneyHelper.readMoney(item['debit']);
@@ -1557,7 +1559,7 @@ class CashBoxService {
           final reversalAmount = credit > 0 ? credit : debit;
           await txn.insert('transactions', {
             'account_id': accountId,
-            'journal_id': generateUniqueJournalId(),
+            'journal_id': reversalJournalId,
             'debit': MoneyHelper.toCents(credit),
             'credit': MoneyHelper.toCents(debit),
             'description': 'عكس سند $voucherNumber',
@@ -1577,7 +1579,12 @@ class CashBoxService {
         }
       }
 
-      // عكس تأثير الصندوق (مع مراعاة balance_type)
+      await _dbHelper.journal.validateJournalBalanceInTransaction(
+        txn,
+        reversalJournalId,
+      );
+
+      // عكس تأثير الصندوق مع الحفاظ على تمثيل الرصيد signed balance.
       if (cashBoxId != null) {
         final cashBox = await txn.query('cash_boxes',
             where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
@@ -1586,22 +1593,21 @@ class CashBoxService {
               MoneyHelper.readMoney(cashBox.first['balance']);
           final cashBoxBalanceType =
               cashBox.first['balance_type'] as String? ?? 'credit';
-          // عكس: قبض (كان أدخل) → نخرج | صرف (كان أخرج) → ندخل
-          final isReverseCashOut = voucherType == 'receipt';
-          double newCashBalance;
-          if (cashBoxBalanceType == 'credit') {
-            newCashBalance = isReverseCashOut
-                ? currentBalance - totalAmount
-                : currentBalance + totalAmount;
-          } else {
-            newCashBalance = isReverseCashOut
-                ? currentBalance + totalAmount
-                : currentBalance - totalAmount;
-          }
+          // عكس: قبض (كان أدخل) → نخرج | صرف (كان أخرج) → ندخل.
+          final signedBalance = cashBoxBalanceType == 'credit'
+              ? currentBalance
+              : -currentBalance;
+          final isCashIn = voucherType == 'receipt';
+          final reversedSignedBalance =
+              signedBalance + (isCashIn ? -totalAmount : totalAmount);
+          final newCashBalance = reversedSignedBalance.abs();
+          final newBalanceType =
+              reversedSignedBalance >= 0 ? 'credit' : 'debit';
           await txn.update(
               'cash_boxes',
               {
                 'balance': MoneyHelper.toCents(newCashBalance),
+                'balance_type': newBalanceType,
                 'updated_at': now
               },
               where: 'id = ?',

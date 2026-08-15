@@ -62,7 +62,7 @@ class CostingEngineService {
 
     // Get product's costing method
     final productRow = await db.query('products',
-        columns: ['costing_method', 'average_cost', 'cost_price'],
+        columns: ['costing_method', 'average_cost', 'cost_price', 'warehouse_id'],
         where: 'id = ?',
         whereArgs: [productId],
         limit: 1);
@@ -86,10 +86,17 @@ class CostingEngineService {
         ? 'acquisition_date ASC, id ASC'
         : 'acquisition_date DESC, id DESC';
 
+    final effectiveWarehouseId = warehouseId ??
+        (productRow.first['warehouse_id'] as num?)?.toInt();
+    final layerWhere = effectiveWarehouseId == null
+        ? 'product_id = ? AND warehouse_id IS NULL AND is_fully_consumed = 0 AND quantity_remaining > 0'
+        : 'product_id = ? AND warehouse_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0';
+    final layerArgs = effectiveWarehouseId == null
+        ? [productId]
+        : [productId, effectiveWarehouseId];
     final layers = await db.query('inventory_cost_layers',
-        where:
-            'product_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
-        whereArgs: [productId],
+        where: layerWhere,
+        whereArgs: layerArgs,
         orderBy: orderBy);
 
     if (layers.isEmpty) {
@@ -160,11 +167,12 @@ class CostingEngineService {
       {required int productId,
       required double baseQuantity,
       required String invoiceId,
-      required int codeOffset}) async {
+      required int codeOffset,
+      int? warehouseId}) async {
     if (baseQuantity <= 0.001) return 0.0;
     // Get product's costing method
     final productRow = await txn.query('products',
-        columns: ['costing_method', 'average_cost', 'cost_price'],
+        columns: ['costing_method', 'average_cost', 'cost_price', 'warehouse_id'],
         where: 'id = ?',
         whereArgs: [productId],
         limit: 1);
@@ -187,10 +195,17 @@ class CostingEngineService {
         ? 'acquisition_date ASC, id ASC'
         : 'acquisition_date DESC, id DESC';
 
+    final effectiveWarehouseId = warehouseId ??
+        (productRow.first['warehouse_id'] as num?)?.toInt();
+    final layerWhere = effectiveWarehouseId == null
+        ? 'product_id = ? AND warehouse_id IS NULL AND is_fully_consumed = 0 AND quantity_remaining > 0'
+        : 'product_id = ? AND warehouse_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0';
+    final layerArgs = effectiveWarehouseId == null
+        ? [productId]
+        : [productId, effectiveWarehouseId];
     final layers = await txn.query('inventory_cost_layers',
-        where:
-            'product_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
-        whereArgs: [productId],
+        where: layerWhere,
+        whereArgs: layerArgs,
         orderBy: orderBy);
 
     if (layers.isEmpty) {

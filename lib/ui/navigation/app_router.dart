@@ -78,14 +78,15 @@ class AppRouter {
         // UI-07: route "new sale invoice" to the creation form, not the list.
         AppConstants.newSaleInvoice: (_) => const CreateInvoiceScreen(
             invoiceType: AppConstants.saleInvoice),
-        AppConstants.newPurchaseInvoice: (_) => const PurchaseInvoicesScreen(),
+        AppConstants.newPurchaseInvoice: (_) => const CreateInvoiceScreen(
+            invoiceType: AppConstants.purchaseInvoice),
         AppConstants.salesInvoices: (_) => const SalesInvoicesScreen(),
         AppConstants.purchaseInvoices: (_) => const PurchaseInvoicesScreen(),
         AppConstants.addCustomer: (_) => const AddCustomerSheet(),
         AppConstants.addProduct: (_) => const AddProductSheet(),
         AppConstants.inventory: (_) => const ProductsScreen(),
         AppConstants.statistics: (_) => const StatisticsScreen(),
-        AppConstants.dailySalesReport: (_) => const ReportsScreen(),
+        AppConstants.dailySalesReport: (_) => const DailyOperationsScreen(),
         AppConstants.delegates: (_) => const EmployeesScreen(),
         AppConstants.customerImport: (_) => const CustomersScreen(),
         AppConstants.customerLoad: (_) => const CustomersScreen(),

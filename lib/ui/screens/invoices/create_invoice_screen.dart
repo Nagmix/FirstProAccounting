@@ -547,7 +547,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 400,
+            height: MediaQuery.sizeOf(context).height * 0.55,
             child: nonReturnInvoices.isEmpty
                 ? Center(
                     child: Column(
@@ -740,6 +740,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ── Save invoice ─────────────────────────────────────────────────
   Future<void> _saveInvoice() async {
+    if (widget.existingInvoice != null) {
+      context.showErrorSnackBar(
+        'تعديل الفاتورة غير متاح بعد الترحيل. استخدم الإلغاء ثم أنشئ فاتورة تصحيحية.',
+      );
+      return;
+    }
     // Sync controllers to VM before validation
     _syncControllersToVm();
 
