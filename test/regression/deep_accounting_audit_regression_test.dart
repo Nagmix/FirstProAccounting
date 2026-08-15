@@ -19,7 +19,7 @@ void main() {
       expect(source, contains("productRow.isEmpty"),
           reason:
               'A sale line must fail atomically when its product no longer exists.');
-      expect(source, contains('allowNegative'),
+      expect(source, contains('allowNeg'),
           reason: 'The sale guard must respect the explicit negative-stock policy.');
       expect(source, contains('quantity > currentStock'),
           reason:
@@ -79,7 +79,7 @@ void main() {
 
       expect(source, contains('reverseCOGSAllocationsInTransaction'),
           reason: 'Returns must reverse the original cost allocations.');
-      expect(source, contains('quantityToReverse'),
+      expect(source, contains('qtyToRestore'),
           reason: 'Partial returns must cap the quantity reversed per allocation.');
       expect(source, contains('fallback'),
           reason:
