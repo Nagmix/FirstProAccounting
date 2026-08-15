@@ -60,14 +60,21 @@ class PortableBackupService {
         }
       }
 
-      final zipBytes = Uint8List.fromList(ZipEncoder().encode(archive));
+      final encodedZip = ZipEncoder().encode(archive);
+      if (encodedZip == null) {
+        throw StateError('تعذر ضغط قاعدة البيانات والمرفقات');
+      }
+      final zipBytes = Uint8List.fromList(encodedZip);
       final salt = _randomBytes(_saltLength);
       final iv = _randomBytes(_ivLength);
       final aesKey = _deriveKey(password, salt);
       final encrypter = encrypt.Encrypter(
         encrypt.AES(encrypt.Key(aesKey), mode: encrypt.AESMode.cbc),
       );
-      final encrypted = encrypter.encryptBytes(zipBytes, iv: encrypt.IV(iv));
+      final encrypted = encrypter.encryptBytes(
+        zipBytes,
+        iv: encrypt.IV(Uint8List.fromList(iv)),
+      );
       final payload = Uint8List.fromList(encrypted.bytes);
       final header = Uint8List.fromList([
         ...utf8.encode(_magic),
