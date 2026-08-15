@@ -762,62 +762,48 @@ class SupplierRepository {
   //  MoneyHelper.readMoney / readCalculatedMoney.
   // ══════════════════════════════════════════════════════════════
 
-  /// جلب رصيد المورد بعملة معينة — get supplier balance for a specific currency.
-  /// Combines opening balance, invoices, and vouchers for the given currency.
+  /// Calculate a supplier's signed payable balance from the posted ledger.
+  /// Positive means credit (we owe the supplier); negative means debit.
+  /// Source documents are joined only to identify the entity and cancellation
+  /// state; the monetary amount always comes from `transactions`.
   Future<double> getSupplierBalanceForCurrency(
       int supplierId, String currency) async {
     final db = await _db;
-    double balance = 0.0;
-
-    // 1. Opening balance
-    final obByRef = await db.rawQuery('''
+    final rows = await db.rawQuery('''
       SELECT COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS net
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
-      WHERE t.reference_type = 'opening_balance'
-        AND t.reference_id = ?
-        AND a.account_code LIKE '21%'
+      WHERE a.account_code LIKE '21%'
         AND a.currency = ?
-    ''', ['supplier_$supplierId', currency]);
-    balance += MoneyHelper.readCalculatedMoney(obByRef.first['net']);
-
-    // 2. Invoices
-    final invoices = await db.rawQuery('''
-      SELECT type, is_return, total FROM invoices
-      WHERE supplier_id = ? AND currency = ?
-    ''', [supplierId, currency]);
-    for (final inv in invoices) {
-      final type = inv['type'] as String? ?? 'purchase';
-      final isReturn = (inv['is_return'] as int? ?? 0) == 1;
-      final total = MoneyHelper.readMoney(inv['total']);
-      if (type == 'purchase' && !isReturn) {
-        balance += total; // Purchase = credit (له)
-      } else if (type == 'purchase' && isReturn) {
-        balance -= total; // Purchase return = debit (عليه)
-      } else if (type == 'sale' && !isReturn) {
-        balance -= total; // Sale = debit (عليه)
-      } else if (type == 'sale' && isReturn) {
-        balance += total; // Sale return = credit (له)
-      }
-    }
-
-    // 3. Vouchers — use voucher_items joined with the supplier's
-    //    payable account (code 21xx) to determine the actual
-    //    debit/credit effect regardless of voucher type.
-    //    This correctly handles settlement, compound, and transfer
-    //    vouchers where the supplier account may be on either side.
-    final voucherNet = await db.rawQuery('''
-      SELECT COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS net
-      FROM vouchers v
-      INNER JOIN voucher_items vi ON v.id = vi.voucher_id
-      INNER JOIN accounts a ON vi.account_id = a.id
-      WHERE v.supplier_id = ?
-        AND v.currency = ?
-        AND a.account_code LIKE '21%'
-    ''', [supplierId, currency]);
-    balance += MoneyHelper.readCalculatedMoney(voucherNet.first['net']);
-
-    return balance;
+        AND t.currency_code = ?
+        AND (
+          (t.reference_type IN ('opening_balance', 'opening_balance_reversal')
+           AND t.reference_id = ?)
+          OR EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE CAST(i.id AS TEXT) = t.reference_id
+              AND i.supplier_id = ?
+              AND i.currency = ?
+              AND i.status != 'cancelled'
+          )
+          OR EXISTS (
+            SELECT 1 FROM vouchers v
+            WHERE t.reference_id = 'voucher_' || CAST(v.id AS TEXT)
+              AND v.supplier_id = ?
+              AND v.currency = ?
+              AND v.is_posted = 1
+          )
+        )
+    ''', [
+      currency,
+      currency,
+      'supplier_$supplierId',
+      supplierId,
+      currency,
+      supplierId,
+      currency,
+    ]);
+    return MoneyHelper.readCalculatedMoney(rows.first['net']);
   }
 
   /// جلب حسابات الموردين لجميع العملات — find supplier payable accounts

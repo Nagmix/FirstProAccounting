@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/supplier_repository.dart';
 import 'package:firstpro/data/models/supplier_model.dart';
+import 'package:firstpro/core/utils/excel_exporter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/ui/screens/shared/entities_screen.dart';
 import 'package:firstpro/ui/screens/suppliers/add_supplier_sheet.dart';
 import 'package:firstpro/ui/screens/suppliers/supplier_detail_screen.dart';
@@ -43,6 +45,23 @@ class SuppliersScreen extends StatelessWidget {
       idOf: (s) => s.id,
       nameOf: (s) => s.name,
       phoneOf: (s) => s.phone,
+      exportEntities: () async {
+        final rows = await locator<SupplierRepository>().getAllSuppliers();
+        await ExcelExporter.exportGenericReport(
+          reportName: 'الموردون',
+          rows: rows
+              .map((row) => {
+                    'الاسم': row['name'] ?? '',
+                    'الهاتف': row['phone'] ?? '',
+                    'العنوان': row['address'] ?? '',
+                    'الرصيد': MoneyHelper.readMoney(row['balance']),
+                    'نوع الرصيد': row['balance_type'] ?? '',
+                    'العملة': row['currency'] ?? 'YER',
+                  })
+              .toList(),
+          totals: const {},
+        );
+      },
       // UI-10: supplier card shows chat icon for WhatsApp contacts
       cardPhoneIconBuilder: (s) =>
           s.contactMethod == 'whatsapp' ? Icons.chat : Icons.phone_in_talk,

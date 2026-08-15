@@ -72,6 +72,74 @@ void main() {
           reason: 'Legacy products without a warehouse must still be scoped safely.');
     });
 
+    test('customer and supplier balances derive amounts from the posted ledger', () {
+      final customerSource = readLib(
+        'lib/data/datasources/repositories/customer_repository.dart',
+      );
+      final supplierSource = readLib(
+        'lib/data/datasources/repositories/supplier_repository.dart',
+      );
+
+      expect(customerSource, contains('SUM(t.credit)'));
+      expect(customerSource, contains("FROM transactions t"));
+      expect(customerSource, contains("i.status != 'cancelled'"));
+      expect(customerSource, contains("t.reference_id = 'voucher_'"));
+      expect(supplierSource, contains('SUM(t.credit)'));
+      expect(supplierSource, contains("FROM transactions t"));
+      expect(supplierSource, contains("i.status != 'cancelled'"));
+      expect(supplierSource, contains("t.reference_id = 'voucher_'"));
+    });
+
+    test('aggregated debt reports use ledger transactions for both entities', () {
+      final source = readLib(
+        'lib/data/datasources/services/report_service.dart',
+      );
+      expect(source, contains('Customer receivables derived from posted ledger transactions'));
+      expect(source, contains('Supplier payables derived from posted ledger transactions'));
+      expect(source, contains('FROM customers c'));
+      expect(source, contains('FROM suppliers s'));
+      expect(source, contains('INNER JOIN transactions t'));
+      expect(source, contains("i.status != 'cancelled'"));
+      expect(source, contains("v.is_posted = 1"));
+      expect(source, contains('getCustomerStatementReport'));
+      expect(source, contains('Shared receivable accounts are safe here'));
+      expect(source, contains('t.currency_code = ?'));
+    });
+
+    test('customer list chart ranks computed ledger balances, not stored balance columns', () {
+      final source = readLib(
+        'lib/data/datasources/repositories/customer_repository.dart',
+      );
+      expect(source, contains('getCustomerBalanceForCurrency(id, currency)'));
+      expect(source, contains('ranked.sort'));
+      expect(source, contains('MoneyHelper.toCents(signedBalance.abs())'));
+    });
+
+    test('posted invoice editing remains blocked safely', () {
+      final source = readLib(
+        'lib/ui/screens/invoices/create_invoice_screen.dart',
+      );
+      expect(source, contains('widget.existingInvoice != null'));
+      expect(source, contains('تعديل الفاتورة غير متاح بعد الترحيل'));
+      expect(source, contains('الإلغاء ثم أنشئ فاتورة تصحيحية'));
+    });
+
+    test('customer and supplier lists expose local export actions', () {
+      final sharedSource = readLib(
+        'lib/ui/screens/shared/entities_screen.dart',
+      );
+      final customerSource = readLib(
+        'lib/ui/screens/customers/customers_screen.dart',
+      );
+      final supplierSource = readLib(
+        'lib/ui/screens/suppliers/suppliers_screen.dart',
+      );
+      expect(sharedSource, contains('exportEntities'));
+      expect(sharedSource, contains('file_download_outlined'));
+      expect(customerSource, contains('ExcelExporter.exportGenericReport'));
+      expect(supplierSource, contains('ExcelExporter.exportGenericReport'));
+    });
+
     test('FIFO/LIFO return and fallback paths preserve auditable allocations', () {
       final source = readLib(
         'lib/data/datasources/services/costing_engine_service.dart',

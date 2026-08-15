@@ -436,7 +436,7 @@ class ReportService {
 
     // 3. Voucher transactions linked by voucher → supplier_id
     conditions.add(
-        '(t.reference_type IN (?, ?, ?, ?) AND t.reference_id IN (SELECT ?||v.id FROM vouchers v WHERE v.supplier_id = ?))');
+        '(t.reference_type IN (?, ?, ?, ?) AND t.reference_id IN (SELECT ?||v.id FROM vouchers v WHERE v.supplier_id = ? AND v.is_posted = 1))');
     args.addAll([
       'receipt',
       'payment',
@@ -462,6 +462,7 @@ class ReportService {
         SELECT 1 FROM invoices i
         WHERE i.supplier_id = ?
           AND i.currency = ?
+          AND i.status != 'cancelled'
           AND t.reference_id = i.id
       )
     )''');
@@ -480,206 +481,106 @@ class ReportService {
       WHERE (${conditions.join(' OR ')})
         AND a.account_code LIKE '21%'
         AND a.currency = ?
+        AND t.currency_code = ?
         $df
       ORDER BY t.date ASC, t.created_at ASC
-    ''', [...args, supplierCurrency]);
+    ''', [...args, supplierCurrency, supplierCurrency]);
   }
 
   // ── 6. Customer Balances ──────────────────────────────────────
 
-  /// ديون العملاء — returns all customers with positive balances.
-  /// Values are raw DB integers (cents).
-  ///
-  /// OPTIMIZED: Replaced N+1 per-customer getCustomerBalanceForCurrency()
-  /// calls with a single SQL query using subqueries for opening balance,
-  /// invoices, and voucher items, aggregated per customer.
-  Future<List<Map<String, dynamic>>> getCustomerBalancesReport(
-      {String? currency}) async {
+  /// Customer receivables derived from posted ledger transactions.
+  /// The invoice/voucher tables are used only to resolve the entity and
+  /// cancellation/posting state; all debit/credit amounts come from `transactions`.
+  Future<List<Map<String, dynamic>>> getCustomerBalancesReport({
+    String? currency,
+  }) async {
     final db = await _db;
-    // When a specific currency is requested, compute the per-currency
-    // balance using a single SQL query with JOIN + GROUP BY instead of
-    // iterating all customers and calling getCustomerBalanceForCurrency().
-    if (currency != null && currency.isNotEmpty) {
-      try {
-        return await db.rawQuery('''
-          SELECT c.name, c.phone, c.debt_ceiling, ? AS currency,
-            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) AS balance,
-            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) >= 0
-                 THEN 'credit' ELSE 'debit' END AS balance_type
-          FROM customers c
-          LEFT JOIN (
-            SELECT t.reference_id,
-              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
-            FROM transactions t
-            INNER JOIN accounts a ON t.account_id = a.id
-            WHERE t.reference_type = 'opening_balance'
-              AND a.account_code LIKE '12%'
-              AND a.currency = ?
-            GROUP BY t.reference_id
-          ) ob ON ob.reference_id = 'customer_' || c.id
-          LEFT JOIN (
-            SELECT customer_id,
-              CAST(SUM(CASE
-                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
-                WHEN type IN ('sale','pos') AND is_return=1 THEN total
-                WHEN type='purchase' AND is_return=0 THEN total
-                WHEN type='purchase' AND is_return=1 THEN -total
-                ELSE 0
-              END) AS INTEGER) AS net
-            FROM invoices
-            WHERE customer_id IS NOT NULL AND currency = ?
-            GROUP BY customer_id
-          ) inv ON inv.customer_id = c.id
-          LEFT JOIN (
-            SELECT v.customer_id,
-              CAST(COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS INTEGER) AS net
-            FROM vouchers v
-            INNER JOIN voucher_items vi ON v.id = vi.voucher_id
-            INNER JOIN accounts a ON vi.account_id = a.id
-            WHERE v.currency = ?
-              AND a.account_code LIKE '12%'
-            GROUP BY v.customer_id
-          ) vch ON vch.customer_id = c.id
-          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0) != 0
-        ''', [currency, currency, currency, currency]);
-      } catch (_) {
-        // Fallback: voucher_items table may not exist in older DBs
-        return await db.rawQuery('''
-          SELECT c.name, c.phone, c.debt_ceiling, ? AS currency,
-            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) AS balance,
-            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) >= 0
-                 THEN 'credit' ELSE 'debit' END AS balance_type
-          FROM customers c
-          LEFT JOIN (
-            SELECT t.reference_id,
-              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
-            FROM transactions t
-            INNER JOIN accounts a ON t.account_id = a.id
-            WHERE t.reference_type = 'opening_balance'
-              AND a.account_code LIKE '12%'
-              AND a.currency = ?
-            GROUP BY t.reference_id
-          ) ob ON ob.reference_id = 'customer_' || c.id
-          LEFT JOIN (
-            SELECT customer_id,
-              CAST(SUM(CASE
-                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
-                WHEN type IN ('sale','pos') AND is_return=1 THEN total
-                WHEN type='purchase' AND is_return=0 THEN total
-                WHEN type='purchase' AND is_return=1 THEN -total
-                ELSE 0
-              END) AS INTEGER) AS net
-            FROM invoices
-            WHERE customer_id IS NOT NULL AND currency = ?
-            GROUP BY customer_id
-          ) inv ON inv.customer_id = c.id
-          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) != 0
-        ''', [currency, currency, currency]);
-      }
-    }
-    // No currency filter — query directly from DB with WHERE instead of
-    // loading all customers and filtering in Dart.
-    return await db.rawQuery(
-      "SELECT name, balance, balance_type, currency, phone, debt_ceiling "
-      "FROM customers WHERE CAST(balance AS INTEGER) != 0",
-    );
+    final currencyFilter = currency != null && currency.isNotEmpty
+        ? ' AND a.currency = ? AND t.currency_code = ?'
+        : '';
+    final currencyArgs = currency != null && currency.isNotEmpty
+        ? [currency, currency]
+        : <dynamic>[];
+    final rows = await db.rawQuery('''
+      SELECT c.name, c.phone, c.debt_ceiling, a.currency,
+        CAST(SUM(t.credit) - SUM(t.debit) AS INTEGER) AS signed_balance,
+        ABS(CAST(SUM(t.credit) - SUM(t.debit) AS INTEGER)) AS balance,
+        CASE WHEN SUM(t.credit) - SUM(t.debit) >= 0
+             THEN 'credit' ELSE 'debit' END AS balance_type
+      FROM customers c
+      INNER JOIN transactions t ON (
+        (t.reference_type IN ('opening_balance', 'opening_balance_reversal')
+         AND t.reference_id = 'customer_' || CAST(c.id AS TEXT))
+        OR EXISTS (
+          SELECT 1 FROM invoices i
+          WHERE CAST(i.id AS TEXT) = t.reference_id
+            AND i.customer_id = c.id
+            AND i.status != 'cancelled'
+        )
+        OR EXISTS (
+          SELECT 1 FROM vouchers v
+          WHERE t.reference_id = 'voucher_' || CAST(v.id AS TEXT)
+            AND v.customer_id = c.id
+            AND v.is_posted = 1
+        )
+      )
+      INNER JOIN accounts a ON a.id = t.account_id
+      WHERE a.account_code LIKE '12%'
+        $currencyFilter
+      GROUP BY c.id, a.currency
+      HAVING SUM(t.credit) - SUM(t.debit) != 0
+      ORDER BY ABS(SUM(t.credit) - SUM(t.debit)) DESC, c.name ASC
+    ''', currencyArgs);
+    return rows;
   }
 
   // ── 7. Supplier Balances ──────────────────────────────────────
 
-  /// ديون الموردين — returns all suppliers with positive balances.
-  /// Values are raw DB integers (cents).
-  ///
-  /// OPTIMIZED: Replaced N+1 per-supplier getSupplierBalanceForCurrency()
-  /// calls with a single SQL query using subqueries for opening balance,
-  /// invoices, and voucher items, aggregated per supplier.
-  Future<List<Map<String, dynamic>>> getSupplierBalancesReport(
-      {String? currency}) async {
+  /// Supplier payables derived from posted ledger transactions.
+  /// The invoice/voucher tables are used only to resolve the entity and
+  /// cancellation/posting state; all debit/credit amounts come from `transactions`.
+  Future<List<Map<String, dynamic>>> getSupplierBalancesReport({
+    String? currency,
+  }) async {
     final db = await _db;
-    if (currency != null && currency.isNotEmpty) {
-      try {
-        return await db.rawQuery('''
-          SELECT s.name, s.phone, s.debt_ceiling, ? AS currency,
-            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) AS balance,
-            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0)) >= 0
-                 THEN 'credit' ELSE 'debit' END AS balance_type
-          FROM suppliers s
-          LEFT JOIN (
-            SELECT t.reference_id,
-              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
-            FROM transactions t
-            INNER JOIN accounts a ON t.account_id = a.id
-            WHERE t.reference_type = 'opening_balance'
-              AND a.account_code LIKE '21%'
-              AND a.currency = ?
-            GROUP BY t.reference_id
-          ) ob ON ob.reference_id = 'supplier_' || s.id
-          LEFT JOIN (
-            SELECT supplier_id,
-              CAST(SUM(CASE
-                WHEN type='purchase' AND is_return=0 THEN total
-                WHEN type='purchase' AND is_return=1 THEN -total
-                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
-                WHEN type IN ('sale','pos') AND is_return=1 THEN total
-                ELSE 0
-              END) AS INTEGER) AS net
-            FROM invoices
-            WHERE supplier_id IS NOT NULL AND currency = ?
-            GROUP BY supplier_id
-          ) inv ON inv.supplier_id = s.id
-          LEFT JOIN (
-            SELECT v.supplier_id,
-              CAST(COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS INTEGER) AS net
-            FROM vouchers v
-            INNER JOIN voucher_items vi ON v.id = vi.voucher_id
-            INNER JOIN accounts a ON vi.account_id = a.id
-            WHERE v.currency = ?
-                AND a.account_code LIKE '21%'
-            GROUP BY v.supplier_id
-          ) vch ON vch.supplier_id = s.id
-          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) + COALESCE(vch.net, 0) != 0
-        ''', [currency, currency, currency, currency]);
-      } catch (_) {
-        // Fallback: voucher_items table may not exist in older DBs
-        return await db.rawQuery('''
-          SELECT s.name, s.phone, s.debt_ceiling, ? AS currency,
-            ABS(COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) AS balance,
-            CASE WHEN (COALESCE(ob.net, 0) + COALESCE(inv.net, 0)) >= 0
-                 THEN 'credit' ELSE 'debit' END AS balance_type
-          FROM suppliers s
-          LEFT JOIN (
-            SELECT t.reference_id,
-              CAST(COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS INTEGER) AS net
-            FROM transactions t
-            INNER JOIN accounts a ON t.account_id = a.id
-            WHERE t.reference_type = 'opening_balance'
-              AND a.account_code LIKE '21%'
-              AND a.currency = ?
-            GROUP BY t.reference_id
-          ) ob ON ob.reference_id = 'supplier_' || s.id
-          LEFT JOIN (
-            SELECT supplier_id,
-              CAST(SUM(CASE
-                WHEN type='purchase' AND is_return=0 THEN total
-                WHEN type='purchase' AND is_return=1 THEN -total
-                WHEN type IN ('sale','pos') AND is_return=0 THEN -total
-                WHEN type IN ('sale','pos') AND is_return=1 THEN total
-                ELSE 0
-              END) AS INTEGER) AS net
-            FROM invoices
-            WHERE supplier_id IS NOT NULL AND currency = ?
-            GROUP BY supplier_id
-          ) inv ON inv.supplier_id = s.id
-          WHERE COALESCE(ob.net, 0) + COALESCE(inv.net, 0) != 0
-        ''', [currency, currency, currency]);
-      }
-    }
-    // No currency filter — query directly from DB with WHERE instead of
-    // loading all suppliers and filtering in Dart.
-    return await db.rawQuery(
-      "SELECT name, balance, balance_type, currency, phone, debt_ceiling "
-      "FROM suppliers WHERE CAST(balance AS INTEGER) != 0",
-    );
+    final currencyFilter = currency != null && currency.isNotEmpty
+        ? ' AND a.currency = ? AND t.currency_code = ?'
+        : '';
+    final currencyArgs = currency != null && currency.isNotEmpty
+        ? [currency, currency]
+        : <dynamic>[];
+    final rows = await db.rawQuery('''
+      SELECT s.name, s.phone, s.debt_ceiling, a.currency,
+        CAST(SUM(t.credit) - SUM(t.debit) AS INTEGER) AS signed_balance,
+        ABS(CAST(SUM(t.credit) - SUM(t.debit) AS INTEGER)) AS balance,
+        CASE WHEN SUM(t.credit) - SUM(t.debit) >= 0
+             THEN 'credit' ELSE 'debit' END AS balance_type
+      FROM suppliers s
+      INNER JOIN transactions t ON (
+        (t.reference_type IN ('opening_balance', 'opening_balance_reversal')
+         AND t.reference_id = 'supplier_' || CAST(s.id AS TEXT))
+        OR EXISTS (
+          SELECT 1 FROM invoices i
+          WHERE CAST(i.id AS TEXT) = t.reference_id
+            AND i.supplier_id = s.id
+            AND i.status != 'cancelled'
+        )
+        OR EXISTS (
+          SELECT 1 FROM vouchers v
+          WHERE t.reference_id = 'voucher_' || CAST(v.id AS TEXT)
+            AND v.supplier_id = s.id
+            AND v.is_posted = 1
+        )
+      )
+      INNER JOIN accounts a ON a.id = t.account_id
+      WHERE a.account_code LIKE '21%'
+        $currencyFilter
+      GROUP BY s.id, a.currency
+      HAVING SUM(t.credit) - SUM(t.debit) != 0
+      ORDER BY ABS(SUM(t.credit) - SUM(t.debit)) DESC, s.name ASC
+    ''', currencyArgs);
+    return rows;
   }
 
   // ── 8. Expenses ───────────────────────────────────────────────
@@ -1027,9 +928,9 @@ class ReportService {
 
   // ── 16. Customer Statement ────────────────────────────────────
 
-  /// كشف حساب عميل — finds the customer's receivable account and
-  /// returns its transactions. Returns empty list if no linked
-  /// account is found.
+  /// Customer statement from posted ledger transactions scoped to one entity.
+  /// Shared receivable accounts are safe here because source references resolve
+  /// the customer before the transaction amount is returned.
   Future<List<Map<String, dynamic>>> getCustomerStatementReport({
     required int customerId,
     required String customerName,
@@ -1038,43 +939,57 @@ class ReportService {
     DateTime? dateTo,
   }) async {
     final db = await _db;
-
-    // Find the customer's receivable account by code (12xx) and currency.
-    // This is more reliable than searching by name, which breaks if the
-    // account name does not exactly match the customer name.
-    final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(customerCurrency);
-    final accountCode = '${1200 + codeOffset}';
-    var acctRes = await db.rawQuery(
-      "SELECT id FROM accounts WHERE account_code=? AND currency=? AND is_active=1 LIMIT 1",
-      [accountCode, customerCurrency],
-    );
-
-    // Fallback to name-based search for legacy data
-    if (acctRes.isEmpty) {
-      acctRes = await db.rawQuery(
-        "SELECT id FROM accounts WHERE name_ar=? AND currency=? LIMIT 1",
-        [customerName, customerCurrency],
-      );
-    }
-    if (acctRes.isEmpty && customerName.isNotEmpty) {
-      acctRes = await db.rawQuery(
-        "SELECT id FROM accounts WHERE (name_ar LIKE ? OR name_ar LIKE ?) AND currency=? LIMIT 1",
-        ['%$customerName%', '%$customerName%', customerCurrency],
-      );
-    }
-    if (acctRes.isEmpty) return [];
-
-    final accountId = acctRes.first['id'] as int;
-    final args = <dynamic>[accountId];
+    final args = <dynamic>[
+      'customer_$customerId',
+      'receipt',
+      'payment',
+      'settlement',
+      'compound',
+      'voucher_',
+      customerId,
+      customerCurrency,
+      customerId,
+      customerCurrency,
+    ];
     final (df, dateArgs) = buildDateFilter(
-        dateFrom: dateFrom, dateTo: dateTo, column: 't.created_at');
-    args.addAll(dateArgs);
-
-    return await db.rawQuery(
-      "SELECT t.date, t.description, t.debit, t.credit, t.created_at "
-      "FROM transactions t WHERE t.account_id=?$df ORDER BY t.date ASC, t.created_at ASC",
-      args,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      column: 't.created_at',
     );
+    args.addAll(dateArgs);
+    return await db.rawQuery('''
+      SELECT t.date, t.description, t.debit, t.credit, t.created_at, a.currency
+      FROM transactions t
+      INNER JOIN accounts a ON a.id = t.account_id
+      WHERE a.account_code LIKE '12%'
+        AND a.currency = ?
+        AND t.currency_code = ?
+        AND (
+          (t.reference_type IN ('opening_balance', 'opening_balance_reversal')
+           AND t.reference_id = ?)
+          OR (t.reference_type IN (?, ?, ?, ?)
+              AND t.reference_id IN (
+                SELECT ? || CAST(v.id AS TEXT)
+                FROM vouchers v
+                WHERE v.customer_id = ?
+                  AND v.currency = ?
+                  AND v.is_posted = 1
+              ))
+          OR EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE CAST(i.id AS TEXT) = t.reference_id
+              AND i.customer_id = ?
+              AND i.currency = ?
+              AND i.status != 'cancelled'
+          )
+        )
+        $df
+      ORDER BY t.date ASC, t.created_at ASC
+    ''', [
+      customerCurrency,
+      customerCurrency,
+      ...args,
+    ]);
   }
 
   // ── 17. Inventory Report ──────────────────────────────────────

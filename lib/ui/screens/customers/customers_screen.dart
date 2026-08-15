@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/repositories/customer_repository.dart';
 import 'package:firstpro/data/models/customer_model.dart';
+import 'package:firstpro/core/utils/excel_exporter.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/ui/screens/shared/entities_screen.dart';
 import 'package:firstpro/ui/screens/customers/add_customer_sheet.dart';
 import 'package:firstpro/ui/screens/customers/customer_detail_screen.dart';
@@ -40,6 +42,23 @@ class CustomersScreen extends StatelessWidget {
       idOf: (c) => c.id,
       nameOf: (c) => c.name,
       phoneOf: (c) => c.phone,
+      exportEntities: () async {
+        final rows = await locator<CustomerRepository>().getAllCustomers();
+        await ExcelExporter.exportGenericReport(
+          reportName: 'العملاء',
+          rows: rows
+              .map((row) => {
+                    'الاسم': row['name'] ?? '',
+                    'الهاتف': row['phone'] ?? '',
+                    'العنوان': row['address'] ?? '',
+                    'الرصيد': MoneyHelper.readMoney(row['balance']),
+                    'نوع الرصيد': row['balance_type'] ?? '',
+                    'العملة': row['currency'] ?? 'YER',
+                  })
+              .toList(),
+          totals: const {},
+        );
+      },
       // cardPhoneIconBuilder omitted → defaults to Icons.phone
     );
   }

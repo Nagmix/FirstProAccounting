@@ -45,6 +45,7 @@ class EntitiesScreen<T> extends StatefulWidget {
     required this.idOf,
     required this.nameOf,
     required this.phoneOf,
+    this.exportEntities,
     this.cardPhoneIconBuilder,
   });
 
@@ -78,6 +79,9 @@ class EntitiesScreen<T> extends StatefulWidget {
   final int? Function(T) idOf;
   final String Function(T) nameOf;
   final String? Function(T) phoneOf;
+
+  /// Optional local export action for the complete entity list.
+  final Future<void> Function()? exportEntities;
 
   /// Optional: builds the phone-row icon for the card.
   /// If null, defaults to [Icons.phone].
@@ -177,6 +181,29 @@ class _EntitiesScreenState<T> extends State<EntitiesScreen<T>>
     _loadCurrencyBalances();
   }
 
+  Future<void> _exportEntities() async {
+    final export = widget.exportEntities;
+    if (export == null) return;
+    try {
+      await export();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم إنشاء ملف التصدير ومشاركته بنجاح'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تعذر تصدير البيانات: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   List<T> _filterEntities(int tabIndex) {
     final q = _searchQuery;
     return _entities.where((e) {
@@ -271,6 +298,12 @@ class _EntitiesScreenState<T> extends State<EntitiesScreen<T>>
                     color: AppColors.primary.withValues(alpha: 0.3)),
               ),
             ),
+            if (widget.exportEntities != null)
+              IconButton(
+                onPressed: _exportEntities,
+                icon: const Icon(Icons.file_download_outlined),
+                tooltip: 'تصدير البيانات',
+              ),
             const SizedBox(width: 4),
             IconButton(
               onPressed: _showAddSheet,

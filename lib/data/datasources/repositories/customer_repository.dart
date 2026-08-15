@@ -725,26 +725,44 @@ class CustomerRepository {
 
   /// Get top customer balances, separated by currency.
   ///
-  /// FIX: Previous version ordered by raw `balance` across all currencies,
-  /// which incorrectly compared YER cents against USD cents against SAR cents.
-  /// Now returns results grouped by currency, ordered within each currency.
+  /// The ranking is derived from the posted ledger through
+  /// [getCustomerBalanceForCurrency], not from the denormalized customer
+  /// balance columns. This keeps charts consistent after cancellations,
+  /// settlements, and manual ledger corrections.
   Future<List<Map<String, dynamic>>> getTopCustomerBalances(int limit) async {
     final db = await _db;
-    // Get distinct currencies first
-    final currencies = await db.rawQuery(
-      'SELECT DISTINCT currency FROM customers WHERE balance > 0 AND currency IS NOT NULL',
+    final customers = await db.query(
+      'customers',
+      columns: ['id', 'name', 'currency'],
+      orderBy: 'name ASC',
     );
+    final currencies = await db.rawQuery('''
+      SELECT DISTINCT currency
+      FROM accounts
+      WHERE account_code LIKE '12%' AND currency IS NOT NULL
+      ORDER BY currency ASC
+    ''');
     final results = <Map<String, dynamic>>[];
-    for (final cur in currencies) {
-      final currency = cur['currency'] as String? ?? 'YER';
-      final rows = await db.rawQuery('''
-        SELECT name, balance, balance_type, currency
-        FROM customers
-        WHERE balance > 0 AND currency = ?
-        ORDER BY balance DESC
-        LIMIT ?
-      ''', [currency, limit]);
-      results.addAll(rows);
+    for (final currencyRow in currencies) {
+      final currency = currencyRow['currency'] as String?;
+      if (currency == null || currency.isEmpty) continue;
+      final ranked = <Map<String, dynamic>>[];
+      for (final customer in customers) {
+        final id = (customer['id'] as num?)?.toInt();
+        if (id == null) continue;
+        final signedBalance =
+            await getCustomerBalanceForCurrency(id, currency);
+        if (signedBalance.abs() < 0.005) continue;
+        ranked.add({
+          'name': customer['name'],
+          'balance': MoneyHelper.toCents(signedBalance.abs()),
+          'balance_type': signedBalance < 0 ? 'debit' : 'credit',
+          'currency': currency,
+        });
+      }
+      ranked.sort((a, b) =>
+          ((b['balance'] as int?) ?? 0).compareTo((a['balance'] as int?) ?? 0));
+      results.addAll(ranked.take(limit));
     }
     return results;
   }
@@ -852,64 +870,47 @@ class CustomerRepository {
     );
   }
 
-  /// Calculate the balance of a specific customer for a given currency
-  /// by summing all financial movements in that currency.
-  /// Uses voucher_items to determine debit/credit effect for ALL voucher
-  /// types (receipt, payment, settlement, compound, transfers), not just
-  /// receipt and payment.
+  /// Calculate a customer's signed receivable balance from the posted ledger.
+  /// Negative means debit (the customer owes us); positive means credit.
+  /// Source documents are joined only to identify the entity and cancellation
+  /// state; the monetary amount always comes from `transactions`.
   Future<double> getCustomerBalanceForCurrency(
       int customerId, String currency) async {
     final db = await _db;
-    double balance = 0.0;
-
-    // 1. Opening balance for this customer in this currency
-    final obByRef = await db.rawQuery('''
+    final rows = await db.rawQuery('''
       SELECT COALESCE(SUM(t.credit), 0) - COALESCE(SUM(t.debit), 0) AS net
       FROM transactions t
       INNER JOIN accounts a ON t.account_id = a.id
-      WHERE t.reference_type = 'opening_balance'
-        AND t.reference_id = ?
-        AND a.account_code LIKE '12%'
+      WHERE a.account_code LIKE '12%'
         AND a.currency = ?
-    ''', ['customer_$customerId', currency]);
-    balance += MoneyHelper.readCalculatedMoney(obByRef.first['net']);
-
-    // 2. Invoices
-    final invoices = await db.rawQuery('''
-      SELECT type, is_return, total FROM invoices
-      WHERE customer_id = ? AND currency = ?
-    ''', [customerId, currency]);
-    for (final inv in invoices) {
-      final type = inv['type'] as String? ?? 'sale';
-      final isReturn = (inv['is_return'] as int? ?? 0) == 1;
-      final total = MoneyHelper.readMoney(inv['total']);
-      if (type == 'sale' && !isReturn) {
-        balance -= total; // Sale = debit (عليه)
-      } else if (type == 'sale' && isReturn) {
-        balance += total; // Return = credit (له)
-      } else if (type == 'purchase' && !isReturn) {
-        balance += total; // Purchase = credit (له)
-      } else if (type == 'purchase' && isReturn) {
-        balance -= total; // Purchase return = debit (عليه)
-      }
-    }
-
-    // 3. Vouchers — use voucher_items joined with the customer's
-    //    receivable account (code 12xx) to determine the actual
-    //    debit/credit effect regardless of voucher type.
-    //    This correctly handles settlement, compound, and transfer
-    //    vouchers where the customer account may be on either side.
-    final voucherNet = await db.rawQuery('''
-      SELECT COALESCE(SUM(vi.credit), 0) - COALESCE(SUM(vi.debit), 0) AS net
-      FROM vouchers v
-      INNER JOIN voucher_items vi ON v.id = vi.voucher_id
-      INNER JOIN accounts a ON vi.account_id = a.id
-      WHERE v.customer_id = ?
-        AND v.currency = ?
-        AND a.account_code LIKE '12%'
-    ''', [customerId, currency]);
-    balance += MoneyHelper.readCalculatedMoney(voucherNet.first['net']);
-
-    return balance;
+        AND t.currency_code = ?
+        AND (
+          (t.reference_type IN ('opening_balance', 'opening_balance_reversal')
+           AND t.reference_id = ?)
+          OR EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE CAST(i.id AS TEXT) = t.reference_id
+              AND i.customer_id = ?
+              AND i.currency = ?
+              AND i.status != 'cancelled'
+          )
+          OR EXISTS (
+            SELECT 1 FROM vouchers v
+            WHERE t.reference_id = 'voucher_' || CAST(v.id AS TEXT)
+              AND v.customer_id = ?
+              AND v.currency = ?
+              AND v.is_posted = 1
+          )
+        )
+    ''', [
+      currency,
+      currency,
+      'customer_$customerId',
+      customerId,
+      currency,
+      customerId,
+      currency,
+    ]);
+    return MoneyHelper.readCalculatedMoney(rows.first['net']);
   }
 }
