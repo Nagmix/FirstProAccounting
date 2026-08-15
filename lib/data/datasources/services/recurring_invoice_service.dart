@@ -352,7 +352,7 @@ class RecurringInvoiceService {
   Future<String?> _generateInvoiceFromTemplate(
     Map<String, dynamic> template,
     DateTime runDate,
-  }) async {
+  ) async {
     final templateId = template['id'] as int;
     final db = await _db;
 
