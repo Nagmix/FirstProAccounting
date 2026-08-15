@@ -21,7 +21,7 @@ void main() {
               'A sale line must fail atomically when its product no longer exists.');
       expect(source, contains('allowNeg'),
           reason: 'The sale guard must respect the explicit negative-stock policy.');
-      expect(source, contains('quantity > currentStock'),
+      expect(source, contains('baseQuantity > currentStock'),
           reason:
               'Tracked products must not be sold above available stock unless explicitly allowed.');
       expect(source, contains("track_stock"),
