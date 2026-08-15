@@ -115,11 +115,10 @@ class MoneyHelper {
   /// Non-existent keys are silently skipped, so it's safe to pass
   /// a superset of field names.
   ///
-  /// Contract: maps passed to this method use human-readable doubles from
-  /// the domain/UI layer. An integer in a money field is treated as an
-  /// already-persisted cents value. This deterministic contract avoids a
-  /// magnitude threshold that could silently mis-handle legitimate large
-  /// amounts.
+  /// Contract: maps passed to this method contain human-readable values from
+  /// the domain/UI layer. Both integer and decimal numeric values are treated
+  /// as currency units and converted to cents. Persisted database maps must
+  /// not be passed back through this write-boundary conversion.
   static Map<String, dynamic> toCentsMap(
     Map<String, dynamic> map,
     List<String> moneyFields,
@@ -130,9 +129,9 @@ class MoneyHelper {
       if (value is double) {
         result[field] = toCents(value);
       } else if (value is int) {
-        // Integer money values are already stored in cents. All new domain
-        // inputs should use double for human-readable currency amounts.
-        result[field] = value;
+        // Integer values at the write boundary are human-readable currency
+        // units too (e.g. 500 means 500.00), so convert them explicitly.
+        result[field] = toCents(value.toDouble());
       } else if (value is num && value.toDouble() != value.toInt()) {
         // num with decimal part — convert
         result[field] = toCents(value.toDouble());

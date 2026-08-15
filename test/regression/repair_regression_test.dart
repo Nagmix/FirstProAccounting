@@ -3,22 +3,22 @@ import 'package:firstpro/core/utils/money_helper.dart';
 
 void main() {
   group('Repair regressions: deterministic money boundaries', () {
-    test('integer money values are treated as persisted cents', () {
+    test('integer money values at the write boundary convert to cents', () {
       final result = MoneyHelper.toCentsMap(
         {'amount': 125},
         ['amount'],
       );
-      expect(result['amount'], 125);
-      expect(MoneyHelper.readMoney(result['amount']), closeTo(1.25, 0.0001));
+      expect(result['amount'], 12500);
+      expect(MoneyHelper.readMoney(result['amount']), closeTo(125.0, 0.0001));
     });
 
-    test('large integer money values are not converted by a magnitude heuristic', () {
+    test('large integer money values are converted deterministically', () {
       final result = MoneyHelper.toCentsMap(
         {'amount': 125000000},
         ['amount'],
       );
-      expect(result['amount'], 125000000);
-      expect(MoneyHelper.readMoney(result['amount']), closeTo(1250000, 0.01));
+      expect(result['amount'], 12500000000);
+      expect(MoneyHelper.readMoney(result['amount']), closeTo(125000000, 0.01));
     });
 
     test('decimal UI money values are converted exactly once', () {
