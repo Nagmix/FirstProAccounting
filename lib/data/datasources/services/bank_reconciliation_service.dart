@@ -267,7 +267,18 @@ class BankReconciliationService {
     if (reconRow.isEmpty) return;
 
     final recon = BankReconciliation.fromMap(reconRow.first);
+    if (recon.status == 'completed' || recon.status == 'posted') {
+      throw StateError('لا يمكن إعادة اعتماد تسوية بنكية مكتملة');
+    }
+    await _dbHelper.journal.checkFiscalPeriodOpen(
+      recon.statementDate.toIso8601String(),
+    );
     final calculated = await calculateAdjustedBalances(recon);
+    if (!calculated.isReconciled) {
+      throw StateError(
+        'لا يمكن اعتماد التسوية قبل تطابق الرصيدين. الفرق ${calculated.difference}',
+      );
+    }
 
     await db.transaction((txn) async {
       final journalId = generateUniqueJournalId();
@@ -357,6 +368,11 @@ class BankReconciliationService {
             ? revenueAccount.first['id'] as int
             : null;
 
+        if (revenueAccountId == null) {
+          throw Exception(
+            'لا يوجد حساب فوائد بنكية (4900) للعملة $currency. يرجى إنشاء الحساب قبل اعتماد التسوية.',
+          );
+        }
         if (revenueAccountId != null) {
           await txn.insert('transactions', {
             'account_id': linkedAccountId,
@@ -402,6 +418,11 @@ class BankReconciliationService {
               [MoneyHelper.toCents(calculated.interestEarned), now, cashBoxId]);
         }
       }
+
+      await _dbHelper.journal.validateJournalBalanceInTransaction(
+        txn,
+        journalId,
+      );
 
       // Update reconciliation status
       await txn.update(

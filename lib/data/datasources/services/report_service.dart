@@ -72,29 +72,29 @@ class ReportService {
 
     // Revenue
     final revRes = await db.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS revenue "
-      "FROM invoices WHERE type IN ('sale','pos') AND is_return=0$df$cf",
+      "SELECT CAST(COALESCE(SUM(subtotal - discount_amount + transport_charges), 0) AS INTEGER) AS revenue "
+      "FROM invoices WHERE type IN ('sale','pos') AND is_return=0 AND status != 'cancelled'$df$cf",
       allArgs,
     );
 
     // Purchases
     final purRes = await db.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS purchases "
-      "FROM invoices WHERE type='purchase' AND is_return=0$df$cf",
+      "SELECT CAST(COALESCE(SUM(subtotal - discount_amount + transport_charges), 0) AS INTEGER) AS purchases "
+      "FROM invoices WHERE type='purchase' AND is_return=0 AND status != 'cancelled'$df$cf",
       allArgs,
     );
 
     // Sales returns
     final retSaleRes = await db.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS sales_returns "
-      "FROM invoices WHERE type IN ('sale','pos') AND is_return=1$df$cf",
+      "SELECT CAST(COALESCE(SUM(subtotal - discount_amount + transport_charges), 0) AS INTEGER) AS sales_returns "
+      "FROM invoices WHERE type IN ('sale','pos') AND is_return=1 AND status != 'cancelled'$df$cf",
       allArgs,
     );
 
     // Purchase returns
     final retPurRes = await db.rawQuery(
-      "SELECT CAST(COALESCE(SUM(total), 0) AS INTEGER) AS purchase_returns "
-      "FROM invoices WHERE type='purchase' AND is_return=1$df$cf",
+      "SELECT CAST(COALESCE(SUM(subtotal - discount_amount + transport_charges), 0) AS INTEGER) AS purchase_returns "
+      "FROM invoices WHERE type='purchase' AND is_return=1 AND status != 'cancelled'$df$cf",
       allArgs,
     );
 
@@ -130,13 +130,20 @@ class ReportService {
     try {
       final cogsRes = await db.rawQuery(
         "SELECT CAST(COALESCE(SUM("
-        "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
-        "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+        "  CASE WHEN p.costing_method IN ('fifo','lifo') "
+        "       THEN COALESCE(a.total_cost, 0) "
+        "       ELSE (CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END) "
+        "            * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+        "  END"
         "), 0) AS INTEGER) AS total_cogs "
         "FROM invoice_items ii "
         "INNER JOIN invoices i ON ii.invoice_id = i.id "
         "LEFT JOIN products p ON ii.product_id = p.id "
-        "WHERE i.type IN ('sale','pos') AND i.is_return = 0$cogsDateF",
+        "LEFT JOIN (SELECT invoice_id, product_id, SUM(total_cost) AS total_cost "
+        "           FROM movement_cost_allocations GROUP BY invoice_id, product_id) a "
+        "  ON a.invoice_id = i.id AND a.product_id = ii.product_id "
+        "WHERE i.type IN ('sale','pos') AND i.is_return = 0 AND i.status != 'cancelled' "
+        "AND COALESCE(p.track_stock, 1) = 1$cogsDateF",
         cogsSaleArgs,
       );
       cogs = cogsRes.first['total_cogs'] as int? ?? 0;
@@ -161,13 +168,25 @@ class ReportService {
         }
         final cogsRetRes = await db.rawQuery(
           "SELECT CAST(COALESCE(SUM("
-          "  CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END "
-          "  * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+          "  CASE WHEN p.costing_method IN ('fifo','lifo') "
+          "       THEN COALESCE((SELECT SUM(mca.total_cost) "
+          "                       FROM movement_cost_allocations mca "
+          "                       WHERE mca.invoice_id = i.original_invoice_id "
+          "                         AND mca.product_id = ii.product_id), 0) "
+          "            * (CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END) "
+          "            / NULLIF((SELECT SUM(CASE WHEN oi.base_quantity > 0 THEN oi.base_quantity ELSE oi.quantity END) "
+          "                      FROM invoice_items oi "
+          "                      WHERE oi.invoice_id = i.original_invoice_id "
+          "                        AND oi.product_id = ii.product_id), 0) "
+          "       ELSE (CASE WHEN ii.base_quantity > 0 THEN ii.base_quantity ELSE ii.quantity END) "
+          "            * CASE WHEN ii.unit_cost > 0 THEN ii.unit_cost ELSE p.cost_price END "
+          "  END"
           "), 0) AS INTEGER) AS total_cogs "
           "FROM invoice_items ii "
           "INNER JOIN invoices i ON ii.invoice_id = i.id "
           "LEFT JOIN products p ON ii.product_id = p.id "
-          "WHERE i.type IN ('sale','pos') AND i.is_return = 1$cogsRetF",
+          "WHERE i.type IN ('sale','pos') AND i.is_return = 1 AND i.status != 'cancelled' "
+          "AND COALESCE(p.track_stock, 1) = 1$cogsRetF",
           cogsRetArgs,
         );
         cogs -= (cogsRetRes.first['total_cogs'] as int? ?? 0);

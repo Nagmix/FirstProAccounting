@@ -252,10 +252,35 @@ class CostingEngineService {
 
     if (remainingQty > 0.001) {
       final avgCost = MoneyHelper.readMoney(productRow.first['average_cost']);
-      totalCogs += (avgCost > 0
-              ? avgCost
-              : MoneyHelper.readMoney(productRow.first['cost_price'])) *
-          remainingQty;
+      final fallbackCost = avgCost > 0
+          ? avgCost
+          : MoneyHelper.readMoney(productRow.first['cost_price']);
+      if (fallbackCost > 0) {
+        // Materialize the fallback as a fully-consumed synthetic layer so
+        // cancellation/returns can restore exactly this missing allocation.
+        final fallbackLayerId = await txn.insert('inventory_cost_layers', {
+          'product_id': productId,
+          'warehouse_id': effectiveWarehouseId,
+          'quantity_original': remainingQty,
+          'quantity_remaining': 0.0,
+          'unit_cost': MoneyHelper.toCents(fallbackCost),
+          'acquisition_date': now,
+          'is_fully_consumed': 1,
+          'reference_type': 'cogs_fallback',
+          'reference_id': invoiceId,
+        });
+        final fallbackCostTotal = fallbackCost * remainingQty;
+        totalCogs += fallbackCostTotal;
+        await txn.insert('movement_cost_allocations', {
+          'product_id': productId,
+          'cost_layer_id': fallbackLayerId,
+          'invoice_id': invoiceId,
+          'quantity_used': remainingQty,
+          'unit_cost': MoneyHelper.toCents(fallbackCost),
+          'total_cost': MoneyHelper.toCents(fallbackCostTotal),
+          'created_at': now,
+        });
+      }
     }
 
     return totalCogs;
@@ -285,19 +310,67 @@ class CostingEngineService {
   /// Reverse COGS allocations within an existing transaction (M-08 fix)
   /// Used for sale returns to restore original cost layer allocations
   /// instead of consuming new layers via calculateCOGSInTransaction.
-  Future<void> reverseCOGSAllocationsInTransaction(Transaction txn,
-      {required String invoiceId}) async {
-    final allocations = await txn.query('movement_cost_allocations',
-        where: 'invoice_id = ?', whereArgs: [invoiceId]);
+  Future<double> reverseCOGSAllocationsInTransaction(
+    Transaction txn, {
+    required String invoiceId,
+    Map<int, double>? productQuantities,
+    Map<int, double>? restoredCostByProduct,
+  }) async {
+    final allocations = await txn.query(
+      'movement_cost_allocations',
+      where: 'invoice_id = ?',
+      whereArgs: [invoiceId],
+      orderBy: 'id DESC',
+    );
+    double restoredCost = 0.0;
     for (final alloc in allocations) {
+      final productId = (alloc['product_id'] as num).toInt();
       final layerId = alloc['cost_layer_id'] as int;
       final qtyUsed = (alloc['quantity_used'] as num).toDouble();
+      final requested = productQuantities?[productId];
+      if (requested != null && requested <= 0.001) continue;
+      final qtyToRestore = requested == null
+          ? qtyUsed
+          : (requested < qtyUsed ? requested : qtyUsed);
+      if (qtyToRestore <= 0.001) continue;
+
+      final unitCost = MoneyHelper.readMoney(alloc['unit_cost']);
+      final allocationCost = unitCost * qtyToRestore;
+      restoredCost += allocationCost;
+      if (restoredCostByProduct != null) {
+        restoredCostByProduct[productId] =
+            (restoredCostByProduct[productId] ?? 0.0) + allocationCost;
+      }
       await txn.rawUpdate(
-          'UPDATE inventory_cost_layers SET quantity_remaining = quantity_remaining + ?, is_fully_consumed = 0 WHERE id = ?',
-          [qtyUsed, layerId]);
+        'UPDATE inventory_cost_layers '
+        'SET quantity_remaining = quantity_remaining + ?, is_fully_consumed = 0 '
+        'WHERE id = ?',
+        [qtyToRestore, layerId],
+      );
+
+      if (qtyToRestore + 0.001 < qtyUsed) {
+        final remainingQty = qtyUsed - qtyToRestore;
+        await txn.update(
+          'movement_cost_allocations',
+          {
+            'quantity_used': remainingQty,
+            'total_cost': MoneyHelper.toCents(remainingQty * unitCost),
+          },
+          where: 'id = ?',
+          whereArgs: [alloc['id']],
+        );
+      } else {
+        await txn.delete(
+          'movement_cost_allocations',
+          where: 'id = ?',
+          whereArgs: [alloc['id']],
+        );
+      }
+      if (productQuantities != null && requested != null) {
+        productQuantities[productId] = requested - qtyToRestore;
+      }
     }
-    await txn.delete('movement_cost_allocations',
-        where: 'invoice_id = ?', whereArgs: [invoiceId]);
+    return restoredCost;
   }
 
   /// Initialize cost layers for existing products during migration
@@ -308,9 +381,22 @@ class CostingEngineService {
 
     for (final p in products) {
       final productId = p['id'] as int;
-      // Check if layer already exists
-      final existing = await db.query('inventory_cost_layers',
-          where: 'product_id = ?', whereArgs: [productId], limit: 1);
+      // A product may have one stock row per warehouse. Scope the duplicate
+      // check by warehouse, including the legacy NULL warehouse case.
+      final warehouseId = (p['warehouse_id'] as num?)?.toInt();
+      final existing = warehouseId == null
+          ? await db.query(
+              'inventory_cost_layers',
+              where: 'product_id = ? AND warehouse_id IS NULL',
+              whereArgs: [productId],
+              limit: 1,
+            )
+          : await db.query(
+              'inventory_cost_layers',
+              where: 'product_id = ? AND warehouse_id = ?',
+              whereArgs: [productId, warehouseId],
+              limit: 1,
+            );
       if (existing.isNotEmpty) continue;
 
       final currentStock = (p['current_stock'] as num).toDouble();

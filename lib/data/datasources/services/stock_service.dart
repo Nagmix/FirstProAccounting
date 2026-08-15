@@ -6,6 +6,7 @@ import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
+import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 
 class StockService {
   final DatabaseHelper _dbHelper;
@@ -58,6 +59,24 @@ class StockService {
         whereArgs: [productId],
         limit: 1,
       );
+      final sourceCostingMethod = sourceProductRow.isNotEmpty
+          ? CostingMethodExt.fromValue(
+              sourceProductRow.first['costing_method'] as String? ??
+                  'weighted_average',
+            )
+          : CostingMethod.weightedAverage;
+      final sourceLayers = sourceCostingMethod == CostingMethod.weightedAverage
+          ? <Map<String, dynamic>>[]
+          : await txn.query(
+              'inventory_cost_layers',
+              where:
+                  'product_id = ? AND warehouse_id = ? AND is_fully_consumed = 0 AND quantity_remaining > 0',
+              whereArgs: [productId, fromWarehouseId],
+              orderBy: sourceCostingMethod == CostingMethod.fifo
+                  ? 'acquisition_date ASC, id ASC'
+                  : 'acquisition_date DESC, id DESC',
+            );
+
       double sourceAvgCost;
       if (sourceProductRow.isNotEmpty) {
         final costingMethodStr =
@@ -135,6 +154,7 @@ class StockService {
         limit: 1,
       );
 
+      int? destinationProductId;
       if (sourceProduct.isNotEmpty) {
         final source = sourceProduct.first;
         final itemCode = source['item_code'] as String?;
@@ -168,6 +188,7 @@ class StockService {
           final currentStock =
               (toProduct.first['current_stock'] as num?)?.toDouble() ?? 0.0;
           final toProductId = toProduct.first['id'] as int;
+          destinationProductId = toProductId;
           final newStock = currentStock + quantity;
 
           // ── W-05: إعادة حساب متوسط التكلفة المرجح في المستودع الوجهة ──
@@ -226,6 +247,7 @@ class StockService {
             newProduct['barcode'] = '${newProduct['barcode']}$whSuffix';
           }
           final newProductId = await txn.insert('products', newProduct);
+          destinationProductId = newProductId;
           // ── T16: تسجيل حركة مخزون وارد إلى الوجهة (منتج جديد) ──
           await txn.insert('stock_movements', {
             'product_id': newProductId,
@@ -240,8 +262,89 @@ class StockService {
         }
       }
 
+      // نقل طبقات FIFO/LIFO إلى المنتج المقابل في المستودع الوجهة.
+      // التحويل يغيّر مكان الأصل؛ لذلك تُخفض طبقات المصدر وتُنشأ طبقات
+      // مستقلة للوجهة بنفس تكلفة وتاريخ الاكتساب، مع دعم التحويل الجزئي.
+      if (sourceLayers.isNotEmpty && destinationProductId != null) {
+        var remainingToTransfer = quantity;
+        for (final sourceLayer in sourceLayers) {
+          if (remainingToTransfer <= 0.000001) break;
+          final available =
+              (sourceLayer['quantity_remaining'] as num?)?.toDouble() ?? 0.0;
+          if (available <= 0.000001) continue;
+          final moved = available < remainingToTransfer
+              ? available
+              : remainingToTransfer;
+          final unitCostCents =
+              (sourceLayer['unit_cost'] as num?)?.toInt() ?? 0;
+          await txn.insert('inventory_cost_layers', {
+            'product_id': destinationProductId,
+            'warehouse_id': toWarehouseId,
+            'quantity_original': moved,
+            'quantity_remaining': moved,
+            'unit_cost': unitCostCents,
+            'acquisition_date': sourceLayer['acquisition_date'],
+            'reference_type': 'stock_transfer',
+            'reference_id': id.toString(),
+            'is_fully_consumed': 0,
+            'created_at': now,
+          });
+          final newRemaining = available - moved;
+          await txn.update(
+            'inventory_cost_layers',
+            {
+              'quantity_remaining': newRemaining < 0.000001 ? 0 : newRemaining,
+              'is_fully_consumed': newRemaining < 0.000001 ? 1 : 0,
+            },
+            where: 'id = ?',
+            whereArgs: [sourceLayer['id']],
+          );
+          remainingToTransfer -= moved;
+        }
+        if (remainingToTransfer > 0.000001) {
+          final sourceAllowsNegative = sourceProductRow.isNotEmpty &&
+              (sourceProductRow.first['allow_negative'] as num?)?.toInt() == 1;
+          if (!sourceAllowsNegative) {
+            throw StateError(
+              'طبقات تكلفة المصدر لا تغطي كمية التحويل المطلوبة ($quantity)',
+            );
+          }
+          await txn.insert('inventory_cost_layers', {
+            'product_id': destinationProductId,
+            'warehouse_id': toWarehouseId,
+            'quantity_original': remainingToTransfer,
+            'quantity_remaining': remainingToTransfer,
+            'unit_cost': MoneyHelper.toCents(sourceAvgCost),
+            'acquisition_date': now,
+            'reference_type': 'stock_transfer_fallback',
+            'reference_id': id.toString(),
+            'is_fully_consumed': 0,
+            'created_at': now,
+          });
+        }
+      }
+
       // ── C-08: إنشاء قيود يومية للتحويل المخزني ──
-      final transferValue = quantity * sourceAvgCost;
+      var transferValue = quantity * sourceAvgCost;
+      if (sourceLayers.isNotEmpty) {
+        var remainingCostQuantity = quantity;
+        var layeredTransferValue = 0.0;
+        for (final sourceLayer in sourceLayers) {
+          if (remainingCostQuantity <= 0.000001) break;
+          final available =
+              (sourceLayer['quantity_remaining'] as num?)?.toDouble() ?? 0.0;
+          final moved = available < remainingCostQuantity
+              ? available
+              : remainingCostQuantity;
+          final unitCost = MoneyHelper.readMoney(sourceLayer['unit_cost']);
+          layeredTransferValue += moved * unitCost;
+          remainingCostQuantity -= moved;
+        }
+        if (remainingCostQuantity > 0.000001) {
+          layeredTransferValue += remainingCostQuantity * sourceAvgCost;
+        }
+        transferValue = layeredTransferValue;
+      }
       final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
 
       if (transferValue.abs() >= 0.005) {

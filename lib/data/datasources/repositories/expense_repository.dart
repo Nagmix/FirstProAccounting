@@ -194,7 +194,9 @@ class ExpenseRepository {
         : expectedBase;
     if (MoneyHelper.readMoney(expenseMap['amount_base']) <= 0 &&
         expectedBase > 0) {
-      expenseMap['amount_base'] = MoneyHelper.toCents(expectedBase);
+      // Keep the value in human currency units until toCentsMap performs the
+      // single database-boundary conversion below.
+      expenseMap['amount_base'] = expectedBase;
     }
     final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
     final operationType = (expenseMap['operation_type'] as String?) ?? 'صرف';

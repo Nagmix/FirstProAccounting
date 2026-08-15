@@ -81,7 +81,36 @@ class InvoiceRepository {
       }
       final db = await _db;
       final total = MoneyHelper.readMoney(invoiceMap['total']);
+      final declaredSubtotal = MoneyHelper.readMoney(invoiceMap['subtotal']);
+      final discountAmount =
+          MoneyHelper.readMoney(invoiceMap['discount_amount']);
+      final taxAmount = MoneyHelper.readMoney(invoiceMap['tax_amount']);
+      final declaredTransport =
+          MoneyHelper.readMoney(invoiceMap['transport_charges']);
+      final transportCharges = declaredTransport > 0
+          ? declaredTransport
+          : transportChargesParam;
+      if (declaredSubtotal < -0.005 ||
+          discountAmount < -0.005 ||
+          taxAmount < -0.005 ||
+          transportCharges < -0.005) {
+        throw ArgumentError('قيم المجموع والخصم والضريبة والنقل غير صالحة');
+      }
+      final calculatedSubtotal = items.fold<double>(
+        0.0,
+        (sum, item) => sum + MoneyHelper.readMoney(item['total_price']),
+      );
+      if ((declaredSubtotal - calculatedSubtotal).abs() > 0.005) {
+        throw ArgumentError('المجموع الفرعي لا يتطابق مع مجموع بنود الفاتورة');
+      }
+      final expectedTotal =
+          declaredSubtotal - discountAmount + taxAmount + transportCharges;
+      if ((total - expectedTotal).abs() > 0.005) {
+        throw ArgumentError('إجمالي الفاتورة لا يتطابق مع المكونات المحسوبة');
+      }
       final invoiceCurrency = (invoiceMap['currency'] as String?) ?? 'YER';
+      final invoiceWarehouseId =
+          (invoiceMap['warehouse_id'] as num?)?.toInt();
       final double exchangeRate =
           (invoiceMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final double effectiveExchangeRate = exchangeRate > 0 ? exchangeRate : 1.0;
@@ -129,8 +158,19 @@ class InvoiceRepository {
           // Enrich item with unit_cost from product's average_cost if not already set
           final productId = (item['product_id'] as num?)?.toInt();
           if (productId != null && !item.containsKey('unit_cost')) {
-            final productRow = await txn.query('products',
-                where: 'id = ?', whereArgs: [productId], limit: 1);
+            final productRow = invoiceWarehouseId == null
+                ? await txn.query(
+                    'products',
+                    where: 'id = ?',
+                    whereArgs: [productId],
+                    limit: 1,
+                  )
+                : await txn.query(
+                    'products',
+                    where: 'id = ? AND (warehouse_id = ? OR warehouse_id IS NULL)',
+                    whereArgs: [productId, invoiceWarehouseId],
+                    limit: 1,
+                  );
             if (productRow.isNotEmpty) {
               final avgCost =
                   MoneyHelper.readMoney(productRow.first['average_cost']);
@@ -172,30 +212,50 @@ class InvoiceRepository {
           final invoiceIdStr = invoiceMap['id'] as String? ?? '';
           if (productId == null) continue;
 
-          // Get product's average cost for stock movement logging
-          final prodRow = await txn.query('products',
-              where: 'id = ?', whereArgs: [productId], limit: 1);
-          final averageCost = prodRow.isNotEmpty
-              ? MoneyHelper.readMoney(prodRow.first['average_cost'])
-              : 0.0;
-          final allowNeg = prodRow.isNotEmpty
-              ? (prodRow.first['allow_negative'] as int?) == 1
-              : false;
+          final prodRow = invoiceWarehouseId == null
+              ? await txn.query(
+                  'products',
+                  where: 'id = ?',
+                  whereArgs: [productId],
+                  limit: 1,
+                )
+              : await txn.query(
+                  'products',
+                  where: 'id = ? AND (warehouse_id = ? OR warehouse_id IS NULL)',
+                  whereArgs: [productId, invoiceWarehouseId],
+                  limit: 1,
+                );
+          if (prodRow.isEmpty) {
+            throw StateError('الصنف رقم $productId غير موجود ولا يمكن ترحيل الفاتورة');
+          }
+          final product = prodRow.first;
+          final trackStock = (product['track_stock'] as int? ?? 1) == 1;
+          if (!trackStock) continue;
+
+          final currentStock =
+              (product['current_stock'] as num?)?.toDouble() ?? 0.0;
+          final averageCost = MoneyHelper.readMoney(product['average_cost']);
+          final allowNeg = (product['allow_negative'] as int? ?? 0) == 1;
+          final isStockOut =
+              (invoiceType == 'sale' || invoiceType == 'pos') && !isReturn;
+          final isPurchaseReturn = invoiceType == 'purchase' && isReturn;
+          if (!allowNeg &&
+              (isStockOut || isPurchaseReturn) &&
+              baseQuantity > currentStock + 0.005) {
+            throw StateError(
+              'المخزون غير كاف للصنف ${product['name_ar'] ?? productId}: '
+              'المتاح $currentStock، المطلوب $baseQuantity',
+            );
+          }
 
           if (invoiceType == 'sale' || invoiceType == 'pos') {
             if (!isReturn) {
-              // Sale: stock leaves warehouse (always in base units)
-              if (allowNeg) {
-                await txn.rawUpdate(
-                  'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-                  [baseQuantity, now, productId],
-                );
-              } else {
-                await txn.rawUpdate(
-                  'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-                  [baseQuantity, now, productId],
-                );
-              }
+              // Sale: stock leaves warehouse (always in base units).
+              // Insufficient stock was rejected before entering this branch.
+              await txn.rawUpdate(
+                'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+                [baseQuantity, now, productId],
+              );
               // Log stock movement (use average cost, not selling price)
               await txn.insert('stock_movements', {
                 'product_id': productId,
@@ -414,17 +474,11 @@ class InvoiceRepository {
                   ? returnCostPrice
                   : MoneyHelper.readMoney(prodRow.first['cost_price']);
 
-              if (allowNeg) {
-                await txn.rawUpdate(
-                  'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
-                  [baseQuantity, now, productId],
-                );
-              } else {
-                await txn.rawUpdate(
-                  'UPDATE products SET current_stock = MAX(current_stock - ?, 0), updated_at = ? WHERE id = ?',
-                  [baseQuantity, now, productId],
-                );
-              }
+              // Stock sufficiency was validated before entering this branch.
+              await txn.rawUpdate(
+                'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+                [baseQuantity, now, productId],
+              );
 
               // C-04: After returning goods, recalculate average cost
               // When goods leave at average cost, remaining stock's avg cost doesn't change
@@ -1251,12 +1305,27 @@ class InvoiceRepository {
         if ((invoiceType == 'sale' ||
             invoiceType == 'pos' ||
             invoiceType == 'sale_return')) {
+          final restoredCostByProduct = <int, double>{};
           if (isReturn) {
-            // M-08: Use reverseCOGSAllocations to restore original cost layers
-            // instead of calculateCOGSInTransaction which consumes new layers
+            final returnQuantities = <int, double>{};
+            for (final returnItem in items) {
+              final returnProductId =
+                  (returnItem['product_id'] as num?)?.toInt();
+              if (returnProductId == null) continue;
+              final returnQuantity =
+                  (returnItem['base_quantity'] as num?)?.toDouble() ??
+                      (returnItem['quantity'] as num?)?.toDouble() ??
+                      0.0;
+              returnQuantities[returnProductId] =
+                  (returnQuantities[returnProductId] ?? 0.0) + returnQuantity;
+            }
+            final originalInvoiceId =
+                invoiceMap['original_invoice_id'] as String?;
             await _dbHelper.costingEngine.reverseCOGSAllocationsInTransaction(
               txn,
-              invoiceId: invoiceMap['id'] as String,
+              invoiceId: originalInvoiceId ?? invoiceMap['id'] as String,
+              productQuantities: returnQuantities,
+              restoredCostByProduct: restoredCostByProduct,
             );
           }
 
@@ -1287,6 +1356,9 @@ class InvoiceRepository {
             final productRow = await txn.query('products',
                 where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isEmpty) continue;
+            if ((productRow.first['track_stock'] as int? ?? 1) != 1) {
+              continue;
+            }
 
             // FIX: Use CostingEngineService to properly consume FIFO/LIFO
             // cost layers instead of always using weighted average cost.
@@ -1297,13 +1369,18 @@ class InvoiceRepository {
 
             double itemCogs;
             if (isReturn) {
-              // M-08: For sale returns, use average_cost for COGS (layers already restored above)
-              final averageCost =
-                  MoneyHelper.readMoney(productRow.first['average_cost']);
-              final effectiveCost = averageCost > 0
-                  ? averageCost
-                  : MoneyHelper.readMoney(productRow.first['cost_price']);
-              itemCogs = effectiveCost * baseQuantity;
+              // Use the exact partial FIFO/LIFO allocation restored above.
+              final restored = restoredCostByProduct[productId];
+              if (restored != null && restored > 0) {
+                itemCogs = restored;
+              } else {
+                final averageCost =
+                    MoneyHelper.readMoney(productRow.first['average_cost']);
+                final effectiveCost = averageCost > 0
+                    ? averageCost
+                    : MoneyHelper.readMoney(productRow.first['cost_price']);
+                itemCogs = effectiveCost * baseQuantity;
+              }
             } else if (costingMethod != CostingMethod.weightedAverage) {
               // FIFO/LIFO: consume cost layers via costing engine (only for non-return sales)
               itemCogs =

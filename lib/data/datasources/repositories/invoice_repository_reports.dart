@@ -223,20 +223,19 @@ extension InvoiceRepositoryReports on InvoiceRepository {
           (item['base_quantity'] as num?)?.toDouble() ??
               quantity * conversionFactor;
 
-      // Find original quantity for this product
+      // Sum every original line for this product. The same product may appear
+      // in multiple lines with different units or prices.
       double originalQty = 0.0;
       for (final origItem in originalItems) {
         final origProductId = (origItem['product_id'] as num?)?.toInt() ?? 0;
-        if (origProductId == productId) {
-          final originalQuantity =
-              (origItem['quantity'] as num?)?.toDouble() ?? 0.0;
-          final originalConversion =
-              (origItem['conversion_factor'] as num?)?.toDouble() ?? 1.0;
-          originalQty =
-              (origItem['base_quantity'] as num?)?.toDouble() ??
-                  originalQuantity * originalConversion;
-          break;
-        }
+        if (origProductId != productId) continue;
+        final originalQuantity =
+            (origItem['quantity'] as num?)?.toDouble() ?? 0.0;
+        final originalConversion =
+            (origItem['conversion_factor'] as num?)?.toDouble() ?? 1.0;
+        originalQty +=
+            (origItem['base_quantity'] as num?)?.toDouble() ??
+                originalQuantity * originalConversion;
       }
 
       final alreadyReturned = returnedQuantities[productId] ?? 0.0;
