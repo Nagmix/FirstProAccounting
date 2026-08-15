@@ -484,26 +484,45 @@ abstract class EntityDetailState<T extends StatefulWidget> extends State<T> {
                         value: 'USD', child: Text('دولار أمريكي (USD)')),
                   ],
                   onChanged: (v) {
-                    if (v != null) setDialogState(() => selectedCurrency = v);
+                    if (v != null) {
+                      setDialogState(() {
+                        selectedCurrency = v;
+                        selectedCashBoxId = null;
+                      });
+                    }
                   },
                 ),
                 const SizedBox(height: 14),
-                DropdownButtonFormField<int?>(
-                  value: selectedCashBoxId,
-                  decoration: const InputDecoration(
-                    labelText: 'الصندوق',
-                    prefixIcon: Icon(Icons.account_balance_wallet),
-                  ),
-                  items: _cashBoxes
-                      .map((cb) => DropdownMenuItem<int?>(
-                            value: cb['id'] as int?,
-                            child: Text('${cb['name']}'),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    setDialogState(() => selectedCashBoxId = v);
-                  },
-                ),
+                Builder(builder: (context) {
+                  final cashBoxesForCurrency = _cashBoxes
+                      .where((cb) =>
+                          ((cb['currency'] as String?) ?? 'YER') ==
+                          selectedCurrency)
+                      .toList();
+                  final selectedBoxIsAvailable = cashBoxesForCurrency.any(
+                      (cb) => cb['id'] == selectedCashBoxId);
+                  return DropdownButtonFormField<int?>(
+                    value: selectedBoxIsAvailable ? selectedCashBoxId : null,
+                    decoration: InputDecoration(
+                      labelText: 'الصندوق',
+                      prefixIcon: const Icon(Icons.account_balance_wallet),
+                      helperText: cashBoxesForCurrency.isEmpty
+                          ? 'لا يوجد صندوق بهذه العملة'
+                          : null,
+                    ),
+                    items: cashBoxesForCurrency
+                        .map((cb) => DropdownMenuItem<int?>(
+                              value: cb['id'] as int?,
+                              child: Text('${cb['name']}'),
+                            ))
+                        .toList(),
+                    onChanged: cashBoxesForCurrency.isEmpty
+                        ? null
+                        : (v) {
+                            setDialogState(() => selectedCashBoxId = v);
+                          },
+                  );
+                }),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: descriptionController,

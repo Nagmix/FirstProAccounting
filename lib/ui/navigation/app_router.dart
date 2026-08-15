@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:firstpro/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:firstpro/ui/screens/customers/customers_screen.dart';
+import 'package:firstpro/ui/screens/customers/customer_data_tools_screen.dart';
 import 'package:firstpro/ui/screens/customers/add_customer_sheet.dart';
 import 'package:firstpro/ui/screens/products/products_screen.dart';
 import 'package:firstpro/ui/screens/products/add_product_sheet.dart';
@@ -88,9 +89,12 @@ class AppRouter {
         AppConstants.statistics: (_) => const StatisticsScreen(),
         AppConstants.dailySalesReport: (_) => const DailyOperationsScreen(),
         AppConstants.delegates: (_) => const EmployeesScreen(),
-        AppConstants.customerImport: (_) => const CustomersScreen(),
-        AppConstants.customerLoad: (_) => const CustomersScreen(),
-        AppConstants.customerPrint: (_) => const CustomersScreen(),
+        AppConstants.customerImport: (_) => const CustomerDataToolsScreen(
+            action: CustomerDataAction.importData),
+        AppConstants.customerLoad: (_) => const CustomerDataToolsScreen(
+            action: CustomerDataAction.loadData),
+        AppConstants.customerPrint: (_) => const CustomerDataToolsScreen(
+            action: CustomerDataAction.printData),
         AppConstants.financialOrders: (_) => const InvoicesScreen(),
         AppConstants.accountingAudit: (_) => const AccountingAuditScreen(),
         AppConstants.quotations: (_) => const QuotationsScreen(),

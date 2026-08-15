@@ -199,5 +199,29 @@ void main() {
       expect(source, contains("reference_type': 'stock_transfer_fallback'"),
           reason: 'Missing FIFO/LIFO layers must remain auditable and reversible.');
     });
+
+    test('customer data routes expose real import, load, and print screens', () {
+      final router = readLib('lib/ui/navigation/app_router.dart');
+      final screen = File(
+        'lib/ui/screens/customers/customer_data_tools_screen.dart',
+      );
+      expect(screen.existsSync(), isTrue,
+          reason: 'Customer data actions need a real local workflow screen.');
+      expect(router, contains('CustomerDataToolsScreen'));
+      expect(router, contains('CustomerDataAction.importData'));
+      expect(router, contains('CustomerDataAction.loadData'));
+      expect(router, contains('CustomerDataAction.printData'));
+      expect(router, isNot(contains('AppConstants.customerImport: (_) => const CustomersScreen()')));
+    });
+
+    test('entity voucher dialog filters cash boxes by selected currency', () {
+      final source = readLib(
+        'lib/ui/widgets/entity_detail/entity_detail_state.dart',
+      );
+      expect(source, contains('cashBoxesForCurrency'),
+          reason: 'The voucher dialog must not offer a cash box in another currency.');
+      expect(source, contains('selectedCurrency'),
+          reason: 'Filtering must use the currency currently selected in the dialog.');
+    });
   });
 }
