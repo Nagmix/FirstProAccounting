@@ -265,7 +265,8 @@ class StockService {
       // نقل طبقات FIFO/LIFO إلى المنتج المقابل في المستودع الوجهة.
       // التحويل يغيّر مكان الأصل؛ لذلك تُخفض طبقات المصدر وتُنشأ طبقات
       // مستقلة للوجهة بنفس تكلفة وتاريخ الاكتساب، مع دعم التحويل الجزئي.
-      if (sourceLayers.isNotEmpty && destinationProductId != null) {
+      if (destinationProductId != null &&
+          sourceCostingMethod != CostingMethod.weightedAverage) {
         var remainingToTransfer = quantity;
         for (final sourceLayer in sourceLayers) {
           if (remainingToTransfer <= 0.000001) break;
@@ -307,6 +308,11 @@ class StockService {
           if (!sourceAllowsNegative) {
             throw StateError(
               'طبقات تكلفة المصدر لا تغطي كمية التحويل المطلوبة ($quantity)',
+            );
+          }
+          if (sourceAvgCost <= 0) {
+            throw StateError(
+              'لا يمكن تحويل مخزون FIFO/LIFO بلا تكلفة موجبة قابلة للتتبع',
             );
           }
           await txn.insert('inventory_cost_layers', {

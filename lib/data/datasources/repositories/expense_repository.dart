@@ -184,22 +184,51 @@ class ExpenseRepository {
     await _dbHelper.journal.checkFiscalPeriodOpen(expenseDate);
 
     final db = await _db;
-    // B-06: Auto-calculate amount_base if exchange_rate is provided and amount_base seems wrong
     final amount = MoneyHelper.readMoney(expenseMap['amount']);
+    if (amount <= 0) {
+      throw ArgumentError.value(
+        amount,
+        'amount',
+        'يجب أن يكون مبلغ المصروف أكبر من صفر',
+      );
+    }
     final exchangeRate =
         (expenseMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-    final expectedBase = amount * exchangeRate;
-    final amountBase = MoneyHelper.readMoney(expenseMap['amount_base']) > 0
-        ? MoneyHelper.readMoney(expenseMap['amount_base'])
-        : expectedBase;
-    if (MoneyHelper.readMoney(expenseMap['amount_base']) <= 0 &&
-        expectedBase > 0) {
-      // Keep the value in human currency units until toCentsMap performs the
-      // single database-boundary conversion below.
-      expenseMap['amount_base'] = expectedBase;
+    if (!exchangeRate.isFinite || exchangeRate <= 0) {
+      throw ArgumentError.value(
+        exchangeRate,
+        'exchange_rate',
+        'سعر الصرف يجب أن يكون أكبر من صفر',
+      );
     }
+    final expectedBase = amount * exchangeRate;
+    final providedAmountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
+    final amountBase = providedAmountBase > 0
+        ? providedAmountBase
+        : expectedBase;
+    final amountBaseDifference = (amountBase - expectedBase).abs();
+    if (amountBaseDifference > 0.005) {
+      throw ArgumentError(
+        'amount_base لا يطابق amount × exchange_rate: '
+        'المتوقع=${expectedBase.toStringAsFixed(2)}، '
+        'الممرر=${amountBase.toStringAsFixed(2)}',
+      );
+    }
+    // Keep the value in human currency units until toCentsMap performs the
+    // single database-boundary conversion below.
+    expenseMap['amount_base'] = expectedBase;
     final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
+    if (expenseCurrency.trim().isEmpty) {
+      throw ArgumentError('عملة المصروف مطلوبة');
+    }
     final operationType = (expenseMap['operation_type'] as String?) ?? 'صرف';
+    if (operationType != 'صرف' && operationType != 'قبض') {
+      throw ArgumentError.value(
+        operationType,
+        'operation_type',
+        'نوع عملية المصروف غير مدعوم',
+      );
+    }
     final now = DateTime.now().toIso8601String();
     final transactionDate = expenseDate;
 
@@ -247,22 +276,34 @@ class ExpenseRepository {
       if (cashBoxId != null) {
         final cashBox = await txn.query('cash_boxes',
             where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final linkedAccountId = cashBox.first['linked_account_id'] as int?;
-          if (linkedAccountId != null) {
-            final linkedAccount = await txn.query('accounts',
-                columns: ['id', 'currency'],
-                where: 'id = ?',
-                whereArgs: [linkedAccountId],
-                limit: 1);
-            if (linkedAccount.isNotEmpty &&
-                linkedAccount.first['currency'] == expenseCurrency) {
-              cashAccountId = linkedAccountId;
-            }
+        if (cashBox.isEmpty) {
+          throw StateError('الصندوق المحدد للمصروف غير موجود');
+        }
+        final cashBoxCurrency =
+            (cashBox.first['currency'] as String?) ?? 'YER';
+        if (cashBoxCurrency != expenseCurrency) {
+          throw ArgumentError(
+            'عملة الصندوق ($cashBoxCurrency) لا تطابق عملة المصروف ($expenseCurrency)',
+          );
+        }
+        final linkedAccountId = cashBox.first['linked_account_id'] as int?;
+        if (linkedAccountId != null) {
+          final linkedAccount = await txn.query('accounts',
+              columns: ['id', 'currency'],
+              where: 'id = ?',
+              whereArgs: [linkedAccountId],
+              limit: 1);
+          if (linkedAccount.isNotEmpty &&
+              linkedAccount.first['currency'] == expenseCurrency) {
+            cashAccountId = linkedAccountId;
           }
         }
-      }
-      if (cashAccountId == null) {
+        if (cashAccountId == null) {
+          throw StateError(
+            'الصندوق المحدد لا يملك حساباً مرتبطاً بعملة المصروف $expenseCurrency',
+          );
+        }
+      } else {
         final cashBanksAccount = await txn.query('accounts',
             where: 'account_code = ? AND currency = ?',
             whereArgs: [(1100 + codeOffset).toString(), expenseCurrency],

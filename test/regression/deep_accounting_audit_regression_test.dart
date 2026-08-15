@@ -153,5 +153,51 @@ void main() {
           reason:
               'Negative or missing-layer inventory must still have a reversible cost record.');
     });
+
+    test('voucher persistence rejects empty or zero journals and mismatched totals', () {
+      final source = readLib(
+        'lib/data/datasources/services/cash_box_service.dart',
+      );
+      expect(source, contains('items.isEmpty'),
+          reason: 'A voucher must contain real journal lines.');
+      expect(source, contains('totalDebit <= 0.0'),
+          reason: 'A zero-value voucher must be rejected.');
+      expect(source, contains('voucherTotalAmount'),
+          reason: 'The voucher header total must be checked against its lines.');
+    });
+
+    test('cash transfers reject invalid source, destination, and currency combinations', () {
+      final source = readLib(
+        'lib/data/datasources/services/cash_box_service.dart',
+      );
+      expect(source, contains('amount <= 0'),
+          reason: 'Cash transfers must reject zero and negative amounts.');
+      expect(source, contains('fromCashBoxId == toCashBoxId'),
+          reason: 'A cash transfer must use two distinct cash boxes.');
+      expect(source, contains('cashBoxCurrency != transferCurrency'),
+          reason: 'Both cash boxes must match the transfer currency.');
+    });
+
+    test('expenses reject zero values and cash boxes in another currency', () {
+      final source = readLib(
+        'lib/data/datasources/repositories/expense_repository.dart',
+      );
+      expect(source, contains('amount <= 0'),
+          reason: 'An expense without a positive amount must not be persisted.');
+      expect(source, contains('cashBoxCurrency != expenseCurrency'),
+          reason: 'An explicitly selected cash box must match the expense currency.');
+      expect(source, contains('amountBaseDifference'),
+          reason: 'The base amount must be validated against amount and exchange rate.');
+    });
+
+    test('stock transfer materializes a fallback layer when no source layers exist', () {
+      final source = readLib(
+        'lib/data/datasources/services/stock_service.dart',
+      );
+      expect(source, contains('remainingToTransfer = quantity'),
+          reason: 'The transfer quantity must be handled even when sourceLayers is empty.');
+      expect(source, contains("reference_type': 'stock_transfer_fallback'"),
+          reason: 'Missing FIFO/LIFO layers must remain auditable and reversible.');
+    });
   });
 }

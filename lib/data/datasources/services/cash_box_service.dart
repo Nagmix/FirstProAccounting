@@ -1145,6 +1145,52 @@ class CashBoxService {
     final amount = MoneyHelper.readMoney(transferMap['amount']);
     final transferCurrency = (transferMap['currency'] as String?) ?? 'YER';
     final now = DateTime.now().toIso8601String();
+    if (amount <= 0) {
+      throw ArgumentError.value(amount, 'amount', 'يجب أن يكون مبلغ التحويل أكبر من صفر');
+    }
+    if (fromCashBoxId <= 0 || toCashBoxId <= 0) {
+      throw ArgumentError('يجب اختيار صندوق مصدر ووجهة صالحين');
+    }
+    if (fromCashBoxId == toCashBoxId) {
+      throw ArgumentError('لا يمكن التحويل إلى الصندوق نفسه');
+    }
+    final fromBoxPreCheck = await db.query(
+      'cash_boxes',
+      where: 'id = ?',
+      whereArgs: [fromCashBoxId],
+      limit: 1,
+    );
+    final toBoxPreCheck = await db.query(
+      'cash_boxes',
+      where: 'id = ?',
+      whereArgs: [toCashBoxId],
+      limit: 1,
+    );
+    if (fromBoxPreCheck.isEmpty || toBoxPreCheck.isEmpty) {
+      throw StateError('الصندوق المصدر أو الوجهة غير موجود');
+    }
+    final fromCurrency =
+        (fromBoxPreCheck.first['currency'] as String?) ?? 'YER';
+    final toCurrency =
+        (toBoxPreCheck.first['currency'] as String?) ?? 'YER';
+    final cashBoxCurrency = fromCurrency;
+    if (cashBoxCurrency != transferCurrency || toCurrency != transferCurrency) {
+      throw ArgumentError(
+        'عملة الصندوقين يجب أن تطابق عملة التحويل: '
+        'المصدر=$fromCurrency، الوجهة=$toCurrency، التحويل=$transferCurrency',
+      );
+    }
+    final sourceBalance = MoneyHelper.readMoney(fromBoxPreCheck.first['balance']);
+    final sourceBalanceType =
+        (fromBoxPreCheck.first['balance_type'] as String?) ?? 'credit';
+    final availableSourceBalance =
+        sourceBalanceType == 'credit' ? sourceBalance : -sourceBalance;
+    if (amount > availableSourceBalance + 0.005) {
+      throw StateError(
+        'الرصيد المتاح في الصندوق المصدر غير كافٍ: '
+        'المتاح=$availableSourceBalance، المطلوب=$amount',
+      );
+    }
 
     late int transferId;
     await db.transaction((txn) async {
@@ -1162,7 +1208,17 @@ class CashBoxService {
       if (fromCashBox.isNotEmpty) {
         final linkedId = fromCashBox.first['linked_account_id'] as int?;
         if (linkedId != null) {
-          fromAccountId = linkedId;
+          final linkedAccount = await txn.query(
+            'accounts',
+            columns: ['id', 'currency'],
+            where: 'id = ?',
+            whereArgs: [linkedId],
+            limit: 1,
+          );
+          if (linkedAccount.isNotEmpty &&
+              linkedAccount.first['currency'] == transferCurrency) {
+            fromAccountId = linkedId;
+          }
         }
       }
       if (fromAccountId == null) {
@@ -1185,7 +1241,17 @@ class CashBoxService {
       if (toCashBox.isNotEmpty) {
         final linkedId = toCashBox.first['linked_account_id'] as int?;
         if (linkedId != null) {
-          toAccountId = linkedId;
+          final linkedAccount = await txn.query(
+            'accounts',
+            columns: ['id', 'currency'],
+            where: 'id = ?',
+            whereArgs: [linkedId],
+            limit: 1,
+          );
+          if (linkedAccount.isNotEmpty &&
+              linkedAccount.first['currency'] == transferCurrency) {
+            toAccountId = linkedId;
+          }
         }
       }
       if (toAccountId == null) {
@@ -1203,6 +1269,11 @@ class CashBoxService {
 
       // Look up exchange rate for transfer currency
       final transferRate = await _getExchangeRate(txn, transferCurrency);
+      if (fromAccountId == null || toAccountId == null) {
+        throw StateError(
+          'لا توجد حسابات مرتبطة بالصندوقين بعملة التحويل $transferCurrency',
+        );
+      }
 
       // مدين: حساب الصناديق والبنوك للوجهة
       if (toAccountId != null && amount > 0) {
@@ -1245,6 +1316,10 @@ class CashBoxService {
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, fromAccountId, 0.0, amount, now);
       }
+      await _dbHelper.journal.validateJournalBalanceInTransaction(
+        txn,
+        journalId,
+      );
 
       // تحديث أرصدة الصناديق (مع مراعاة نوع الرصيد)
       final fromBox = await txn.query('cash_boxes',
@@ -1315,14 +1390,42 @@ class CashBoxService {
   /// إدراج سند مع بنوده وإنشاء قيود يومية
   Future<int> insertVoucher(
       Map<String, dynamic> voucherMap, List<Map<String, dynamic>> items) async {
-    // ── التحقق من توازن القيد: مجموع المدين يجب أن يساوي مجموع الدائن ──
+    // ── التحقق من صحة القيد قبل أي كتابة ──
+    if (items.isEmpty) {
+      throw ArgumentError('لا يمكن حفظ سند بلا بنود محاسبية');
+    }
     final totalDebit = items.fold(
         0.0, (sum, item) => sum + MoneyHelper.readMoney(item['debit']));
     final totalCredit = items.fold(
         0.0, (sum, item) => sum + MoneyHelper.readMoney(item['credit']));
-    if ((totalDebit - totalCredit).abs() > 0.01) {
+    final hasInvalidItem = items.any((item) {
+      final debit = MoneyHelper.readMoney(item['debit']);
+      final credit = MoneyHelper.readMoney(item['credit']);
+      final accountId = (item['account_id'] as num?)?.toInt();
+      return accountId == null ||
+          debit < 0 ||
+          credit < 0 ||
+          (debit == 0 && credit == 0) ||
+          (debit > 0 && credit > 0);
+    });
+    if (hasInvalidItem ||
+        totalDebit <= 0.0 ||
+        totalCredit <= 0.0 ||
+        items.length < 2) {
+      throw ArgumentError('يجب أن يحتوي السند على بنود مدين ودائن موجبة وصالحة');
+    }
+    if ((totalDebit - totalCredit).abs() > 0.005) {
       throw Exception(
           'القيد غير متوازن: المدين = $totalDebit، الدائن = $totalCredit');
+    }
+    final voucherTotalAmount = MoneyHelper.readMoney(voucherMap['total_amount']);
+    if (voucherTotalAmount <= 0.0 ||
+        (voucherTotalAmount - totalDebit).abs() > 0.005) {
+      throw ArgumentError(
+        'إجمالي السند لا يطابق إجمالي بنود القيد: '
+        'الإجمالي=${voucherTotalAmount.toStringAsFixed(2)}، '
+        'القيد=${totalDebit.toStringAsFixed(2)}',
+      );
     }
 
     // ── التحقق من قفل الفترة المحاسبية ──
