@@ -156,15 +156,15 @@ void main() {
       order: draft().copyWith(total: 50, remaining: 50),
     );
 
-    expect(
-      () => service.createPayment(
+    await expectLater(
+      service.createPayment(
         payment: ServicePayment(
           serviceOrderId: 'SO-100',
           amount: 50.01,
           paymentDate: DateTime.utc(2026, 8, 18),
         ),
       ),
-      throwsArgumentError,
+      throwsA(isA<ArgumentError>()),
     );
   });
 
@@ -297,9 +297,58 @@ void main() {
     expect(transactions[1]['credit'], MoneyHelper.toCents(50));
     expect(transactions[0]['journal_id'], transactions[1]['journal_id']);
 
-    expect(
-      () => service.postPayment(paymentId: paymentId),
-      throwsStateError,
+    await expectLater(
+      service.postPayment(paymentId: paymentId),
+      throwsA(isA<StateError>()),
     );
+  });
+
+  test('rejects zero and negative payments before creating rows', () async {
+    await service.createDraft(
+      order: draft().copyWith(total: 100, remaining: 100),
+    );
+
+    await expectLater(
+      service.createPayment(
+        payment: ServicePayment(
+          serviceOrderId: 'SO-100',
+          amount: 0,
+          paymentDate: DateTime.utc(2026, 8, 18),
+        ),
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+    await expectLater(
+      service.createPayment(
+        payment: ServicePayment(
+          serviceOrderId: 'SO-100',
+          amount: -1,
+          paymentDate: DateTime.utc(2026, 8, 18),
+        ),
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+
+    expect(await db.query('service_payments'), isEmpty);
+    final order = await service.getById('SO-100');
+    expect(order!.paidAmount, 0);
+    expect(order.remaining, 100);
+  });
+
+  test('adding a warranty has no financial or stock side effects', () async {
+    await service.createDraft(order: draft());
+
+    await service.addWarranty(
+      warranty: ServiceWarranty(
+        serviceOrderId: 'SO-100',
+        startsAt: DateTime.utc(2026, 8, 18),
+        endsAt: DateTime.utc(2026, 11, 18),
+        terms: 'Three months',
+      ),
+    );
+
+    expect(await db.query('transactions'), isEmpty);
+    expect(await db.query('stock_movements'), isEmpty);
+    expect(await service.getWarranties('SO-100'), hasLength(1));
   });
 }
