@@ -1,11 +1,39 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/finance/tax_engine.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
+import 'package:firstpro/data/datasources/migrations/schema.dart';
 import 'package:firstpro/data/datasources/services/journal_service.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  late Database db;
+
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    db = await openDatabase(
+      inMemoryDatabasePath,
+      version: 58,
+      onCreate: (database, version) async {
+        await DatabaseSchema.onCreate(database, version);
+      },
+      onConfigure: (database) async {
+        await database.execute('PRAGMA foreign_keys = ON');
+      },
+    );
+    DatabaseHelper.useTestDatabase(db);
+  });
+
+  tearDown(() async {
+    DatabaseHelper.clearTestDatabase();
+    await db.close();
+  });
+
   group('tax, currency and fiscal-period regression guards', () {
     test('rejects a zero exchange rate before conversion', () {
       expect(
@@ -30,10 +58,7 @@ void main() {
     });
 
     test('rejects postings dated in a closed fiscal year', () async {
-      final dbHelper = DatabaseHelper();
-      final db = await dbHelper.database;
       final now = DateTime.utc(2099, 8, 1).toIso8601String();
-      await db.delete('fiscal_years', where: 'year = ?', whereArgs: [2099]);
       await db.insert('fiscal_years', {
         'year': 2099,
         'name': 'FY 2099',
@@ -47,7 +72,7 @@ void main() {
       });
 
       await expectLater(
-        JournalService(dbHelper).checkFiscalPeriodOpen('2099-08-19'),
+        JournalService(DatabaseHelper()).checkFiscalPeriodOpen('2099-08-19'),
         throwsException,
       );
     });
