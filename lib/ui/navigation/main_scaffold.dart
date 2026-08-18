@@ -132,6 +132,11 @@ class _MainScaffoldState extends State<MainScaffold>
             route: AppConstants.serviceOrders,
             color: Colors.deepOrange),
         _DrawerMenuItem(
+            icon: Icons.factory_outlined,
+            label: 'الإنتاج والوصفات',
+            route: AppConstants.productionOrders,
+            color: Colors.deepPurple),
+        _DrawerMenuItem(
             icon: Icons.history,
             label: 'الورديات',
             route: AppConstants.shifts,
@@ -161,6 +166,11 @@ class _MainScaffoldState extends State<MainScaffold>
             label: 'المنتجات والمخزون',
             route: AppConstants.products,
             color: AppColors.secondary),
+        _DrawerMenuItem(
+            icon: Icons.fact_check_outlined,
+            label: 'تسويات الجرد',
+            route: AppConstants.inventoryAdjustments,
+            color: Colors.blueGrey),
         _DrawerMenuItem(
             icon: Icons.warehouse,
             label: 'المستودعات',
