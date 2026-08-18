@@ -17,6 +17,7 @@ import 'package:firstpro/data/datasources/migrations/migration_v54.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v55.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v56.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v57.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v58.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -114,5 +115,8 @@ class MigrationRunner {
 
     // v57 — Service and maintenance orders
     if (oldVersion < 57) await MigrationV57.migrate(db);
+
+    // v58 — Recipes and production orders
+    if (oldVersion < 58) await MigrationV58.migrate(db);
   }
 }
