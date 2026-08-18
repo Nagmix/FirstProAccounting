@@ -69,6 +69,8 @@ void main() {
     expect(captured!.lines.single.actualQuantity, 3);
     expect(captured!.lines.single.conversionFactor, 12);
     expect(find.textContaining('تم إنشاء مسودة تسوية الجرد'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('confirm-inventory-adjustment')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('confirm-inventory-adjustment')));

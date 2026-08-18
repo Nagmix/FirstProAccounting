@@ -48,14 +48,11 @@ void main() {
     expect(captured!.outputProductId, 7);
     expect(captured!.plannedQuantity, 24);
     expect(find.textContaining('تم إنشاء مسودة أمر الإنتاج'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('post-production')), findsOneWidget);
 
     final postButton = find.byKey(const Key('post-production'));
-    await tester.scrollUntilVisible(
-      postButton,
-      500,
-      scrollable: find.byType(Scrollable).first,
-    );
     await tester.tap(postButton);
     await tester.pumpAndSettle();
     expect(postedOrderId, captured!.id);
