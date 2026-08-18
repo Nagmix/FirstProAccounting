@@ -54,6 +54,23 @@ void main() {
   });
 
   group('ServicePayment model', () {
+    test('reads persisted base amount as minor units even when SQLite returns double', () {
+      final payment = ServicePayment.fromMap({
+        'id': 1,
+        'service_order_id': 'so-1',
+        'payment_method': 'cash',
+        'amount': 10000,
+        'currency_code': 'USD',
+        'exchange_rate': 140.0,
+        'amount_base': 14000.0,
+        'is_posted': 0,
+        'payment_date': '2026-08-18T00:00:00.000Z',
+      });
+
+      expect(payment.amount, 100);
+      expect(payment.amountBase, 140);
+    });
+
     test('requires a positive amount and preserves currency metadata', () {
       final payment = ServicePayment(
         serviceOrderId: 'so-1',

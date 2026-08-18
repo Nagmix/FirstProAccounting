@@ -57,7 +57,9 @@ class ServicePayment {
       amount: MoneyHelper.readMoney(map['amount']),
       currencyCode: map['currency_code'] as String? ?? 'YER',
       exchangeRate: (map['exchange_rate'] as num?)?.toDouble() ?? 1.0,
-      amountBase: MoneyHelper.readMoney(map['amount_base']),
+      // amount_base is always persisted as minor units in v57. SQLite may
+      // return INTEGER columns as int or double depending on the driver.
+      amountBase: MoneyHelper.readCalculatedMoney(map['amount_base']),
       cashBoxId: map['cash_box_id'] as int?,
       referenceNumber: map['reference_number'] as String?,
       isPosted: (map['is_posted'] ?? 0) == 1,
