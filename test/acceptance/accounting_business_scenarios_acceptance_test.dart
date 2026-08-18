@@ -308,7 +308,7 @@ Map<String, dynamic> _item(
     'quantity': quantity,
     'unit_price': unitPrice,
     'total_price': total,
-    'unit_cost': unitCost,
+    'unit_cost': unitCost ?? 0.0,
     'conversion_factor': 1.0,
     'base_quantity': quantity,
   };
