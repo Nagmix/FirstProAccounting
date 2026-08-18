@@ -5,6 +5,7 @@ import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/journal_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('tax, currency and fiscal-period regression guards', () {
     test('rejects a zero exchange rate before conversion', () {
       expect(
