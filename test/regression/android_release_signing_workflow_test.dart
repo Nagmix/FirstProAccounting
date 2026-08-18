@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('release workflow must fail when APK or AAB signing cannot be verified', () {
