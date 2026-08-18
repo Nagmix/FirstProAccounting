@@ -258,6 +258,20 @@
 
 ---
 
+## 12.1. وحدة الخدمات والصيانة v57
+
+وحدة الخدمات والصيانة مبنية حول `ServiceOrderService`، ويجب أن تبقى العمليات المحاسبية والمخزنية داخل معاملة SQLite واحدة بعد التحقق من الفترة المالية والحالة.
+
+- لا يُرحّل أمر الخدمة إلا عندما تكون حالته `ready` أو `delivered`، ويُمنع الترحيل المكرر عبر `is_posted` و`posted_journal_id`.
+- بند `service` لا ينشئ حركة مخزون ولا COGS. بند `part` يؤثر في المخزون فقط إذا كان المنتج متتبع المخزون وكان `ProductKind.createsStockMovement` صحيحًا.
+- قيد الخدمة الأساسي يكون مدينًا للذمم `1200 + currencyOffset` ودائنًا للإيراد `4100 + currencyOffset`، وتُخزّن القيم المالية بالوحدات الصغرى مع `amount_base` وبيانات العملة والتدقيق.
+- قطع الغيار المخزنية تُرحّل بتكلفة `CostingEngineService`، مع إنقاص `products.current_stock` وتسجيل `stock_movements` بمرجع `service_order` وإنشاء COGS/مخزون بالعملة الأساسية YER.
+- لا يُستدعى `BaseCurrencyService` من داخل معاملة SQLite؛ يجب الحصول على إزاحة العملة قبل `db.transaction` لتجنب deadlock.
+- إلغاء أمر مرحّل لا يحذف القيد أو حركة المخزون الأصلية. ينشئ قيدًا عكسيًا جديدًا بمرجع `service_order_reversal`، ويعيد الكميات والتكلفة، ثم يسجل سبب الإلغاء في `service_status_history`.
+- كل صف في جدول `transactions` يجب أن يتضمن `journal_id` و`reference_type` و`reference_id` و`currency_code` و`exchange_rate` و`amount_base`، وأن يمر عبر مدققات توازن القيد.
+
+---
+
 ## 13. الأمن والخصوصية
 
 - لا تحفظ أي Token أو Password أو Secret داخل المستودع أو ملفات التقارير.
