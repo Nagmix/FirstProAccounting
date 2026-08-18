@@ -11,7 +11,7 @@ class AppConstants {
 
   // ── Database ──────────────────────────────────────────────────
   static const String dbName = 'firstpro.db';
-  static const int dbVersion = 55; // Must match DatabaseHelper._databaseVersion
+  static const int dbVersion = 56; // Must match DatabaseHelper._databaseVersion
 
   // ── Locale & currency ─────────────────────────────────────────
   // Note: AppConstants.currency and AppConstants.currencyEn were removed
