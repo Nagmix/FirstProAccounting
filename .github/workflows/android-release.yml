@@ -98,13 +98,13 @@ jobs:
             echo "ERROR: Release APK not found at $APK_PATH"
             exit 1
           fi
-          echo "APK size: $(du -h $APK_PATH | cut -f1)"
-          # Verify the APK is signed with release key (not debug)
-          if unzip -l "$APK_PATH" | grep -q "META-INF/CERT.RSA"; then
-            echo "APK is properly signed (CERT.RSA found)"
-          else
-            echo "WARNING: Could not verify APK signing"
+          echo "APK size: $(du -h "$APK_PATH" | cut -f1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: Android apksigner was not found"
+            exit 1
           fi
+          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
 
       - name: Verify AAB signing
         run: |
@@ -113,17 +113,34 @@ jobs:
             echo "ERROR: Release AAB not found at $AAB_PATH"
             exit 1
           fi
-          echo "AAB size: $(du -h $AAB_PATH | cut -f1)"
+          echo "AAB size: $(du -h "$AAB_PATH" | cut -f1)"
+          JARSIGNER_OUTPUT="$(mktemp)"
+          trap 'rm -f "$JARSIGNER_OUTPUT"' EXIT
+          if ! jarsigner -verify -verbose -certs "$AAB_PATH" >"$JARSIGNER_OUTPUT" 2>&1; then
+            cat "$JARSIGNER_OUTPUT"
+            echo "ERROR: Release AAB signature verification failed"
+            exit 1
+          fi
+          cat "$JARSIGNER_OUTPUT"
+          if ! grep -q "jar verified" "$JARSIGNER_OUTPUT"; then
+            echo "ERROR: Release AAB was not verified as signed"
+            exit 1
+          fi
 
       # ── 12. Extract SHA Fingerprints ───────────────────────────────
       - name: Extract SHA1 & SHA256 fingerprints
         run: |
-          keytool -list -v \
+          FINGERPRINTS="$(keytool -list -v \
             -keystore android/app/release.jks \
             -alias ${{ secrets.KEY_ALIAS }} \
             -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -keypass "${{ secrets.KEY_PASSWORD }}" \
-            2>/dev/null | grep -E "SHA1:|SHA256:" || echo "Could not extract fingerprints"
+            2>/dev/null | grep -E "SHA1:|SHA256:" || true)"
+          if [ -z "$FINGERPRINTS" ]; then
+            echo "ERROR: Release keystore fingerprints unavailable"
+            exit 1
+          fi
+          echo "$FINGERPRINTS"
 
       # ── 13. Upload Artifacts ───────────────────────────────────────
       - name: Upload Release APK
