@@ -268,6 +268,9 @@ class ServiceOrderService {
       throw StateError('A payment date is required before posting.');
     }
     await _dbHelper.journal.checkFiscalPeriodOpen(paymentDate);
+    final paymentCurrency = initialRows.single['currency_code'] as String? ?? 'YER';
+    final currencyOffset =
+        await _dbHelper.baseCurrency.getOffsetForCurrency(paymentCurrency);
 
     await db.transaction((txn) async {
       final paymentRows = await txn.query(
@@ -312,6 +315,9 @@ class ServiceOrderService {
       }
 
       final currency = payment['currency_code'] as String? ?? 'YER';
+      if (currency != paymentCurrency) {
+        throw StateError('Payment currency changed while posting.');
+      }
       if (currency != order['currency_code']) {
         throw StateError('Payment currency does not match the service order.');
       }
@@ -338,11 +344,10 @@ class ServiceOrderService {
         throw StateError('Cash box currency does not match the payment.');
       }
 
-      final offset = await _dbHelper.baseCurrency.getOffsetForCurrency(currency);
       final receivableRows = await txn.query(
         'accounts',
         where: 'account_code = ? AND currency = ? AND is_active = 1',
-        whereArgs: [(1200 + offset).toString(), currency],
+        whereArgs: [(1200 + currencyOffset).toString(), currency],
         limit: 1,
       );
       if (receivableRows.isEmpty) {
