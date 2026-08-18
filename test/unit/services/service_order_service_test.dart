@@ -146,7 +146,7 @@ void main() {
     final order = await service.getById('SO-100');
     expect(payments, hasLength(1));
     expect(payments.single.amount, 100);
-    expect(payments.single.amountBase, 140);
+    expect(payments.single.amountBase, 14000);
     expect(order!.paidAmount, 100);
     expect(order.remaining, 100);
   });
