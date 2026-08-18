@@ -22,7 +22,9 @@ void main() {
     await tester.enterText(find.byKey(const Key('product-id')), '7');
     await tester.enterText(find.byKey(const Key('actual-quantity')), '-2');
     await tester.enterText(find.byKey(const Key('unit-cost')), '100');
-    await tester.tap(find.byKey(const Key('create-inventory-draft')));
+    final createButton = find.byKey(const Key('create-inventory-draft'));
+    await tester.scrollUntilVisible(createButton, 500);
+    await tester.tap(createButton);
     await tester.pump();
 
     expect(find.text('الكمية الفعلية لا يمكن أن تكون سالبة'), findsOneWidget);
@@ -50,7 +52,9 @@ void main() {
     await tester.enterText(find.byKey(const Key('actual-quantity')), '3');
     await tester.enterText(find.byKey(const Key('conversion-factor')), '12');
     await tester.enterText(find.byKey(const Key('unit-cost')), '100');
-    await tester.tap(find.byKey(const Key('create-inventory-draft')));
+    final createButton = find.byKey(const Key('create-inventory-draft'));
+    await tester.scrollUntilVisible(createButton, 500);
+    await tester.tap(createButton);
     await tester.pump();
 
     expect(captured, isNotNull);

@@ -50,7 +50,9 @@ void main() {
     expect(find.textContaining('تم إنشاء مسودة أمر الإنتاج'), findsOneWidget);
     expect(find.byKey(const Key('post-production')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('post-production')));
+    final postButton = find.byKey(const Key('post-production'));
+    await tester.ensureVisible(postButton);
+    await tester.tap(postButton);
     await tester.pumpAndSettle();
     expect(postedOrderId, captured!.id);
   });
