@@ -782,6 +782,7 @@ class ReportService {
 
     return await db.rawQuery(
       "SELECT t.id, t.account_id, t.debit, t.credit, t.description, t.date, t.created_at, "
+      "t.currency_code, t.exchange_rate, t.amount_base, "
       "a.name_ar AS account_name, a.account_code, a.currency "
       "FROM transactions t LEFT JOIN accounts a ON t.account_id=a.id "
       "WHERE 1=1$df$cf "
@@ -852,9 +853,9 @@ class ReportService {
 
   // ── 15b. Consolidated Trial Balance (base currency) ────────────
 
-  /// ميزان المراجعة التجميعي — converts all currency balances to
-  /// the base currency (YER) using the current rate from the currencies
-  /// table.
+  /// ميزان المراجعة التجميعي — converts posted balances to the base
+  /// currency (YER) using each transaction's historical amount_base value.
+  /// The current currency rate is retained only as audit metadata.
   ///
   /// Returns the same structure as `getTrialBalanceReport` but with
   /// all amounts converted to the base currency, plus `base_currency`
@@ -890,10 +891,7 @@ class ReportService {
       SELECT a.account_code, a.name_ar, a.account_type, a.currency,
         CAST(COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0) AS INTEGER) AS balance_original,
         CASE WHEN a.currency = ? THEN 1.0 ELSE COALESCE(cur.rate, 1.0) END AS exchange_rate_used,
-        CAST(ROUND(
-          (COALESCE(SUM(t.debit), 0) - COALESCE(SUM(t.credit), 0)) *
-          CASE WHEN a.currency = ? THEN 1.0 ELSE COALESCE(cur.rate, 1.0) END
-        ) AS INTEGER) AS balance_base
+        CAST(COALESCE(SUM(CASE WHEN t.debit > 0 THEN t.amount_base ELSE -t.amount_base END), 0) AS INTEGER) AS balance_base
       FROM accounts a
       LEFT JOIN transactions t ON t.account_id = a.id$df
       LEFT JOIN (
