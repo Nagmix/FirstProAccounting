@@ -11,6 +11,7 @@ import 'package:firstpro/data/datasources/services/shift_service.dart';
 import 'package:firstpro/data/datasources/services/report_service.dart';
 import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/invoice_totals_engine.dart';
 import 'package:firstpro/ui/screens/pos/pos_models.dart';
 /// reactive updates for sync readiness.
 ///
@@ -141,16 +142,20 @@ class PosViewModel extends ChangeNotifier {
   double _vatRate = 0.0;
   double get vatRate => _vatRate;
 
-  double get tax {
-    final taxableBase =
-        (subtotal - effectiveDiscount).clamp(0.0, double.infinity);
-    return taxableBase * (_vatRate / 100);
-  }
-
   double _transportCharges = 0.0;
   double get transportCharges => _transportCharges;
 
-  double get total => subtotal - effectiveDiscount + tax + _transportCharges;
+  InvoiceTotals get totals => const InvoiceTotalsEngine().calculate(
+        subtotalMinorUnits: MoneyHelper.toCents(subtotal),
+        discountMinorUnits: MoneyHelper.toCents(effectiveDiscount),
+        transportMinorUnits: MoneyHelper.toCents(_transportCharges),
+        taxRateBasisPoints: (_vatRate * 100).round(),
+        taxInclusive: false,
+      );
+
+  double get tax => MoneyHelper.fromCents(totals.taxMinorUnits);
+
+  double get total => MoneyHelper.fromCents(totals.totalMinorUnits);
 
   double get totalPaid => _payments.fold(0.0, (sum, p) => sum + p.amount);
   double get remaining => total - totalPaid;

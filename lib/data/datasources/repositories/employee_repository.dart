@@ -3,6 +3,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -129,7 +130,10 @@ class EmployeeRepository {
 
     // Resolve exchange rate for the given currency
     final exchangeRate = await _getExchangeRate(currency);
-    final baseAmount = currency == 'YER' ? balance : balance * exchangeRate;
+    final baseAmountMinorUnits = const CurrencyEngine().convertMajorUnits(
+      amount: balance,
+      exchangeRate: currency == 'YER' ? 1.0 : exchangeRate,
+    );
 
     await db.transaction((txn) async {
       if (balanceType == 'credit') {
@@ -147,7 +151,7 @@ class EmployeeRepository {
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
         });
         await txn.insert('transactions', {
           'account_id': equityAccountId,
@@ -161,7 +165,7 @@ class EmployeeRepository {
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
         });
         await _dbHelper.journal
             .updateAccountBalanceWithJournal(txn, accountId, 0.0, balance, now);
@@ -182,7 +186,7 @@ class EmployeeRepository {
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
         });
         await txn.insert('transactions', {
           'account_id': equityAccountId,
@@ -196,7 +200,7 @@ class EmployeeRepository {
           'reference_id': employeeId != null ? 'employee_$employeeId' : null,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
         });
         await _dbHelper.journal
             .updateAccountBalanceWithJournal(txn, accountId, balance, 0.0, now);
@@ -362,7 +366,10 @@ class EmployeeRepository {
 
     // Resolve exchange rate for the given currency
     final exchangeRate = await _getExchangeRate(currency);
-    final baseAmount = currency == 'YER' ? amount : amount * exchangeRate;
+    final baseAmountMinorUnits = const CurrencyEngine().convertMajorUnits(
+      amount: amount,
+      exchangeRate: currency == 'YER' ? 1.0 : exchangeRate,
+    );
 
     await db.transaction((txn) async {
       if (balanceType == 'credit') {
@@ -379,7 +386,7 @@ class EmployeeRepository {
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
                   'reference_type': 'employee_journal',
           'reference_id': journalId.toString(),
 });
@@ -393,7 +400,7 @@ class EmployeeRepository {
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
                   'reference_type': 'employee_journal',
           'reference_id': journalId.toString(),
 });
@@ -415,7 +422,7 @@ class EmployeeRepository {
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
                   'reference_type': 'employee_journal',
           'reference_id': journalId.toString(),
 });
@@ -429,7 +436,7 @@ class EmployeeRepository {
           'created_at': now,
           'currency_code': currency,
           'exchange_rate': exchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
                   'reference_type': 'employee_journal',
           'reference_id': journalId.toString(),
 });

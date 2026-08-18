@@ -71,6 +71,7 @@ class DatabaseSchema {
         purchase_unit_id INTEGER,
         sale_unit_id INTEGER,
         track_stock INTEGER NOT NULL DEFAULT 1,
+        product_kind TEXT NOT NULL DEFAULT 'stock',
         is_sellable INTEGER NOT NULL DEFAULT 1,
         is_purchasable INTEGER NOT NULL DEFAULT 1,
         allow_negative INTEGER NOT NULL DEFAULT 0,

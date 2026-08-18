@@ -2,6 +2,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -201,23 +202,27 @@ class ExpenseRepository {
         'سعر الصرف يجب أن يكون أكبر من صفر',
       );
     }
-    final expectedBase = amount * exchangeRate;
+    final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
+    final effectiveExchangeRate = expenseCurrency == 'YER' ? 1.0 : exchangeRate;
+    final expectedBaseMinorUnits = const CurrencyEngine().convertMajorUnits(
+      amount: amount,
+      exchangeRate: effectiveExchangeRate,
+    );
     final providedAmountBase = MoneyHelper.readMoney(expenseMap['amount_base']);
-    final amountBase = providedAmountBase > 0
-        ? providedAmountBase
-        : expectedBase;
-    final amountBaseDifference = (amountBase - expectedBase).abs();
-    if (amountBaseDifference > 0.005) {
+    final providedAmountBaseMinorUnits = providedAmountBase > 0
+        ? MoneyHelper.toCents(providedAmountBase)
+        : expectedBaseMinorUnits;
+    if (providedAmountBaseMinorUnits != expectedBaseMinorUnits) {
       throw ArgumentError(
         'amount_base لا يطابق amount × exchange_rate: '
-        'المتوقع=${expectedBase.toStringAsFixed(2)}، '
-        'الممرر=${amountBase.toStringAsFixed(2)}',
+        'المتوقع=${(expectedBaseMinorUnits / 100).toStringAsFixed(2)}، '
+        'الممرر=${(providedAmountBaseMinorUnits / 100).toStringAsFixed(2)}',
       );
     }
     // Keep the value in human currency units until toCentsMap performs the
     // single database-boundary conversion below.
-    expenseMap['amount_base'] = expectedBase;
-    final expenseCurrency = (expenseMap['currency'] as String?) ?? 'YER';
+    final amountBase = expectedBaseMinorUnits / 100.0;
+    expenseMap['amount_base'] = amountBase;
     if (expenseCurrency.trim().isEmpty) {
       throw ArgumentError('عملة المصروف مطلوبة');
     }
@@ -238,7 +243,7 @@ class ExpenseRepository {
     // value for consolidated reports. This matches invoice posting behavior.
     final int codeOffset =
         await locator<BaseCurrencyService>().getOffsetForCurrency(expenseCurrency);
-    final double journalAmount = amount;
+        final double journalAmount = amount;
     int expenseId = 0;
 
     await db.transaction((txn) async {
@@ -334,7 +339,7 @@ class ExpenseRepository {
             'date': transactionDate,
             'created_at': now,
             'currency_code': expenseCurrency,
-            'exchange_rate': exchangeRate,
+            'exchange_rate': effectiveExchangeRate,
             'amount_base': MoneyHelper.toCents(amountBase),
             'reference_type': 'expense',
             'reference_id': referenceId,
@@ -352,7 +357,7 @@ class ExpenseRepository {
             'date': transactionDate,
             'created_at': now,
             'currency_code': expenseCurrency,
-            'exchange_rate': exchangeRate,
+            'exchange_rate': effectiveExchangeRate,
             'amount_base': MoneyHelper.toCents(amountBase),
             'reference_type': 'expense',
             'reference_id': referenceId,
@@ -374,7 +379,7 @@ class ExpenseRepository {
             'date': transactionDate,
             'created_at': now,
             'currency_code': expenseCurrency,
-            'exchange_rate': exchangeRate,
+            'exchange_rate': effectiveExchangeRate,
             'amount_base': MoneyHelper.toCents(amountBase),
             'reference_type': 'expense',
             'reference_id': referenceId,
@@ -393,7 +398,7 @@ class ExpenseRepository {
             'date': transactionDate,
             'created_at': now,
             'currency_code': expenseCurrency,
-            'exchange_rate': exchangeRate,
+            'exchange_rate': effectiveExchangeRate,
             'amount_base': MoneyHelper.toCents(amountBase),
             'reference_type': 'expense',
             'reference_id': referenceId,

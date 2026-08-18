@@ -8,6 +8,7 @@ import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 import 'package:firstpro/data/models/invoice_item_model.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/invoice_totals_engine.dart';
 
 /// ViewModel for invoice creation — manages customers, products, invoice items,
 /// entity selection, payment state, currency, and all computed totals.
@@ -151,13 +152,25 @@ class InvoiceViewModel extends ChangeNotifier {
   double _vatRate = 0.0;
   double get vatRate => _vatRate;
 
-  /// Tax amount based on VAT rate.
-  double get taxAmount =>
-      (subtotal - discountAmount) * (_vatRate / 100);
+  /// The current product supports exclusive VAT by default. The tax-inclusive
+  /// flag must be persisted as a business setting before enabling it per
+  /// invoice; silently mixing both modes would corrupt tax reports.
+  bool _taxInclusive = false;
+  bool get taxInclusive => _taxInclusive;
+
+  InvoiceTotals get totals => const InvoiceTotalsEngine().calculate(
+        subtotalMinorUnits: MoneyHelper.toCents(subtotal),
+        discountMinorUnits: MoneyHelper.toCents(discountAmount),
+        transportMinorUnits: MoneyHelper.toCents(transportChargesAmount),
+        taxRateBasisPoints: (_vatRate * 100).round(),
+        taxInclusive: _taxInclusive,
+      );
+
+  /// Tax amount based on the central integer tax engine.
+  double get taxAmount => MoneyHelper.fromCents(totals.taxMinorUnits);
 
   /// Total after discount, tax, and transport.
-  double get total =>
-      subtotal - discountAmount + taxAmount + transportChargesAmount;
+  double get total => MoneyHelper.fromCents(totals.totalMinorUnits);
 
   /// Paid amount (from stored value).
   double get paidAmount => _paidAmount;

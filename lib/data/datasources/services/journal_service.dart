@@ -161,20 +161,43 @@ class JournalService {
   /// ── W-03: في نظام cents (أعداد صحيحة)، الفرق يجب أن يكون صفراً ──
   /// Throws an exception if the journal entry is unbalanced.
   void validateJournalBalance(List<Map<String, dynamic>> entries) {
-    double totalDebit = 0.0;
-    double totalCredit = 0.0;
+    var totalDebitCents = 0;
+    var totalCreditCents = 0;
+
     for (final entry in entries) {
-      totalDebit += MoneyHelper.readMoney(entry['debit']);
-      totalCredit += MoneyHelper.readMoney(entry['credit']);
+      final debitCents = MoneyHelper.toCents(
+        MoneyHelper.readMoney(entry['debit']),
+      );
+      final creditCents = MoneyHelper.toCents(
+        MoneyHelper.readMoney(entry['credit']),
+      );
+
+      if (debitCents < 0 || creditCents < 0) {
+        throw Exception('لا يمكن أن يحتوي سطر القيد على مبلغ سالب');
+      }
+      if (debitCents > 0 && creditCents > 0) {
+        throw Exception('لا يجوز أن يحتوي سطر القيد على مدين ودائن معًا');
+      }
+
+      totalDebitCents += debitCents;
+      totalCreditCents += creditCents;
     }
-    final difference = (totalDebit - totalCredit).abs();
-    // W-03: في نظام التخزين بالسنتات (أعداد صحيحة)، لا يجب وجود أي فرق
-    if (difference > 0.005) {
+
+    // Monetary values are persisted as integer minor units; therefore exact
+    // equality is required and no floating-point tolerance is appropriate.
+    if (totalDebitCents != totalCreditCents) {
+      final differenceCents = (totalDebitCents - totalCreditCents).abs();
       debugPrint(
-        '⚠️ UNBALANCED JOURNAL ENTRY: Debit=$totalDebit, Credit=$totalCredit, Diff=$difference',
+        '⚠️ UNBALANCED JOURNAL ENTRY: '
+        'DebitCents=$totalDebitCents, '
+        'CreditCents=$totalCreditCents, '
+        'DiffCents=$differenceCents',
       );
       throw Exception(
-        'قيد محاسبي غير متوازن: المدين=$totalDebit, الدائن=$totalCredit, الفرق=$difference',
+        'قيد محاسبي غير متوازن: '
+        'المدين بالسنتات=$totalDebitCents، '
+        'الدائن بالسنتات=$totalCreditCents، '
+        'الفرق بالسنتات=$differenceCents',
       );
     }
   }
@@ -212,17 +235,22 @@ class JournalService {
       'FROM transactions WHERE journal_id = ? AND credit > 0',
       [journalId],
     );
-    final totalDebitBase =
-        MoneyHelper.readCalculatedMoney(debitRows.first['total']);
+    final totalDebitBase = (debitRows.first['total'] as num?)?.toInt() ?? 0;
     final totalCreditBase =
-        MoneyHelper.readCalculatedMoney(creditRows.first['total']);
-    final difference = (totalDebitBase - totalCreditBase).abs();
-    if (difference > 0.005) {
+        (creditRows.first['total'] as num?)?.toInt() ?? 0;
+    if (totalDebitBase != totalCreditBase) {
+      final differenceBase = (totalDebitBase - totalCreditBase).abs();
       debugPrint(
-        '⚠️ UNBALANCED BASE JOURNAL ENTRY: DebitBase=$totalDebitBase, CreditBase=$totalCreditBase, Diff=$difference',
+        '⚠️ UNBALANCED BASE JOURNAL ENTRY: '
+        'DebitBaseCents=$totalDebitBase, '
+        'CreditBaseCents=$totalCreditBase, '
+        'DiffCents=$differenceBase',
       );
       throw Exception(
-        'قيد محاسبي غير متوازن بالعملة الأساسية: المدين=$totalDebitBase, الدائن=$totalCreditBase, الفرق=$difference',
+        'قيد محاسبي غير متوازن بالعملة الأساسية: '
+        'المدين بالسنتات=$totalDebitBase، '
+        'الدائن بالسنتات=$totalCreditBase، '
+        'الفرق بالسنتات=$differenceBase',
       );
     }
   }

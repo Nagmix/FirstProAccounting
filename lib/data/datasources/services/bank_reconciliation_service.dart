@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -295,6 +296,11 @@ class BankReconciliationService {
       final codeOffset =
           await locator<BaseCurrencyService>().getOffsetForCurrency(currency);
       final exchangeRate = await _getExchangeRate(txn, currency);
+      final effectiveExchangeRate = currency == 'YER' ? 1.0 : exchangeRate;
+      int toBaseMinorUnits(double amount) => const CurrencyEngine().convertMinorUnits(
+            amountMinorUnits: MoneyHelper.toCents(amount),
+            exchangeRateMicros: CurrencyEngine.rateToMicros(effectiveExchangeRate),
+          );
 
       // Bank charges: Dr. Bank Charges Expense / Cr. Cash
       if (calculated.bankCharges.abs() >= 0.005) {
@@ -322,10 +328,9 @@ class BankReconciliationService {
           'date': now,
           'created_at': now,
           'currency_code': currency,
-          'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+          'exchange_rate': effectiveExchangeRate,
           'amount_base':
-              (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate)
-                  .round(),
+              toBaseMinorUnits(calculated.bankCharges),
                   'reference_type': 'bank_reconciliation',
           'reference_id': journalId.toString(),
 });
@@ -341,10 +346,9 @@ class BankReconciliationService {
           'date': now,
           'created_at': now,
           'currency_code': currency,
-          'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+          'exchange_rate': effectiveExchangeRate,
           'amount_base':
-              (MoneyHelper.toCents(calculated.bankCharges) * exchangeRate)
-                  .round(),
+              toBaseMinorUnits(calculated.bankCharges),
                   'reference_type': 'bank_reconciliation',
           'reference_id': journalId.toString(),
 });
@@ -383,10 +387,9 @@ class BankReconciliationService {
             'date': now,
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+            'exchange_rate': effectiveExchangeRate,
             'amount_base':
-                (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate)
-                    .round(),
+                toBaseMinorUnits(calculated.interestEarned),
                     'reference_type': 'bank_reconciliation',
           'reference_id': journalId.toString(),
 });
@@ -402,10 +405,9 @@ class BankReconciliationService {
             'date': now,
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': currency == 'YER' ? 1.0 : exchangeRate,
+            'exchange_rate': effectiveExchangeRate,
             'amount_base':
-                (MoneyHelper.toCents(calculated.interestEarned) * exchangeRate)
-                    .round(),
+                toBaseMinorUnits(calculated.interestEarned),
                     'reference_type': 'bank_reconciliation',
           'reference_id': journalId.toString(),
 });

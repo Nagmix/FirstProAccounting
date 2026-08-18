@@ -53,7 +53,7 @@
 - يعتمد المشروع على Flutter localization مع ملفات `arb` للغة العربية والإنجليزية.
 - يستخدم خط Cairo وأصولًا داخل `assets/icons/`.
 - قاعدة البيانات تعتمد على SQLite مشفر عبر `sqflite_sqlcipher`.
-- توجد بنية بيانات ومهاجرات حتى `migration_v53`.
+- توجد بنية بيانات ومهاجرات حتى `migration_v56`.
 - يوجد DI عبر `get_it` وإدارة حالة عبر `provider` وبعض ViewModels.
 - توجد خدمات محاسبية ومخزون وتقارير مثل:
   - `journal_service.dart`

@@ -1,6 +1,27 @@
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 
+enum ProductKind {
+  stock('stock'),
+  service('service'),
+  nonStock('non_stock'),
+  bundle('bundle');
+
+  const ProductKind(this.value);
+  final String value;
+
+  /// Whether this product kind participates in stock and COGS movements.
+  bool get createsStockMovement =>
+      this == ProductKind.stock || this == ProductKind.bundle;
+
+  static ProductKind fromValue(String? value) {
+    return ProductKind.values.firstWhere(
+      (kind) => kind.value == value,
+      orElse: () => ProductKind.stock,
+    );
+  }
+}
+
 class Product {
   final int? id;
   final String? itemCode;
@@ -35,6 +56,7 @@ class Product {
   final DateTime? expiryDate;
   final bool expiryTracking;
   final bool trackStock; // Whether to track inventory for this product
+  final ProductKind productKind;
   final double weight;
   final String? notes;
   final bool includeInReports;
@@ -85,6 +107,7 @@ class Product {
     this.expiryDate,
     this.expiryTracking = false,
     this.trackStock = true,
+    this.productKind = ProductKind.stock,
     this.weight = 0.0,
     this.notes,
     this.includeInReports = true,
@@ -141,6 +164,7 @@ class Product {
       'expiry_date': expiryDate?.toIso8601String(),
       'expiry_tracking': expiryTracking ? 1 : 0,
       'track_stock': trackStock ? 1 : 0,
+      'product_kind': productKind.value,
       'weight': weight,
       'notes': notes,
       'include_in_reports': includeInReports ? 1 : 0,
@@ -198,6 +222,7 @@ class Product {
           : null,
       expiryTracking: (map['expiry_tracking'] ?? 0) == 1,
       trackStock: (map['track_stock'] ?? 1) == 1,
+      productKind: ProductKind.fromValue(map['product_kind'] as String?),
       weight: (map['weight'] ?? 0.0).toDouble(),
       notes: map['notes'],
       includeInReports: (map['include_in_reports'] ?? 1) == 1,
@@ -256,6 +281,7 @@ class Product {
     bool? includeInReports,
     bool? isActive,
     bool? hasVariants,
+    ProductKind? productKind,
     bool? isSellable,
     bool? isPurchasable,
     bool? allowNegative,
@@ -302,6 +328,7 @@ class Product {
       expiryDate: expiryDate ?? this.expiryDate,
       expiryTracking: expiryTracking ?? this.expiryTracking,
       trackStock: trackStock ?? this.trackStock,
+      productKind: productKind ?? this.productKind,
       weight: weight ?? this.weight,
       notes: notes ?? this.notes,
       includeInReports: includeInReports ?? this.includeInReports,

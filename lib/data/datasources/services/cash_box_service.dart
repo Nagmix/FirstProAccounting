@@ -6,6 +6,7 @@ import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 
@@ -976,6 +977,13 @@ class CashBoxService {
       // Look up exchange rates for currency conversion
       final toRate = await _getExchangeRate(txn, toCurrency);
       final fromRate = await _getExchangeRate(txn, fromCurrency);
+      final effectiveToRate = toCurrency == 'YER' ? 1.0 : toRate;
+      final effectiveFromRate = fromCurrency == 'YER' ? 1.0 : fromRate;
+      int toBaseMinorUnits(double amount, double rate) =>
+          const CurrencyEngine().convertMajorUnits(
+                amount: amount,
+                exchangeRate: rate,
+              );
 
       // مدين: حساب الصناديق والبنوك للعملة المستلمة
       if (toCashBanksAccountId != null && toAmount > 0) {
@@ -989,8 +997,8 @@ class CashBoxService {
           'date': now,
           'created_at': now,
           'currency_code': toCurrency,
-          'exchange_rate': toCurrency == 'YER' ? 1.0 : toRate,
-          'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
+          'exchange_rate': effectiveToRate,
+          'amount_base': toBaseMinorUnits(toAmount, effectiveToRate),
                   'reference_type': 'cash_box_journal',
           'reference_id': journalId.toString(),
 });
@@ -1010,8 +1018,8 @@ class CashBoxService {
           'date': now,
           'created_at': now,
           'currency_code': fromCurrency,
-          'exchange_rate': fromCurrency == 'YER' ? 1.0 : fromRate,
-          'amount_base': (MoneyHelper.toCents(fromAmount) * fromRate).round(),
+          'exchange_rate': effectiveFromRate,
+          'amount_base': toBaseMinorUnits(fromAmount, effectiveFromRate),
                   'reference_type': 'cash_box_journal',
           'reference_id': journalId.toString(),
 });
@@ -1275,6 +1283,13 @@ class CashBoxService {
         );
       }
 
+      final transferExchangeRate =
+          transferCurrency == 'YER' ? 1.0 : transferRate;
+      final transferAmountBaseMinor = const CurrencyEngine().convertMinorUnits(
+        amountMinorUnits: MoneyHelper.toCents(amount),
+        exchangeRateMicros: CurrencyEngine.rateToMicros(transferExchangeRate),
+      );
+
       // مدين: حساب الصناديق والبنوك للوجهة
       if (toAccountId != null && amount > 0) {
         await txn.insert('transactions', {
@@ -1287,8 +1302,8 @@ class CashBoxService {
           'date': now,
           'created_at': now,
           'currency_code': transferCurrency,
-          'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
-          'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
+          'exchange_rate': transferExchangeRate,
+          'amount_base': transferAmountBaseMinor,
                   'reference_type': 'cash_box_journal',
           'reference_id': journalId.toString(),
 });
@@ -1308,8 +1323,8 @@ class CashBoxService {
           'date': now,
           'created_at': now,
           'currency_code': transferCurrency,
-          'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
-          'amount_base': (MoneyHelper.toCents(amount) * transferRate).round(),
+          'exchange_rate': transferExchangeRate,
+          'amount_base': transferAmountBaseMinor,
                   'reference_type': 'cash_box_journal',
           'reference_id': journalId.toString(),
 });

@@ -4,6 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -553,6 +554,10 @@ class VoucherAutoMappingService {
       // إنشاء قيود يومية - مدين
       final receiptRates = await _getExchangeRates(txn);
       final receiptRate = receiptRates[currency] ?? 1.0;
+      final receiptAmountBaseMinor = const CurrencyEngine().convertMinorUnits(
+        amountMinorUnits: MoneyHelper.toCents(amount),
+        exchangeRateMicros: CurrencyEngine.rateToMicros(receiptRate),
+      );
       await txn.insert('transactions', {
         'account_id': debitAccountId,
         'journal_id': journalId,
@@ -565,7 +570,7 @@ class VoucherAutoMappingService {
         'reference_id': 'voucher_$voucherId',
         'currency_code': currency,
         'exchange_rate': receiptRate,
-        'amount_base': (MoneyHelper.toCents(amount) * receiptRate).round(),
+        'amount_base': receiptAmountBaseMinor,
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, debitAccountId, amount, 0.0, now);
@@ -583,7 +588,7 @@ class VoucherAutoMappingService {
         'reference_id': 'voucher_$voucherId',
         'currency_code': currency,
         'exchange_rate': receiptRate,
-        'amount_base': (MoneyHelper.toCents(amount) * receiptRate).round(),
+        'amount_base': receiptAmountBaseMinor,
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, creditAccountId, 0.0, amount, now);
@@ -751,6 +756,14 @@ class VoucherAutoMappingService {
       final entryRates = await _getExchangeRates(txn);
       final toRate = entryRates[toCurrency] ?? 1.0;
       final fromRate = entryRates[fromCurrency] ?? 1.0;
+      final toAmountBaseMinor = const CurrencyEngine().convertMinorUnits(
+        amountMinorUnits: MoneyHelper.toCents(toAmount),
+        exchangeRateMicros: CurrencyEngine.rateToMicros(toRate),
+      );
+      final fromAmountBaseMinor = const CurrencyEngine().convertMinorUnits(
+        amountMinorUnits: MoneyHelper.toCents(fromAmount),
+        exchangeRateMicros: CurrencyEngine.rateToMicros(fromRate),
+      );
       await txn.insert('transactions', {
         'account_id': toAccount,
         'journal_id': journalId,
@@ -763,7 +776,7 @@ class VoucherAutoMappingService {
         'reference_id': 'voucher_$voucherId',
         'currency_code': toCurrency,
         'exchange_rate': toRate,
-        'amount_base': (MoneyHelper.toCents(toAmount) * toRate).round(),
+        'amount_base': toAmountBaseMinor,
       });
       await _dbHelper.journal
           .updateAccountBalanceWithJournal(txn, toAccount, toAmount, 0.0, now);
@@ -781,7 +794,7 @@ class VoucherAutoMappingService {
         'reference_id': 'voucher_$voucherId',
         'currency_code': fromCurrency,
         'exchange_rate': fromRate,
-        'amount_base': (MoneyHelper.toCents(fromAmount) * fromRate).round(),
+        'amount_base': fromAmountBaseMinor,
       });
       await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn, fromAccount, 0.0, fromAmount, now);

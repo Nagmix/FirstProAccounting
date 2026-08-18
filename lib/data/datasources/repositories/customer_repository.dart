@@ -2,6 +2,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/data/models/customer_model.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -499,7 +500,10 @@ class CustomerRepository {
     String currencyCode,
     double exchangeRate,
   ) async {
-    final baseAmount = currencyCode == 'YER' ? amount : amount * exchangeRate;
+    final baseAmountMinorUnits = const CurrencyEngine().convertMajorUnits(
+      amount: amount,
+      exchangeRate: currencyCode == 'YER' ? 1.0 : exchangeRate,
+    );
     await txn.insert('transactions', {
       'account_id': customersAccountId,
       'journal_id': journalId,
@@ -512,7 +516,7 @@ class CustomerRepository {
       'reference_id': 'customer_$customerId',
       'currency_code': currencyCode,
       'exchange_rate': exchangeRate,
-      'amount_base': MoneyHelper.toCents(baseAmount),
+      'amount_base': baseAmountMinorUnits,
     });
     await txn.insert('transactions', {
       'account_id': openingBalanceAccountId,
@@ -526,7 +530,7 @@ class CustomerRepository {
       'reference_id': 'customer_$customerId',
       'currency_code': currencyCode,
       'exchange_rate': exchangeRate,
-      'amount_base': MoneyHelper.toCents(baseAmount),
+      'amount_base': baseAmountMinorUnits,
     });
     await _dbHelper.journal.updateAccountBalanceWithJournal(
       txn,
@@ -640,9 +644,10 @@ class CustomerRepository {
           ? (accountRow.first['currency'] as String? ?? 'YER')
           : 'YER';
       final accountExchangeRate = currencyRates[accountCurrency] ?? 1.0;
-      final baseAmount = accountCurrency == 'YER'
-          ? netCredit.abs()
-          : netCredit.abs() * accountExchangeRate;
+      final baseAmountMinorUnits = const CurrencyEngine().convertMajorUnits(
+        amount: netCredit.abs(),
+        exchangeRate: accountCurrency == 'YER' ? 1.0 : accountExchangeRate,
+      );
 
       if (netCredit > 0) {
         // Original was credit → reverse with debit
@@ -658,7 +663,7 @@ class CustomerRepository {
           'reference_id': referenceId,
           'currency_code': accountCurrency,
           'exchange_rate': accountExchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, accountId, netCredit, 0.0, now);
@@ -677,7 +682,7 @@ class CustomerRepository {
           'reference_id': referenceId,
           'currency_code': accountCurrency,
           'exchange_rate': accountExchangeRate,
-          'amount_base': MoneyHelper.toCents(baseAmount),
+          'amount_base': baseAmountMinorUnits,
         });
         await _dbHelper.journal.updateAccountBalanceWithJournal(
             txn, accountId, 0.0, absAmount, now);

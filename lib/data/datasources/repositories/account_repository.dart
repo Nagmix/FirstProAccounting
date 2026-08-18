@@ -2,6 +2,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/data/models/account_model.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -621,6 +622,12 @@ class AccountRepository {
           });
         }
 
+        final effectiveExchangeRate = currency == 'YER' ? 1.0 : rate;
+        int toBaseMinorUnits(double amount) => const CurrencyEngine().convertMajorUnits(
+              amount: amount,
+              exchangeRate: effectiveExchangeRate,
+            );
+
         // Close revenue accounts: Debit Revenue, Credit Retained Earnings
         for (final acc
             in revenueAccounts.where((a) => a['currency'] == currency)) {
@@ -638,8 +645,8 @@ class AccountRepository {
             'date': '$year-12-31',
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': rate,
-            'amount_base': MoneyHelper.toCents(balance * rate),
+            'exchange_rate': effectiveExchangeRate,
+            'amount_base': toBaseMinorUnits(balance),
                     'reference_type': 'account_journal',
           'reference_id': journalId.toString(),
 });
@@ -655,8 +662,8 @@ class AccountRepository {
             'date': '$year-12-31',
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': rate,
-            'amount_base': MoneyHelper.toCents(balance * rate),
+            'exchange_rate': effectiveExchangeRate,
+            'amount_base': toBaseMinorUnits(balance),
                     'reference_type': 'account_journal',
           'reference_id': journalId.toString(),
 });
@@ -681,8 +688,8 @@ class AccountRepository {
             'date': '$year-12-31',
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': rate,
-            'amount_base': MoneyHelper.toCents(balance * rate),
+            'exchange_rate': effectiveExchangeRate,
+            'amount_base': toBaseMinorUnits(balance),
                     'reference_type': 'account_journal',
           'reference_id': journalId.toString(),
 });
@@ -698,8 +705,8 @@ class AccountRepository {
             'date': '$year-12-31',
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': rate,
-            'amount_base': MoneyHelper.toCents(balance * rate),
+            'exchange_rate': effectiveExchangeRate,
+            'amount_base': toBaseMinorUnits(balance),
                     'reference_type': 'account_journal',
           'reference_id': journalId.toString(),
 });
@@ -724,8 +731,8 @@ class AccountRepository {
             'date': '$year-12-31',
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': rate,
-            'amount_base': MoneyHelper.toCents(balance * rate),
+            'exchange_rate': effectiveExchangeRate,
+            'amount_base': toBaseMinorUnits(balance),
                     'reference_type': 'account_journal',
           'reference_id': journalId.toString(),
 });
@@ -741,8 +748,8 @@ class AccountRepository {
             'date': '$year-12-31',
             'created_at': now,
             'currency_code': currency,
-            'exchange_rate': rate,
-            'amount_base': MoneyHelper.toCents(balance * rate),
+            'exchange_rate': effectiveExchangeRate,
+            'amount_base': toBaseMinorUnits(balance),
                     'reference_type': 'account_journal',
           'reference_id': journalId.toString(),
 });

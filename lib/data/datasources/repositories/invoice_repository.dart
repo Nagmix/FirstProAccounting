@@ -4,8 +4,10 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:firstpro/core/utils/entity_balance_helper.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/data/models/invoice_model.dart';
 import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
+import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -114,6 +116,10 @@ class InvoiceRepository {
       final double exchangeRate =
           (invoiceMap['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final double effectiveExchangeRate = exchangeRate > 0 ? exchangeRate : 1.0;
+      int toBaseMinorUnits(double amount) => const CurrencyEngine().convertMinorUnits(
+            amountMinorUnits: MoneyHelper.toCents(amount),
+            exchangeRateMicros: CurrencyEngine.rateToMicros(effectiveExchangeRate),
+          );
       final now = DateTime.now().toIso8601String();
       if (total < -0.005) {
         throw ArgumentError('إجمالي الفاتورة لا يمكن أن يكون سالباً');
@@ -230,7 +236,11 @@ class InvoiceRepository {
           }
           final product = prodRow.first;
           final trackStock = (product['track_stock'] as int? ?? 1) == 1;
-          if (!trackStock) continue;
+          final productKind =
+              ProductKind.fromValue(product['product_kind'] as String?);
+          final createsStockMovement =
+              trackStock && productKind.createsStockMovement;
+          if (!createsStockMovement) continue;
 
           final currentStock =
               (product['current_stock'] as num?)?.toDouble() ?? 0.0;
@@ -423,8 +433,7 @@ class InvoiceRepository {
                 'reference_type': 'purchase',
                 'reference_id': invoiceIdStr,
                 // A-09: unit_cost is stored in base currency
-                'unit_cost': MoneyHelper.toCents(unitPrice *
-                    (effectiveExchangeRate)),
+                'unit_cost': toBaseMinorUnits(unitPrice),
                 'created_at': now,
               });
 
@@ -751,7 +760,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(netRevenueAmount),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(netRevenueAmount * effectiveExchangeRate),
+                    toBaseMinorUnits(netRevenueAmount),
                 'description': 'عكس إيراد مبيعات - مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -770,7 +779,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalTax),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalTax * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTax),
                 'description': 'عكس ضريبة مبيعات - مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -792,7 +801,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalTotal),
                 'amount_base':
-                    MoneyHelper.toCents(journalTotal * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTotal),
                 'description': 'فاتورة مبيعات - مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -811,7 +820,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalDiscount),
                 'amount_base':
-                    MoneyHelper.toCents(journalDiscount * effectiveExchangeRate),
+                    toBaseMinorUnits(journalDiscount),
                 'description': 'عكس خصم مسموح به - مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -838,8 +847,7 @@ class InvoiceRepository {
                 'journal_id': journalId,
                 'debit': MoneyHelper.toCents(journalEffectivePaid),
                 'credit': 0,
-                'amount_base': MoneyHelper.toCents(
-                    journalEffectivePaid * effectiveExchangeRate),
+                'amount_base': toBaseMinorUnits(journalEffectivePaid),
                 'description': 'فاتورة مبيعات (مدفوع) - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -858,8 +866,7 @@ class InvoiceRepository {
                 'journal_id': journalId,
                 'debit': MoneyHelper.toCents(journalRemainingAmount),
                 'credit': 0,
-                'amount_base': MoneyHelper.toCents(
-                    journalRemainingAmount * effectiveExchangeRate),
+                'amount_base': toBaseMinorUnits(journalRemainingAmount),
                 'description': 'فاتورة مبيعات (آجل) - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -878,7 +885,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalDiscount),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalDiscount * effectiveExchangeRate),
+                    toBaseMinorUnits(journalDiscount),
                 'description': 'خصم مسموح به - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -897,7 +904,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(netRevenueAmount),
                 'amount_base':
-                    MoneyHelper.toCents(netRevenueAmount * effectiveExchangeRate),
+                    toBaseMinorUnits(netRevenueAmount),
                 'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -916,7 +923,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalTax),
                 'amount_base':
-                    MoneyHelper.toCents(journalTax * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTax),
                 'description': 'ضريبة قيمة مضافة مستحقة - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -945,7 +952,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalTotal),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalTotal * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTotal),
                 'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -964,7 +971,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalDiscount),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalDiscount * effectiveExchangeRate),
+                    toBaseMinorUnits(journalDiscount),
                 'description': 'خصم مسموح به - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -983,7 +990,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(netRevenueAmount),
                 'amount_base':
-                    MoneyHelper.toCents(netRevenueAmount * effectiveExchangeRate),
+                    toBaseMinorUnits(netRevenueAmount),
                 'description': 'فاتورة مبيعات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1002,7 +1009,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalTax),
                 'amount_base':
-                    MoneyHelper.toCents(journalTax * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTax),
                 'description': 'ضريبة قيمة مضافة مستحقة - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1034,7 +1041,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalTotal),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalTotal * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTotal),
                 'description': 'فاتورة مشتريات - مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1053,7 +1060,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalDiscount),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalDiscount * effectiveExchangeRate),
+                    toBaseMinorUnits(journalDiscount),
                 'description':
                     'عكس خصم مشتريات مكتسب - مرتجع - ${invoiceMap['id']}',
                 'date': now,
@@ -1073,7 +1080,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(netPurchaseCost),
                 'amount_base':
-                    MoneyHelper.toCents(netPurchaseCost * effectiveExchangeRate),
+                    toBaseMinorUnits(netPurchaseCost),
                 'description': 'عكس مشتريات - مرتجع - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1092,7 +1099,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalTax),
                 'amount_base':
-                    MoneyHelper.toCents(journalTax * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTax),
                 'description':
                     'عكس ضريبة مشتريات - مرتجع - ${invoiceMap['id']}',
                 'date': now,
@@ -1120,7 +1127,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(netPurchaseCost),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(netPurchaseCost * effectiveExchangeRate),
+                    toBaseMinorUnits(netPurchaseCost),
                 'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1139,7 +1146,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalTax),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalTax * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTax),
                 'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1158,8 +1165,7 @@ class InvoiceRepository {
                 'journal_id': journalId,
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalEffectivePaid),
-                'amount_base': MoneyHelper.toCents(
-                    journalEffectivePaid * effectiveExchangeRate),
+                'amount_base': toBaseMinorUnits(journalEffectivePaid),
                 'description': 'فاتورة مشتريات (مدفوع) - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1178,8 +1184,7 @@ class InvoiceRepository {
                 'journal_id': journalId,
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalRemainingAmount),
-                'amount_base': MoneyHelper.toCents(
-                    journalRemainingAmount * effectiveExchangeRate),
+                'amount_base': toBaseMinorUnits(journalRemainingAmount),
                 'description': 'فاتورة مشتريات (آجل) - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1198,7 +1203,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalDiscount),
                 'amount_base':
-                    MoneyHelper.toCents(journalDiscount * effectiveExchangeRate),
+                    toBaseMinorUnits(journalDiscount),
                 'description': 'خصم مشتريات مكتسب - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1224,7 +1229,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(netPurchaseCost),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(netPurchaseCost * effectiveExchangeRate),
+                    toBaseMinorUnits(netPurchaseCost),
                 'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1243,7 +1248,7 @@ class InvoiceRepository {
                 'debit': MoneyHelper.toCents(journalTax),
                 'credit': 0,
                 'amount_base':
-                    MoneyHelper.toCents(journalTax * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTax),
                 'description': 'ضريبة قيمة مضافة مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1265,7 +1270,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalTotal),
                 'amount_base':
-                    MoneyHelper.toCents(journalTotal * effectiveExchangeRate),
+                    toBaseMinorUnits(journalTotal),
                 'description': 'فاتورة مشتريات - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1284,7 +1289,7 @@ class InvoiceRepository {
                 'debit': 0,
                 'credit': MoneyHelper.toCents(journalDiscount),
                 'amount_base':
-                    MoneyHelper.toCents(journalDiscount * effectiveExchangeRate),
+                    toBaseMinorUnits(journalDiscount),
                 'description': 'خصم مشتريات مكتسب - ${invoiceMap['id']}',
                 'date': now,
                 'created_at': now,
@@ -1356,7 +1361,13 @@ class InvoiceRepository {
             final productRow = await txn.query('products',
                 where: 'id = ?', whereArgs: [productId], limit: 1);
             if (productRow.isEmpty) continue;
-            if ((productRow.first['track_stock'] as int? ?? 1) != 1) {
+            final tracksStock =
+                (productRow.first['track_stock'] as int? ?? 1) == 1;
+            final productKind = ProductKind.fromValue(
+                productRow.first['product_kind'] as String?);
+            final createsStockMovement =
+                tracksStock && productKind.createsStockMovement;
+            if (!createsStockMovement) {
               continue;
             }
 
@@ -1591,8 +1602,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
-              'amount_base': MoneyHelper.toCents(
-                  totalPurchaseCost * effectiveExchangeRate),
+              'amount_base': toBaseMinorUnits(totalPurchaseCost),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -1606,8 +1616,7 @@ class InvoiceRepository {
               'created_at': now,
               'currency_code': journalCurrency,
               'exchange_rate': effectiveExchangeRate,
-              'amount_base': MoneyHelper.toCents(
-                  totalPurchaseCost * effectiveExchangeRate),
+              'amount_base': toBaseMinorUnits(totalPurchaseCost),
               'reference_type': invoiceType,
               'reference_id': invoiceMap['id'] as String?,
             });
@@ -2266,6 +2275,10 @@ class InvoiceRepository {
       final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
       final double effectiveExchangeRate =
           exchangeRate > 0 ? exchangeRate : 1.0;
+      int toBaseMinorUnits(double amount) => const CurrencyEngine().convertMinorUnits(
+            amountMinorUnits: MoneyHelper.toCents(amount),
+            exchangeRateMicros: CurrencyEngine.rateToMicros(effectiveExchangeRate),
+          );
 
       final cashBanksAccount = await txn.query('accounts',
           where: 'account_code = ? AND currency = ?',
@@ -2301,7 +2314,7 @@ class InvoiceRepository {
             'debit': MoneyHelper.toCents(paymentAmount),
             'credit': 0,
             'amount_base':
-                MoneyHelper.toCents(paymentAmount * effectiveExchangeRate),
+                toBaseMinorUnits(paymentAmount),
             'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -2320,7 +2333,7 @@ class InvoiceRepository {
             'debit': 0,
             'credit': MoneyHelper.toCents(paymentAmount),
             'amount_base':
-                MoneyHelper.toCents(paymentAmount * effectiveExchangeRate),
+                toBaseMinorUnits(paymentAmount),
             'description': 'تحصيل دفعة فاتورة مبيعات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -2341,7 +2354,7 @@ class InvoiceRepository {
             'debit': MoneyHelper.toCents(paymentAmount),
             'credit': 0,
             'amount_base':
-                MoneyHelper.toCents(paymentAmount * effectiveExchangeRate),
+                toBaseMinorUnits(paymentAmount),
             'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -2360,7 +2373,7 @@ class InvoiceRepository {
             'debit': 0,
             'credit': MoneyHelper.toCents(paymentAmount),
             'amount_base':
-                MoneyHelper.toCents(paymentAmount * effectiveExchangeRate),
+                toBaseMinorUnits(paymentAmount),
             'description': 'سداد دفعة فاتورة مشتريات - $invoiceId',
             'date': now,
             'created_at': now,
@@ -2386,7 +2399,7 @@ class InvoiceRepository {
             'created_at': now,
             'currency_code': invoiceCurrency,
             'exchange_rate': exchangeRate,
-            'amount_base': MoneyHelper.toCents(paymentAmount * exchangeRate),
+            'amount_base': toBaseMinorUnits(paymentAmount),
                     'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2404,7 +2417,7 @@ class InvoiceRepository {
             'created_at': now,
             'currency_code': invoiceCurrency,
             'exchange_rate': exchangeRate,
-            'amount_base': MoneyHelper.toCents(paymentAmount * exchangeRate),
+            'amount_base': toBaseMinorUnits(paymentAmount),
                     'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2510,6 +2523,10 @@ class InvoiceRepository {
 
         // 2. Create reversal journal entries
         final journalId = generateUniqueJournalId();
+        int toBaseMinorUnits(double amount) => const CurrencyEngine().convertMinorUnits(
+              amountMinorUnits: MoneyHelper.toCents(amount),
+              exchangeRateMicros: CurrencyEngine.rateToMicros(exchangeRate),
+            );
         final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
 
         final salesAccount = await txn.query('accounts',
@@ -2572,7 +2589,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(paidAmount * exchangeRate),
+                'amount_base': toBaseMinorUnits(paidAmount),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2590,7 +2607,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(remainingAmount * exchangeRate),
+                'amount_base': toBaseMinorUnits(remainingAmount),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2608,7 +2625,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2631,7 +2648,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2649,7 +2666,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2672,7 +2689,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2690,7 +2707,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2713,7 +2730,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(paidAmount * exchangeRate),
+                'amount_base': toBaseMinorUnits(paidAmount),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2731,7 +2748,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(remainingAmount * exchangeRate),
+                'amount_base': toBaseMinorUnits(remainingAmount),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2749,7 +2766,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2772,7 +2789,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2790,7 +2807,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2813,7 +2830,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2831,7 +2848,7 @@ class InvoiceRepository {
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': MoneyHelper.toCents(total * exchangeRate),
+                'amount_base': toBaseMinorUnits(total),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2910,7 +2927,7 @@ class InvoiceRepository {
                   'created_at': now,
                   'currency_code': invoiceCurrency,
                   'exchange_rate': exchangeRate,
-                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
+                  'amount_base': toBaseMinorUnits(totalCogs),
                           'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2924,7 +2941,7 @@ class InvoiceRepository {
                   'created_at': now,
                   'currency_code': invoiceCurrency,
                   'exchange_rate': exchangeRate,
-                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
+                  'amount_base': toBaseMinorUnits(totalCogs),
                           'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2944,7 +2961,7 @@ class InvoiceRepository {
                   'created_at': now,
                   'currency_code': invoiceCurrency,
                   'exchange_rate': exchangeRate,
-                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
+                  'amount_base': toBaseMinorUnits(totalCogs),
                           'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
@@ -2958,7 +2975,7 @@ class InvoiceRepository {
                   'created_at': now,
                   'currency_code': invoiceCurrency,
                   'exchange_rate': exchangeRate,
-                  'amount_base': MoneyHelper.toCents(totalCogs * exchangeRate),
+                  'amount_base': toBaseMinorUnits(totalCogs),
                           'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });

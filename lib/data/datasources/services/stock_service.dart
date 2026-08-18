@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -381,6 +382,13 @@ class StockService {
         toInventoryAccountId ??= await _getDefaultInventoryAccountId(
             txn, codeOffset, transferCurrency);
 
+        final transferExchangeRate =
+            transferCurrency == 'YER' ? 1.0 : transferRate;
+        final transferValueBaseMinor = const CurrencyEngine().convertMinorUnits(
+          amountMinorUnits: MoneyHelper.toCents(transferValue),
+          exchangeRateMicros: CurrencyEngine.rateToMicros(transferExchangeRate),
+        );
+
         // إذا كان المستودعان مرتبطين بنفس الحساب، لا حاجة لقيود تحويل
         if (fromInventoryAccountId != null &&
             toInventoryAccountId != null &&
@@ -396,9 +404,8 @@ class StockService {
             'date': now,
             'created_at': now,
             'currency_code': transferCurrency,
-            'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
-            'amount_base':
-                (MoneyHelper.toCents(transferValue) * transferRate).round(),
+            'exchange_rate': transferExchangeRate,
+            'amount_base': transferValueBaseMinor,
                     'reference_type': 'stock_journal',
           'reference_id': journalId.toString(),
 });
@@ -416,9 +423,8 @@ class StockService {
             'date': now,
             'created_at': now,
             'currency_code': transferCurrency,
-            'exchange_rate': transferCurrency == 'YER' ? 1.0 : transferRate,
-            'amount_base':
-                (MoneyHelper.toCents(transferValue) * transferRate).round(),
+            'exchange_rate': transferExchangeRate,
+            'amount_base': transferValueBaseMinor,
                     'reference_type': 'stock_journal',
           'reference_id': journalId.toString(),
 });

@@ -3,6 +3,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -448,8 +449,11 @@ class SupplierRepository {
     double exchangeRate,
   ) async {
     final isYer = currencyCode == 'YER';
-    final amountBase =
-        MoneyHelper.toCents(isYer ? amount : amount * exchangeRate);
+    final effectiveExchangeRate = isYer ? 1.0 : exchangeRate;
+    final amountBase = const CurrencyEngine().convertMajorUnits(
+      amount: amount,
+      exchangeRate: effectiveExchangeRate,
+    );
     await txn.insert('transactions', {
       'account_id': suppliersAccountId,
       'journal_id': journalId,
@@ -461,7 +465,7 @@ class SupplierRepository {
       'reference_type': 'opening_balance',
       'reference_id': 'supplier_$supplierId',
       'currency_code': currencyCode,
-      'exchange_rate': isYer ? 1.0 : exchangeRate,
+      'exchange_rate': effectiveExchangeRate,
       'amount_base': amountBase,
     });
     await txn.insert('transactions', {
@@ -475,7 +479,7 @@ class SupplierRepository {
       'reference_type': 'opening_balance',
       'reference_id': 'supplier_$supplierId',
       'currency_code': currencyCode,
-      'exchange_rate': isYer ? 1.0 : exchangeRate,
+      'exchange_rate': effectiveExchangeRate,
       'amount_base': amountBase,
     });
     await _dbHelper.journal.updateAccountBalanceWithJournal(
