@@ -7,6 +7,7 @@ import 'package:firstpro/data/datasources/services/service_order_service.dart';
 import 'package:firstpro/data/models/service_order_line_model.dart';
 import 'package:firstpro/data/models/service_order_device_model.dart';
 import 'package:firstpro/data/models/service_order_model.dart';
+import 'package:firstpro/data/models/service_payment_model.dart';
 import 'package:firstpro/data/models/service_warranty_model.dart';
 
 void main() {
@@ -121,6 +122,50 @@ void main() {
     expect(devices.single.imei, '123456789012345');
     expect(warranties, hasLength(1));
     expect(warranties.single.endsAt, DateTime.utc(2026, 11, 18));
+  });
+
+  test('records a payment with converted base amount and updates balance', () async {
+    await service.createDraft(
+      order: draft().copyWith(
+        currencyCode: 'USD',
+        total: 200,
+        remaining: 200,
+      ),
+    );
+    await service.createPayment(
+      payment: ServicePayment(
+        serviceOrderId: 'SO-100',
+        amount: 100,
+        currencyCode: 'USD',
+        exchangeRate: 140,
+        paymentDate: DateTime.utc(2026, 8, 18),
+      ),
+    );
+
+    final payments = await service.getPayments('SO-100');
+    final order = await service.getById('SO-100');
+    expect(payments, hasLength(1));
+    expect(payments.single.amount, 100);
+    expect(payments.single.amountBase, 140);
+    expect(order!.paidAmount, 100);
+    expect(order.remaining, 100);
+  });
+
+  test('rejects a payment that exceeds the service order total', () async {
+    await service.createDraft(
+      order: draft().copyWith(total: 50, remaining: 50),
+    );
+
+    expect(
+      () => service.createPayment(
+        payment: ServicePayment(
+          serviceOrderId: 'SO-100',
+          amount: 50.01,
+          paymentDate: DateTime.utc(2026, 8, 18),
+        ),
+      ),
+      throwsArgumentError,
+    );
   });
 
   test('rejects a warranty linked to a missing line', () async {

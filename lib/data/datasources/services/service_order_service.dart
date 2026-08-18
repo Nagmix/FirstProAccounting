@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/service/service_order_line_policy.dart';
 import 'package:firstpro/core/service/service_order_status_policy.dart';
 import 'package:firstpro/core/service/service_order_totals.dart';
@@ -9,6 +10,7 @@ import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/data/models/service_order_device_model.dart';
 import 'package:firstpro/data/models/service_order_line_model.dart';
 import 'package:firstpro/data/models/service_order_model.dart';
+import 'package:firstpro/data/models/service_payment_model.dart';
 import 'package:firstpro/data/models/service_warranty_model.dart';
 
 class ServiceOrderService {
@@ -179,6 +181,79 @@ class ServiceOrderService {
       orderBy: 'id ASC',
     );
     return rows.map(ServiceWarranty.fromMap).toList();
+  }
+
+  Future<void> createPayment({required ServicePayment payment}) async {
+    if (payment.amount <= 0) {
+      throw ArgumentError.value(payment.amount, 'amount', 'must be positive');
+    }
+    if (payment.currencyCode.trim().isEmpty || payment.exchangeRate <= 0) {
+      throw ArgumentError('Payment currency and positive exchange rate are required.');
+    }
+    if (payment.isPosted || payment.journalId != null) {
+      throw StateError('A payment with an existing journal cannot be created as a draft.');
+    }
+
+    final db = await _db;
+    await db.transaction((txn) async {
+      final order = await _requireOrder(txn, payment.serviceOrderId);
+      _ensureEditable(order);
+      if (payment.currencyCode != order['currency_code']) {
+        throw ArgumentError('Payment currency must match the service order currency.');
+      }
+
+      final amountMinorUnits = MoneyHelper.toCents(payment.amount);
+      final totalMinorUnits = MoneyHelper.toCents(
+        MoneyHelper.readMoney(order['total']),
+      );
+      final paidMinorUnits = MoneyHelper.toCents(
+        MoneyHelper.readMoney(order['paid_amount']),
+      );
+      if (paidMinorUnits + amountMinorUnits > totalMinorUnits) {
+        throw ArgumentError('Payment exceeds the service order remaining amount.');
+      }
+
+      final amountBaseMinorUnits = const CurrencyEngine().convertMinorUnits(
+        amountMinorUnits: amountMinorUnits,
+        exchangeRateMicros: CurrencyEngine.rateToMicros(payment.exchangeRate),
+      );
+      final values = MoneyHelper.toCentsMap(
+        payment.toMap()
+          ..remove('id')
+          ..['created_at'] =
+              payment.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        const ['amount'],
+      );
+      values['amount_base'] = amountBaseMinorUnits;
+      await txn.insert('service_payments', values);
+
+      final newPaidMinorUnits = paidMinorUnits + amountMinorUnits;
+      await txn.update(
+        'service_orders',
+        MoneyHelper.toCentsMap(
+          {
+            'paid_amount': newPaidMinorUnits / MoneyHelper.scaleFactor,
+            'remaining':
+                (totalMinorUnits - newPaidMinorUnits) / MoneyHelper.scaleFactor,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          const ['paid_amount', 'remaining'],
+        ),
+        where: 'id = ?',
+        whereArgs: [payment.serviceOrderId],
+      );
+    });
+  }
+
+  Future<List<ServicePayment>> getPayments(String orderId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'service_payments',
+      where: 'service_order_id = ?',
+      whereArgs: [orderId],
+      orderBy: 'id ASC',
+    );
+    return rows.map(ServicePayment.fromMap).toList();
   }
 
   Future<void> transitionStatus({
