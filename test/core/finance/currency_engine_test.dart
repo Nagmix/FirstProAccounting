@@ -17,7 +17,7 @@ void main() {
       exchangeRateMicros: 140000000,
     );
 
-    expect(result, -140014);
+    expect(result, -1400140);
   });
 
   test('converts major units without floating-point base arithmetic', () {

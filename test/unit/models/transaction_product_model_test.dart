@@ -15,7 +15,7 @@ void main() {
       expect(txn.credit, equals(0.0));
     });
 
-    test('toMap returns human-readable doubles', () {
+    test('toMap returns integer minor units', () {
       final txn = Transaction(
         accountId: 1,
         date: DateTime(2026, 1, 1),
@@ -23,8 +23,8 @@ void main() {
         credit: 0.0,
       );
       final map = txn.toMap();
-      expect(map['debit'], equals(1000.0));
-      expect(map['credit'], equals(0.0));
+      expect(map['debit'], equals(100000));
+      expect(map['credit'], equals(0));
     });
 
     test('fromMap reads cents correctly', () {
@@ -44,7 +44,7 @@ void main() {
       expect(txn.credit, equals(0.0));
     });
 
-    test('round-trip via toCentsMap preserves debit and credit', () {
+    test('round-trip via toMap preserves debit and credit', () {
       final original = Transaction(
         id: 1,
         accountId: 5,
@@ -55,7 +55,7 @@ void main() {
         date: DateTime(2026, 1, 1),
         createdAt: DateTime(2026, 1, 1),
       );
-      final dbMap = MoneyHelper.toCentsMap(original.toMap(), MoneyHelper.transactionMoneyFields);
+      final dbMap = original.toMap();
       final restored = Transaction.fromMap(dbMap);
       expect(restored.debit, closeTo(original.debit, 0.01));
       expect(restored.credit, closeTo(original.credit, 0.01));
