@@ -26,7 +26,7 @@ void main() {
     await tester.scrollUntilVisible(
       createButton,
       500,
-      scrollable: find.byType(ListView),
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(createButton);
     await tester.pump();
@@ -60,7 +60,7 @@ void main() {
     await tester.scrollUntilVisible(
       createButton,
       500,
-      scrollable: find.byType(ListView),
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(createButton);
     await tester.pump();

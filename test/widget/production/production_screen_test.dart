@@ -54,7 +54,7 @@ void main() {
     await tester.scrollUntilVisible(
       postButton,
       500,
-      scrollable: find.byType(ListView),
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(postButton);
     await tester.pumpAndSettle();
