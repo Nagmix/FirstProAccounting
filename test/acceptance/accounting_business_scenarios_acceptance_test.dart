@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get_it/get_it.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
@@ -317,6 +316,14 @@ Map<String, dynamic> _item(
 
 Future<void> _seedAccounts(Database db, List<String> codes) async {
   for (final code in codes) {
+    final existing = await db.query(
+      'accounts',
+      columns: ['id'],
+      where: 'account_code = ? AND currency = ?',
+      whereArgs: [code, 'YER'],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) continue;
     final accountType = code.startsWith('4') ? 'REVENUE' :
         (code.startsWith('2') ? 'LIABILITY' :
             (code.startsWith('3') || code.startsWith('5') ? 'EXPENSE' : 'ASSET'));
