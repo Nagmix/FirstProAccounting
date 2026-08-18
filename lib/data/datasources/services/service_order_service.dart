@@ -4,6 +4,7 @@ import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/core/service/service_order_line_policy.dart';
 import 'package:firstpro/core/service/service_order_status_policy.dart';
 import 'package:firstpro/core/service/service_order_totals.dart';
+import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/models/product_model.dart';
@@ -241,6 +242,180 @@ class ServiceOrderService {
         ),
         where: 'id = ?',
         whereArgs: [payment.serviceOrderId],
+      );
+    });
+  }
+
+  /// Post a service-order payment as a balanced receipt journal.
+  ///
+  /// The debit goes to the cash-box linked account and the credit goes to
+  /// the customer receivable account. The payment row is marked posted only
+  /// after both journal rows, account balances, and exact currency checks
+  /// succeed in the same SQLite transaction.
+  Future<void> postPayment({required int paymentId}) async {
+    final db = await _db;
+    final initialRows = await db.query(
+      'service_payments',
+      where: 'id = ?',
+      whereArgs: [paymentId],
+      limit: 1,
+    );
+    if (initialRows.isEmpty) {
+      throw StateError('Service payment not found: $paymentId');
+    }
+    final paymentDate = initialRows.single['payment_date'] as String?;
+    if (paymentDate == null || paymentDate.trim().isEmpty) {
+      throw StateError('A payment date is required before posting.');
+    }
+    await _dbHelper.journal.checkFiscalPeriodOpen(paymentDate);
+
+    await db.transaction((txn) async {
+      final paymentRows = await txn.query(
+        'service_payments',
+        where: 'id = ?',
+        whereArgs: [paymentId],
+        limit: 1,
+      );
+      if (paymentRows.isEmpty) {
+        throw StateError('Service payment not found: $paymentId');
+      }
+      final payment = paymentRows.single;
+      if ((payment['is_posted'] as num?)?.toInt() == 1 ||
+          payment['journal_id'] != null) {
+        throw StateError('Service payment is already posted: $paymentId');
+      }
+
+      final orderRows = await txn.query(
+        'service_orders',
+        columns: ['id', 'customer_id', 'currency_code'],
+        where: 'id = ?',
+        whereArgs: [payment['service_order_id']],
+        limit: 1,
+      );
+      if (orderRows.isEmpty) {
+        throw StateError('Service order for payment was not found.');
+      }
+      final order = orderRows.single;
+      final customerId = order['customer_id'] as int?;
+      if (customerId == null) {
+        throw StateError('A customer is required before posting a payment.');
+      }
+      final customerRows = await txn.query(
+        'customers',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [customerId],
+        limit: 1,
+      );
+      if (customerRows.isEmpty) {
+        throw StateError('Customer was not found: $customerId');
+      }
+
+      final currency = payment['currency_code'] as String? ?? 'YER';
+      if (currency != order['currency_code']) {
+        throw StateError('Payment currency does not match the service order.');
+      }
+      final cashBoxId = payment['cash_box_id'] as int?;
+      if (cashBoxId == null) {
+        throw StateError('A cash box is required before posting a payment.');
+      }
+      final cashBoxRows = await txn.query(
+        'cash_boxes',
+        columns: ['linked_account_id', 'currency'],
+        where: 'id = ?',
+        whereArgs: [cashBoxId],
+        limit: 1,
+      );
+      if (cashBoxRows.isEmpty) {
+        throw StateError('Cash box not found: $cashBoxId');
+      }
+      final cashAccountId = cashBoxRows.single['linked_account_id'] as int?;
+      if (cashAccountId == null) {
+        throw StateError('Cash box has no linked ledger account.');
+      }
+      final cashCurrency = cashBoxRows.single['currency'] as String?;
+      if (cashCurrency != null && cashCurrency != currency) {
+        throw StateError('Cash box currency does not match the payment.');
+      }
+
+      final offset = await _dbHelper.baseCurrency.getOffsetForCurrency(currency);
+      final receivableRows = await txn.query(
+        'accounts',
+        where: 'account_code = ? AND currency = ? AND is_active = 1',
+        whereArgs: [(1200 + offset).toString(), currency],
+        limit: 1,
+      );
+      if (receivableRows.isEmpty) {
+        throw StateError(
+          'Customer receivable account was not found for currency $currency.',
+        );
+      }
+      final receivableAccountId = receivableRows.single['id'] as int;
+      final journalId = generateUniqueJournalId();
+      final now = DateTime.now().toIso8601String();
+      final amountMinorUnits = (payment['amount'] as num).round();
+      final amount = MoneyHelper.fromCents(amountMinorUnits);
+      final amountBaseMinorUnits = (payment['amount_base'] as num).round();
+      final exchangeRate = (payment['exchange_rate'] as num).toDouble();
+      final referenceId = paymentId.toString();
+
+      await txn.insert('transactions', {
+        'account_id': cashAccountId,
+        'journal_id': journalId,
+        'debit': amountMinorUnits,
+        'credit': 0,
+        'description': 'Service payment $referenceId',
+        'date': paymentDate,
+        'created_at': now,
+        'reference_type': 'service_payment',
+        'reference_id': referenceId,
+        'currency_code': currency,
+        'exchange_rate': exchangeRate,
+        'amount_base': amountBaseMinorUnits,
+      });
+      await txn.insert('transactions', {
+        'account_id': receivableAccountId,
+        'journal_id': journalId,
+        'debit': 0,
+        'credit': amountMinorUnits,
+        'description': 'Service payment $referenceId',
+        'date': paymentDate,
+        'created_at': now,
+        'reference_type': 'service_payment',
+        'reference_id': referenceId,
+        'currency_code': currency,
+        'exchange_rate': exchangeRate,
+        'amount_base': amountBaseMinorUnits,
+      });
+
+      await _dbHelper.journal.updateAccountBalanceWithJournal(
+        txn,
+        cashAccountId,
+        amount,
+        0.0,
+        now,
+      );
+      await _dbHelper.journal.updateAccountBalanceWithJournal(
+        txn,
+        receivableAccountId,
+        0.0,
+        amount,
+        now,
+      );
+      await _dbHelper.journal.validateJournalBalanceInTransaction(
+        txn,
+        journalId,
+      );
+      await _dbHelper.journal.validateJournalBaseBalanceInTransaction(
+        txn,
+        journalId,
+      );
+
+      await txn.update(
+        'service_payments',
+        {'is_posted': 1, 'journal_id': journalId, 'created_at': payment['created_at']},
+        where: 'id = ? AND is_posted = 0 AND journal_id IS NULL',
+        whereArgs: [paymentId],
       );
     });
   }

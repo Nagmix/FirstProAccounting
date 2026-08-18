@@ -208,4 +208,96 @@ void main() {
       throwsStateError,
     );
   });
+
+  test('posts a service payment as a balanced receipt journal exactly once', () async {
+    final now = DateTime.utc(2026, 8, 18).toIso8601String();
+    await db.insert('customers', {
+      'name': 'Test Customer',
+      'balance': 0,
+      'balance_type': 'credit',
+      'currency': 'YER',
+      'created_at': now,
+      'updated_at': now,
+    });
+    final cashAccountId = await db.insert('accounts', {
+      'name_ar': 'صندوق الاختبار',
+      'name_en': 'Test Cash',
+      'account_code': '1100',
+      'account_type': 'ASSET',
+      'balance': 0,
+      'currency': 'YER',
+      'balance_type': 'debit',
+      'is_active': 1,
+      'created_at': now,
+      'updated_at': now,
+    });
+    final customerAccountId = await db.insert('accounts', {
+      'name_ar': 'عملاء الاختبار',
+      'name_en': 'Test Customer Receivable',
+      'account_code': '1200',
+      'account_type': 'ASSET',
+      'balance': 0,
+      'currency': 'YER',
+      'balance_type': 'debit',
+      'is_active': 1,
+      'created_at': now,
+      'updated_at': now,
+    });
+    final cashBoxId = await db.insert('cash_boxes', {
+      'name': 'Test Cash Box',
+      'type': 'cash_box',
+      'currency': 'YER',
+      'balance': 0,
+      'balance_type': 'debit',
+      'linked_account_id': cashAccountId,
+      'is_active': 1,
+      'created_at': now,
+      'updated_at': now,
+    });
+    final customerId = (await db.query('customers')).single['id'] as int;
+    await service.createDraft(
+      order: draft().copyWith(
+        customerId: customerId,
+        total: 100,
+        remaining: 100,
+      ),
+    );
+    await service.createPayment(
+      payment: ServicePayment(
+        serviceOrderId: 'SO-100',
+        amount: 50,
+        cashBoxId: cashBoxId,
+        paymentDate: DateTime.utc(2026, 8, 18),
+      ),
+    );
+    final paymentId = ((await db.query('service_payments')).single['id'] as int);
+
+    await service.postPayment(paymentId: paymentId);
+
+    final payment = (await db.query(
+      'service_payments',
+      where: 'id = ?',
+      whereArgs: [paymentId],
+    )).single;
+    expect(payment['is_posted'], 1);
+    expect(payment['journal_id'], isA<int>());
+
+    final transactions = await db.query(
+      'transactions',
+      where: 'reference_type = ? AND reference_id = ?',
+      whereArgs: ['service_payment', paymentId.toString()],
+      orderBy: 'id ASC',
+    );
+    expect(transactions, hasLength(2));
+    expect(transactions[0]['account_id'], cashAccountId);
+    expect(transactions[0]['debit'], MoneyHelper.toCents(50));
+    expect(transactions[1]['account_id'], customerAccountId);
+    expect(transactions[1]['credit'], MoneyHelper.toCents(50));
+    expect(transactions[0]['journal_id'], transactions[1]['journal_id']);
+
+    expect(
+      () => service.postPayment(paymentId: paymentId),
+      throwsStateError,
+    );
+  });
 }
