@@ -47,14 +47,14 @@ void main() {
       expect(v57Position, greaterThan(v56Position));
     });
 
-    test('database version is 57 in both sources', () {
+    test('database version is 58 in both sources after v58', () {
       final dbSource =
           File('lib/data/datasources/database_helper.dart').readAsStringSync();
       final constantsSource =
           File('lib/core/constants/app_constants.dart').readAsStringSync();
 
-      expect(dbSource.contains('_databaseVersion = 57'), isTrue);
-      expect(constantsSource.contains('dbVersion = 57'), isTrue);
+      expect(dbSource.contains('_databaseVersion = 58'), isTrue);
+      expect(constantsSource.contains('dbVersion = 58'), isTrue);
     });
 
     test('fresh schema contains service maintenance tables', () {
