@@ -5,7 +5,9 @@ import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/migrations/schema.dart';
 import 'package:firstpro/data/datasources/services/service_order_service.dart';
 import 'package:firstpro/data/models/service_order_line_model.dart';
+import 'package:firstpro/data/models/service_order_device_model.dart';
 import 'package:firstpro/data/models/service_order_model.dart';
+import 'package:firstpro/data/models/service_warranty_model.dart';
 
 void main() {
   late Database db;
@@ -90,6 +92,51 @@ void main() {
     expect(history, hasLength(1));
     expect(history.single['from_status'], 'draft');
     expect(history.single['to_status'], 'received');
+  });
+
+  test('stores devices and warranties under the service order', () async {
+    await service.createDraft(order: draft());
+    await service.addDevice(
+      device: ServiceOrderDevice(
+        serviceOrderId: 'SO-100',
+        deviceType: 'phone',
+        brand: 'Example',
+        model: 'X1',
+        imei: '123456789012345',
+      ),
+    );
+    await service.addWarranty(
+      warranty: ServiceWarranty(
+        serviceOrderId: 'SO-100',
+        serviceOrderLineId: null,
+        startsAt: DateTime.utc(2026, 8, 18),
+        endsAt: DateTime.utc(2026, 11, 18),
+        terms: 'Repair warranty',
+      ),
+    );
+
+    final devices = await service.getDevices('SO-100');
+    final warranties = await service.getWarranties('SO-100');
+    expect(devices, hasLength(1));
+    expect(devices.single.imei, '123456789012345');
+    expect(warranties, hasLength(1));
+    expect(warranties.single.endsAt, DateTime.utc(2026, 11, 18));
+  });
+
+  test('rejects a warranty linked to a missing line', () async {
+    await service.createDraft(order: draft());
+
+    expect(
+      () => service.addWarranty(
+        warranty: ServiceWarranty(
+          serviceOrderId: 'SO-100',
+          serviceOrderLineId: 404,
+          startsAt: DateTime.utc(2026, 8, 18),
+          endsAt: DateTime.utc(2026, 11, 18),
+        ),
+      ),
+      throwsStateError,
+    );
   });
 
   test('rejects editing a posted order', () async {

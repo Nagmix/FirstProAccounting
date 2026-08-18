@@ -6,8 +6,10 @@ import 'package:firstpro/core/service/service_order_totals.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/models/product_model.dart';
+import 'package:firstpro/data/models/service_order_device_model.dart';
 import 'package:firstpro/data/models/service_order_line_model.dart';
 import 'package:firstpro/data/models/service_order_model.dart';
+import 'package:firstpro/data/models/service_warranty_model.dart';
 
 class ServiceOrderService {
   ServiceOrderService(this._dbHelper);
@@ -110,6 +112,73 @@ class ServiceOrderService {
       );
       await _recalculateOrder(txn, orderId);
     });
+  }
+
+  Future<void> addDevice({required ServiceOrderDevice device}) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      final order = await _requireOrder(txn, device.serviceOrderId);
+      _ensureEditable(order);
+      if (device.deviceType.trim().isEmpty) {
+        throw ArgumentError('Device type is required.');
+      }
+      final values = device.toMap()
+        ..remove('id')
+        ..['created_at'] =
+            device.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String();
+      await txn.insert('service_order_devices', values);
+    });
+  }
+
+  Future<List<ServiceOrderDevice>> getDevices(String orderId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'service_order_devices',
+      where: 'service_order_id = ?',
+      whereArgs: [orderId],
+      orderBy: 'id ASC',
+    );
+    return rows.map(ServiceOrderDevice.fromMap).toList();
+  }
+
+  Future<void> addWarranty({required ServiceWarranty warranty}) async {
+    if (warranty.endsAt.isBefore(warranty.startsAt)) {
+      throw ArgumentError('Warranty end date cannot precede start date.');
+    }
+    final db = await _db;
+    await db.transaction((txn) async {
+      final order = await _requireOrder(txn, warranty.serviceOrderId);
+      _ensureEditable(order);
+      if (warranty.serviceOrderLineId != null) {
+        final lines = await txn.query(
+          'service_order_lines',
+          columns: ['id'],
+          where: 'id = ? AND service_order_id = ?',
+          whereArgs: [warranty.serviceOrderLineId, warranty.serviceOrderId],
+          limit: 1,
+        );
+        if (lines.isEmpty) {
+          throw StateError('Warranty line does not belong to the service order.');
+        }
+      }
+      final now = DateTime.now().toIso8601String();
+      final values = warranty.toMap()
+        ..remove('id')
+        ..['created_at'] = warranty.createdAt?.toIso8601String() ?? now
+        ..['updated_at'] = warranty.updatedAt?.toIso8601String() ?? now;
+      await txn.insert('service_warranties', values);
+    });
+  }
+
+  Future<List<ServiceWarranty>> getWarranties(String orderId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'service_warranties',
+      where: 'service_order_id = ?',
+      whereArgs: [orderId],
+      orderBy: 'id ASC',
+    );
+    return rows.map(ServiceWarranty.fromMap).toList();
   }
 
   Future<void> transitionStatus({
