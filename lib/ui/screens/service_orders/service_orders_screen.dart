@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/service/service_order_status_policy.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
+import 'package:firstpro/data/datasources/services/cash_box_service.dart';
 import 'package:firstpro/data/datasources/services/service_order_service.dart';
+import 'package:firstpro/data/models/service_order_device_model.dart';
 import 'package:firstpro/data/models/service_order_model.dart';
+import 'package:firstpro/data/models/service_payment_model.dart';
+import 'package:firstpro/data/models/service_warranty_model.dart';
 
 class ServiceOrdersScreen extends StatefulWidget {
   const ServiceOrdersScreen({super.key});
@@ -241,7 +245,12 @@ class ServiceOrderDetailScreen extends StatefulWidget {
 
 class _ServiceOrderDetailScreenState extends State<ServiceOrderDetailScreen> {
   final _service = locator<ServiceOrderService>();
+  final _cashBoxService = locator<CashBoxService>();
   ServiceOrder? _order;
+  List<ServiceOrderDevice> _devices = const [];
+  List<ServiceWarranty> _warranties = const [];
+  List<ServicePayment> _payments = const [];
+  List<Map<String, dynamic>> _cashBoxes = const [];
   bool _loading = true;
   String? _error;
 
@@ -262,6 +271,18 @@ class _ServiceOrderDetailScreenState extends State<ServiceOrderDetailScreen> {
   Future<void> _loadOrder() async {
     try {
       final order = await _service.getById(widget.orderId);
+      if (order != null) {
+        final related = await Future.wait([
+          _service.getDevices(widget.orderId),
+          _service.getWarranties(widget.orderId),
+          _service.getPayments(widget.orderId),
+          _cashBoxService.getAllCashBoxes(),
+        ]);
+        _devices = related[0] as List<ServiceOrderDevice>;
+        _warranties = related[1] as List<ServiceWarranty>;
+        _payments = related[2] as List<ServicePayment>;
+        _cashBoxes = related[3] as List<Map<String, dynamic>>;
+      }
       if (mounted) {
         setState(() {
           _order = order;
@@ -338,6 +359,288 @@ class _ServiceOrderDetailScreenState extends State<ServiceOrderDetailScreen> {
     }
   }
 
+  Future<void> _addDevice() async {
+    final type = TextEditingController();
+    final brand = TextEditingController();
+    final model = TextEditingController();
+    final serial = TextEditingController();
+    final values = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) {
+        String? error;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('إضافة جهاز'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: type, decoration: const InputDecoration(labelText: 'نوع الجهاز *')),
+                  TextField(controller: brand, decoration: const InputDecoration(labelText: 'العلامة التجارية')),
+                  TextField(controller: model, decoration: const InputDecoration(labelText: 'الموديل')),
+                  TextField(controller: serial, decoration: const InputDecoration(labelText: 'الرقم التسلسلي')),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('رجوع')),
+              FilledButton(
+                onPressed: () {
+                  if (type.text.trim().isEmpty) {
+                    setState(() => error = 'نوع الجهاز مطلوب');
+                    return;
+                  }
+                  Navigator.pop(dialogContext, {
+                    'type': type.text.trim(),
+                    'brand': brand.text.trim(),
+                    'model': model.text.trim(),
+                    'serial': serial.text.trim(),
+                  });
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    type.dispose();
+    brand.dispose();
+    model.dispose();
+    serial.dispose();
+    if (values == null) return;
+    try {
+      await _service.addDevice(
+        device: ServiceOrderDevice(
+          serviceOrderId: widget.orderId,
+          deviceType: values['type']!,
+          brand: values['brand']!.isEmpty ? null : values['brand'],
+          model: values['model']!.isEmpty ? null : values['model'],
+          serialNumber: values['serial']!.isEmpty ? null : values['serial'],
+        ),
+      );
+      await _loadOrder();
+      _showSuccess('تمت إضافة الجهاز');
+    } catch (error) {
+      _showError('تعذر إضافة الجهاز: $error');
+    }
+  }
+
+  Future<void> _addWarranty() async {
+    final type = TextEditingController(text: 'repair');
+    final days = TextEditingController(text: '90');
+    final terms = TextEditingController();
+    final values = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) {
+        String? error;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('إضافة ضمان'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: type, decoration: const InputDecoration(labelText: 'نوع الضمان')),
+                  TextField(
+                    controller: days,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'مدة الضمان بالأيام *'),
+                  ),
+                  TextField(
+                    controller: terms,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'الشروط'),
+                  ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('رجوع')),
+              FilledButton(
+                onPressed: () {
+                  final parsedDays = int.tryParse(days.text.trim());
+                  if (parsedDays == null || parsedDays <= 0) {
+                    setState(() => error = 'مدة الضمان يجب أن تكون رقماً موجباً');
+                    return;
+                  }
+                  Navigator.pop(dialogContext, {
+                    'type': type.text.trim().isEmpty ? 'repair' : type.text.trim(),
+                    'days': parsedDays.toString(),
+                    'terms': terms.text.trim(),
+                  });
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    type.dispose();
+    days.dispose();
+    terms.dispose();
+    if (values == null) return;
+    final startsAt = DateTime.now();
+    try {
+      await _service.addWarranty(
+        warranty: ServiceWarranty(
+          serviceOrderId: widget.orderId,
+          serviceOrderLineId: null,
+          warrantyType: values['type']!,
+          startsAt: startsAt,
+          endsAt: startsAt.add(Duration(days: int.parse(values['days']!))),
+          terms: values['terms']!.isEmpty ? null : values['terms'],
+        ),
+      );
+      await _loadOrder();
+      _showSuccess('تمت إضافة الضمان');
+    } catch (error) {
+      _showError('تعذر إضافة الضمان: $error');
+    }
+  }
+
+  Future<void> _addPayment() async {
+    final order = _order;
+    if (order == null) return;
+    final compatibleBoxes = _cashBoxes
+        .where((box) => (box['currency'] as String? ?? order.currencyCode) == order.currencyCode)
+        .toList();
+    final amount = TextEditingController();
+    final method = TextEditingController(text: 'cash');
+    final rate = TextEditingController(text: '1.0');
+    final reference = TextEditingController();
+    int? selectedCashBoxId = compatibleBoxes.isEmpty ? null : compatibleBoxes.first['id'] as int?;
+    final values = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        String? error;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('تسجيل دفعة'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('العملة: ${order.currencyCode}'),
+                  TextField(
+                    controller: amount,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'المبلغ * (المتبقي ${order.remaining.toStringAsFixed(2)})',
+                    ),
+                  ),
+                  TextField(controller: method, decoration: const InputDecoration(labelText: 'طريقة الدفع')),
+                  TextField(
+                    controller: rate,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'سعر الصرف إلى العملة الأساسية *'),
+                  ),
+                  DropdownButtonFormField<int>(
+                    value: selectedCashBoxId,
+                    decoration: const InputDecoration(labelText: 'صندوق النقد *'),
+                    items: compatibleBoxes
+                        .map((box) => DropdownMenuItem<int>(
+                              value: box['id'] as int,
+                              child: Text('${box['name']} (${box['currency']})'),
+                            ))
+                        .toList(),
+                    onChanged: (value) => setState(() => selectedCashBoxId = value),
+                  ),
+                  TextField(controller: reference, decoration: const InputDecoration(labelText: 'رقم المرجع')),
+                  if (compatibleBoxes.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text('لا يوجد صندوق نقد مطابق للعملة', style: TextStyle(color: Colors.red)),
+                    ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('رجوع')),
+              FilledButton(
+                onPressed: () {
+                  final parsedAmount = double.tryParse(amount.text.trim());
+                  final parsedRate = double.tryParse(rate.text.trim());
+                  if (parsedAmount == null || parsedAmount <= 0) {
+                    setState(() => error = 'المبلغ يجب أن يكون موجباً');
+                    return;
+                  }
+                  if (parsedRate == null || parsedRate <= 0) {
+                    setState(() => error = 'سعر الصرف يجب أن يكون موجباً');
+                    return;
+                  }
+                  if (selectedCashBoxId == null) {
+                    setState(() => error = 'اختر صندوق نقد صالحاً');
+                    return;
+                  }
+                  Navigator.pop(dialogContext, {
+                    'amount': parsedAmount,
+                    'method': method.text.trim().isEmpty ? 'cash' : method.text.trim(),
+                    'rate': parsedRate,
+                    'cashBoxId': selectedCashBoxId,
+                    'reference': reference.text.trim(),
+                  });
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    amount.dispose();
+    method.dispose();
+    rate.dispose();
+    reference.dispose();
+    if (values == null) return;
+    try {
+      await _service.createPayment(
+        payment: ServicePayment(
+          serviceOrderId: widget.orderId,
+          paymentMethod: values['method'] as String,
+          amount: values['amount'] as double,
+          currencyCode: order.currencyCode,
+          exchangeRate: values['rate'] as double,
+          cashBoxId: values['cashBoxId'] as int,
+          referenceNumber: (values['reference'] as String).isEmpty
+              ? null
+              : values['reference'] as String,
+          paymentDate: DateTime.now(),
+        ),
+      );
+      await _loadOrder();
+      _showSuccess('تم حفظ الدفعة كمسودة؛ يمكنك ترحيلها من سجل الدفعات');
+    } catch (error) {
+      _showError('تعذر تسجيل الدفعة: $error');
+    }
+  }
+
+  Future<void> _postPayment(int paymentId) async {
+    try {
+      await _service.postPayment(paymentId: paymentId);
+      await _loadOrder();
+      _showSuccess('تم ترحيل الدفعة محاسبياً');
+    } catch (error) {
+      _showError('تعذر ترحيل الدفعة: $error');
+    }
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -371,6 +674,8 @@ class _ServiceOrderDetailScreenState extends State<ServiceOrderDetailScreen> {
                       _actionCard(order),
                       const SizedBox(height: 12),
                       _financialCard(order),
+                      const SizedBox(height: 12),
+                      _relatedRecordsCard(),
                     ],
                   ),
                 ),
@@ -414,6 +719,23 @@ class _ServiceOrderDetailScreenState extends State<ServiceOrderDetailScreen> {
                 icon: const Icon(Icons.arrow_forward),
                 label: Text('تغيير إلى ${_statusLabel(nextStatus)}'),
               ),
+            if (!order.isPosted && !ServiceOrderStatusPolicy.isTerminal(order.status)) ...[
+              OutlinedButton.icon(
+                onPressed: _addDevice,
+                icon: const Icon(Icons.phone_android),
+                label: const Text('إضافة جهاز'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _addWarranty,
+                icon: const Icon(Icons.verified_user_outlined),
+                label: const Text('إضافة ضمان'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _addPayment,
+                icon: const Icon(Icons.payments_outlined),
+                label: const Text('تسجيل دفعة'),
+              ),
+            ],
             if (canPost)
               FilledButton.icon(
                 onPressed: _post,
@@ -452,6 +774,90 @@ class _ServiceOrderDetailScreenState extends State<ServiceOrderDetailScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _relatedRecordsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('السجلات المرتبطة', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            _recordHeader(Icons.devices_other, 'الأجهزة', _devices.length),
+            ..._devices.map((device) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: const Icon(Icons.phone_android),
+                  title: Text(device.deviceType),
+                  subtitle: Text(
+                    [device.brand, device.model, device.serialNumber]
+                        .where((value) => value != null && value!.trim().isNotEmpty)
+                        .map((value) => value!)
+                        .join(' • '),
+                  ),
+                )),
+            _recordHeader(Icons.verified_user_outlined, 'الضمانات', _warranties.length),
+            ..._warranties.map((warranty) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: Icon(
+                    warranty.endsAt.isBefore(DateTime.now())
+                        ? Icons.warning_amber
+                        : Icons.verified,
+                    color: warranty.endsAt.isBefore(DateTime.now())
+                        ? Colors.orange
+                        : AppColors.success,
+                  ),
+                  title: Text(warranty.warrantyType),
+                  subtitle: Text(
+                    '${_shortDate(warranty.startsAt)} - ${_shortDate(warranty.endsAt)} • ${warranty.status}',
+                  ),
+                )),
+            _recordHeader(Icons.payments_outlined, 'الدفعات', _payments.length),
+            ..._payments.map((payment) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: Icon(
+                    payment.isPosted ? Icons.verified : Icons.pending,
+                    color: payment.isPosted ? AppColors.success : Colors.orange,
+                  ),
+                  title: Text(
+                    '${payment.currencyCode} ${payment.amount.toStringAsFixed(2)}',
+                  ),
+                  subtitle: Text(
+                    '${payment.paymentMethod} • ${_shortDate(payment.paymentDate)}',
+                  ),
+                  trailing: payment.isPosted
+                      ? const Text('مرحّل')
+                      : TextButton(
+                          onPressed: payment.id == null ? null : () => _postPayment(payment.id!),
+                          child: const Text('ترحيل'),
+                        ),
+                )),
+            if (_devices.isEmpty && _warranties.isEmpty && _payments.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('لا توجد سجلات مرتبطة بعد'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _recordHeader(IconData icon, String label, int count) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 8),
+          Text('$label ($count)', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
