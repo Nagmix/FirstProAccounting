@@ -32,6 +32,7 @@ import 'package:firstpro/ui/screens/audit/accounting_audit_screen.dart';
 import 'package:firstpro/ui/screens/quotations/quotations_screen.dart';
 import 'package:firstpro/ui/screens/purchase_orders/purchase_orders_screen.dart';
 import 'package:firstpro/ui/screens/sales_orders/sales_orders_screen.dart';
+import 'package:firstpro/ui/screens/service_orders/service_orders_screen.dart';
 import 'package:firstpro/ui/screens/shifts/shifts_screen.dart';
 import 'package:firstpro/ui/screens/currency_exchange/currency_exchange_screen.dart';
 import 'package:firstpro/ui/screens/cash_transfers/cash_transfer_screen.dart';
@@ -100,6 +101,7 @@ class AppRouter {
         AppConstants.quotations: (_) => const QuotationsScreen(),
         AppConstants.purchaseOrders: (_) => const PurchaseOrdersScreen(),
         AppConstants.salesOrders: (_) => const SalesOrdersScreen(),
+        AppConstants.serviceOrders: (_) => const ServiceOrdersScreen(),
         AppConstants.shifts: (_) => const ShiftsScreen(),
         AppConstants.currencyExchange: (_) => const CurrencyExchangeScreen(),
         AppConstants.cashTransfers: (_) => const CashTransferScreen(),

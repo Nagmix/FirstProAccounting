@@ -934,6 +934,17 @@ class ServiceOrderService {
     });
   }
 
+  Future<List<ServiceOrder>> getAll({String? status}) async {
+    final db = await _db;
+    final rows = await db.query(
+      'service_orders',
+      where: status == null ? null : 'status = ?',
+      whereArgs: status == null ? null : [status],
+      orderBy: 'received_at DESC, id DESC',
+    );
+    return rows.map(ServiceOrder.fromMap).toList();
+  }
+
   Future<ServiceOrder?> getById(String orderId) async {
     final db = await _db;
     final rows = await db.query(

@@ -127,6 +127,11 @@ class _MainScaffoldState extends State<MainScaffold>
             route: AppConstants.salesOrders,
             color: Colors.indigo),
         _DrawerMenuItem(
+            icon: Icons.build,
+            label: 'الخدمات والصيانة',
+            route: AppConstants.serviceOrders,
+            color: Colors.deepOrange),
+        _DrawerMenuItem(
             icon: Icons.history,
             label: 'الورديات',
             route: AppConstants.shifts,

@@ -125,6 +125,7 @@ class AppConstants {
   static const String quotations = '/quotations';
   static const String purchaseOrders = '/purchase-orders';
   static const String salesOrders = '/sales-orders';
+  static const String serviceOrders = '/service-orders';
   static const String shifts = '/shifts';
   static const String currencyExchange = '/currency-exchange';
   static const String cashTransfers = '/cash-transfers';
