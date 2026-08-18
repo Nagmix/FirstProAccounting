@@ -61,7 +61,6 @@ void main() {
       final now = DateTime.utc(2099, 8, 1).toIso8601String();
       await db.insert('fiscal_years', {
         'year': 2099,
-        'name': 'FY 2099',
         'start_date': '2099-01-01',
         'end_date': '2099-12-31',
         'status': 'closed',
