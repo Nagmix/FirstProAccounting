@@ -14,46 +14,7 @@ void main() {
   late int finishedProductId;
   const now = '2026-08-19T00:00:00.000Z';
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  setUp(() async {
-    db = await openDatabase(
-      inMemoryDatabasePath,
-      version: 58,
-      onCreate: (database, version) async {
-        await DatabaseSchema.onCreate(database, version);
-      },
-      onConfigure: (database) async {
-        await database.execute('PRAGMA foreign_keys = ON');
-      },
-    );
-    DatabaseHelper.useTestDatabase(db);
-    service = ProductionService(DatabaseHelper());
-
-    rawProductId = await _insertProduct(
-      name: 'دقيق خام',
-      stock: 10,
-      averageCost: 5,
-      inventoryAccountId: await _ensureAccount('1301', 'مخزون المواد الخام'),
-    );
-    finishedProductId = await _insertProduct(
-      name: 'خبز تام',
-      stock: 0,
-      averageCost: 0,
-      inventoryAccountId: await _ensureAccount('1302', 'مخزون الإنتاج التام'),
-    );
-    await _seedRecipe();
-  });
-
-  tearDown(() async {
-    DatabaseHelper.clearTestDatabase();
-    await db.close();
-  });
-
-  Future<int> _ensureAccount(String code, String name) async {
+  Future<int> ensureAccount(String code, String name) async {
     final rows = await db.query(
       'accounts',
       columns: ['id'],
@@ -76,7 +37,7 @@ void main() {
     });
   }
 
-  Future<int> _insertProduct({
+  Future<int> insertProduct({
     required String name,
     required double stock,
     required double averageCost,
@@ -101,7 +62,7 @@ void main() {
     });
   }
 
-  Future<void> _seedRecipe() async {
+  Future<void> seedRecipe() async {
     final recipeId = await db.insert('recipes', {
       'output_product_id': finishedProductId,
       'name': 'وصفة الخبز الأساسية',
@@ -116,6 +77,45 @@ void main() {
       'quantity': 2,
     });
   }
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    db = await openDatabase(
+      inMemoryDatabasePath,
+      version: 58,
+      onCreate: (database, version) async {
+        await DatabaseSchema.onCreate(database, version);
+      },
+      onConfigure: (database) async {
+        await database.execute('PRAGMA foreign_keys = ON');
+      },
+    );
+    DatabaseHelper.useTestDatabase(db);
+    service = ProductionService(DatabaseHelper());
+
+    rawProductId = await insertProduct(
+      name: 'دقيق خام',
+      stock: 10,
+      averageCost: 5,
+      inventoryAccountId: await ensureAccount('1301', 'مخزون المواد الخام'),
+    );
+    finishedProductId = await insertProduct(
+      name: 'خبز تام',
+      stock: 0,
+      averageCost: 0,
+      inventoryAccountId: await ensureAccount('1302', 'مخزون الإنتاج التام'),
+    );
+    await seedRecipe();
+  });
+
+  tearDown(() async {
+    DatabaseHelper.clearTestDatabase();
+    await db.close();
+  });
 
   ProductionOrder _draft({double plannedQuantity = 2}) {
     return ProductionOrder(
