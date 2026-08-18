@@ -172,15 +172,15 @@ void main() {
       ),
     );
 
-    expect(
-      () => service.postServiceOrder(orderId: 'SO-POST-1'),
+    await expectLater(
+      service.postServiceOrder(orderId: 'SO-POST-1'),
       throwsStateError,
     );
 
     await makeReady();
     await service.postServiceOrder(orderId: 'SO-POST-1');
-    expect(
-      () => service.postServiceOrder(orderId: 'SO-POST-1'),
+    await expectLater(
+      service.postServiceOrder(orderId: 'SO-POST-1'),
       throwsStateError,
     );
   });
