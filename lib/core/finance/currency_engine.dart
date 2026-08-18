@@ -24,11 +24,11 @@ class CurrencyEngine {
     required int amountMinorUnits,
     required int exchangeRateMicros,
   }) {
-    if (exchangeRateMicros < 0) {
+    if (exchangeRateMicros <= 0) {
       throw ArgumentError.value(
         exchangeRateMicros,
         'exchangeRateMicros',
-        'cannot be negative',
+        'must be greater than zero',
       );
     }
 
