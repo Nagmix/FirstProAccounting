@@ -219,30 +219,32 @@ void main() {
       'created_at': now,
       'updated_at': now,
     });
-    final cashAccountId = await db.insert('accounts', {
-      'name_ar': 'صندوق الاختبار',
-      'name_en': 'Test Cash',
-      'account_code': '1100',
-      'account_type': 'ASSET',
-      'balance': 0,
-      'currency': 'YER',
-      'balance_type': 'debit',
-      'is_active': 1,
-      'created_at': now,
-      'updated_at': now,
-    });
-    final customerAccountId = await db.insert('accounts', {
-      'name_ar': 'عملاء الاختبار',
-      'name_en': 'Test Customer Receivable',
-      'account_code': '1200',
-      'account_type': 'ASSET',
-      'balance': 0,
-      'currency': 'YER',
-      'balance_type': 'debit',
-      'is_active': 1,
-      'created_at': now,
-      'updated_at': now,
-    });
+    Future<int> accountIdForCode(String code) async {
+      final rows = await db.query(
+        'accounts',
+        columns: ['id'],
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [code, 'YER'],
+        limit: 1,
+      );
+      if (rows.isNotEmpty) return rows.single['id'] as int;
+      return db.insert('accounts', {
+        'name_ar': code == '1100' ? 'صندوق الاختبار' : 'عملاء الاختبار',
+        'name_en': code == '1100'
+            ? 'Test Cash'
+            : 'Test Customer Receivable',
+        'account_code': code,
+        'account_type': 'ASSET',
+        'balance': 0,
+        'currency': 'YER',
+        'balance_type': 'debit',
+        'is_active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
+    final cashAccountId = await accountIdForCode('1100');
+    final customerAccountId = await accountIdForCode('1200');
     final cashBoxId = await db.insert('cash_boxes', {
       'name': 'Test Cash Box',
       'type': 'cash_box',
