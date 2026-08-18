@@ -833,12 +833,15 @@ class ServiceOrderService {
           'created_at': now,
         });
       }
-      final reversalRows = <Map<String, dynamic>>[];
       for (final original in originalRows) {
         final debitMinorUnits = (original['debit'] as num?)?.round() ?? 0;
         final creditMinorUnits = (original['credit'] as num?)?.round() ?? 0;
-        reversalRows.add({
-          'account_id': original['account_id'],
+        final accountId = original['account_id'] as int;
+        final currencyCode = original['currency_code'] ?? 'YER';
+        final originalExchangeRate = original['exchange_rate'] ?? 1.0;
+        final amountBase = original['amount_base'] ?? 0;
+        await txn.insert('transactions', {
+          'account_id': accountId,
           'journal_id': journalId,
           'debit': creditMinorUnits,
           'credit': debitMinorUnits,
@@ -847,18 +850,15 @@ class ServiceOrderService {
           'created_at': now,
           'reference_type': 'service_order_reversal',
           'reference_id': orderId,
-          'currency_code': original['currency_code'] ?? 'YER',
-          'exchange_rate': original['exchange_rate'] ?? 1.0,
-          'amount_base': original['amount_base'] ?? 0,
+          'currency_code': currencyCode,
+          'exchange_rate': originalExchangeRate,
+          'amount_base': amountBase,
         });
-      }
-      for (final reversal in reversalRows) {
-        await txn.insert('transactions', reversal);
         await _dbHelper.journal.updateAccountBalanceWithJournal(
           txn,
-          reversal['account_id'] as int,
-          MoneyHelper.fromCents((reversal['debit'] as num).round()),
-          MoneyHelper.fromCents((reversal['credit'] as num).round()),
+          accountId,
+          MoneyHelper.fromCents(creditMinorUnits),
+          MoneyHelper.fromCents(debitMinorUnits),
           now,
         );
       }
