@@ -16,6 +16,7 @@ import 'package:firstpro/data/datasources/migrations/migration_v53.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v54.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v55.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v56.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v57.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -110,5 +111,8 @@ class MigrationRunner {
 
     // v56 — Explicit product kinds for goods and services
     if (oldVersion < 56) await MigrationV56.migrate(db);
+
+    // v57 — Service and maintenance orders
+    if (oldVersion < 57) await MigrationV57.migrate(db);
   }
 }
