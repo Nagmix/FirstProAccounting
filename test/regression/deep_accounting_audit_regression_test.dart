@@ -186,8 +186,10 @@ void main() {
           reason: 'An expense without a positive amount must not be persisted.');
       expect(source, contains('cashBoxCurrency != expenseCurrency'),
           reason: 'An explicitly selected cash box must match the expense currency.');
-      expect(source, contains('amountBaseDifference'),
-          reason: 'The base amount must be validated against amount and exchange rate.');
+      expect(source, contains('expectedBaseMinorUnits'),
+          reason: 'The base amount must be calculated from amount and exchange rate.');
+      expect(source, contains('providedAmountBaseMinorUnits'),
+          reason: 'A provided base amount must be validated against the calculated value.');
     });
 
     test('stock transfer materializes a fallback layer when no source layers exist', () {
