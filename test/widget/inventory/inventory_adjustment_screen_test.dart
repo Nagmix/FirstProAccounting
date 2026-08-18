@@ -23,7 +23,11 @@ void main() {
     await tester.enterText(find.byKey(const Key('actual-quantity')), '-2');
     await tester.enterText(find.byKey(const Key('unit-cost')), '100');
     final createButton = find.byKey(const Key('create-inventory-draft'));
-    await tester.scrollUntilVisible(createButton, 500);
+    await tester.scrollUntilVisible(
+      createButton,
+      500,
+      scrollable: find.byType(ListView),
+    );
     await tester.tap(createButton);
     await tester.pump();
 
@@ -53,7 +57,11 @@ void main() {
     await tester.enterText(find.byKey(const Key('conversion-factor')), '12');
     await tester.enterText(find.byKey(const Key('unit-cost')), '100');
     final createButton = find.byKey(const Key('create-inventory-draft'));
-    await tester.scrollUntilVisible(createButton, 500);
+    await tester.scrollUntilVisible(
+      createButton,
+      500,
+      scrollable: find.byType(ListView),
+    );
     await tester.tap(createButton);
     await tester.pump();
 

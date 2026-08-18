@@ -51,7 +51,11 @@ void main() {
     expect(find.byKey(const Key('post-production')), findsOneWidget);
 
     final postButton = find.byKey(const Key('post-production'));
-    await tester.ensureVisible(postButton);
+    await tester.scrollUntilVisible(
+      postButton,
+      500,
+      scrollable: find.byType(ListView),
+    );
     await tester.tap(postButton);
     await tester.pumpAndSettle();
     expect(postedOrderId, captured!.id);
