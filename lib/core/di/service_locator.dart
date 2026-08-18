@@ -26,6 +26,7 @@ import 'package:firstpro/data/datasources/services/inventory_alert_service.dart'
 import 'package:firstpro/data/datasources/services/recurring_invoice_service.dart';
 import 'package:firstpro/data/datasources/services/service_order_service.dart';
 import 'package:firstpro/data/datasources/services/production_service.dart';
+import 'package:firstpro/data/datasources/services/inventory_adjustment_service.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
 import 'package:firstpro/core/viewmodels/pos_viewmodel.dart';
@@ -130,6 +131,9 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<ProductionService>(
     () => ProductionService(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<InventoryAdjustmentService>(
+    () => InventoryAdjustmentService(locator<DatabaseHelper>()),
   );
 
   // ── ViewModels (factory — fresh instance per screen, no stale state) ──
