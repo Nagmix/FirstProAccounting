@@ -71,7 +71,7 @@ void main() {
     );
     final invoices = InvoiceRepository(dbHelper);
 
-    await invoices.saveInvoiceWithJournalEntries(
+    await _withScenarioTimeout('purchase posting', invoices.saveInvoiceWithJournalEntries(
       _invoice(
         id: 'PUR-ACCEPT-001',
         type: 'purchase',
@@ -84,7 +84,7 @@ void main() {
       paymentMechanism: 'cash',
       isReturn: false,
       paidAmount: 1000,
-    );
+    ));
 
     var product = await _product(db, productId);
     expect(product['current_stock'], 10.0);
@@ -95,7 +95,7 @@ void main() {
       hasLength(1),
     );
 
-    await invoices.saveInvoiceWithJournalEntries(
+    await _withScenarioTimeout('sale posting', invoices.saveInvoiceWithJournalEntries(
       _invoice(
         id: 'SALE-ACCEPT-001',
         type: 'sale',
@@ -111,7 +111,7 @@ void main() {
       paymentMechanism: 'cash',
       isReturn: false,
       paidAmount: 500,
-    );
+    ));
 
     product = await _product(db, productId);
     expect(product['current_stock'], 5.0);
@@ -133,7 +133,7 @@ void main() {
       expect(row['amount_base'], row['debit'] as int == 0 ? row['credit'] : row['debit']);
     }
 
-    await invoices.saveInvoiceWithJournalEntries(
+    await _withScenarioTimeout('sale return posting', invoices.saveInvoiceWithJournalEntries(
       _invoice(
         id: 'RET-ACCEPT-001',
         type: 'sale_return',
@@ -157,7 +157,7 @@ void main() {
       paymentMechanism: 'cash',
       isReturn: true,
       paidAmount: 500,
-    );
+    ));
 
     product = await _product(db, productId);
     expect(product['current_stock'], 7.0);
@@ -259,6 +259,14 @@ void main() {
 }
 
 const _timestamp = '2026-08-18T00:00:00.000Z';
+
+Future<void> _withScenarioTimeout(String label, Future<void> operation) {
+  return operation.timeout(
+    const Duration(seconds: 30),
+    onTimeout: () => throw StateError('Acceptance scenario timed out: $label'),
+  );
+}
+
 
 Map<String, dynamic> _invoice({
   required String id,
