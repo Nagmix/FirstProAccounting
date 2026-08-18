@@ -425,6 +425,463 @@ class ServiceOrderService {
     });
   }
 
+  /// Post the service order as a receivable and service-revenue journal.
+  ///
+  /// Service-only lines never create stock movements or COGS. Part-line
+  /// inventory posting is intentionally handled by the dedicated inventory
+  /// phase; this method refuses to post an order containing unsupported part
+  /// lines rather than silently creating an incomplete journal.
+  Future<void> postServiceOrder({required String orderId}) async {
+    final db = await _db;
+    final initialRows = await db.query(
+      'service_orders',
+      where: 'id = ?',
+      whereArgs: [orderId],
+      limit: 1,
+    );
+    if (initialRows.isEmpty) {
+      throw StateError('Service order not found: $orderId');
+    }
+    final initialOrder = initialRows.single;
+    final receivedAt = initialOrder['received_at'] as String?;
+    if (receivedAt == null || receivedAt.trim().isEmpty) {
+      throw StateError('A received date is required before posting.');
+    }
+    await _dbHelper.journal.checkFiscalPeriodOpen(receivedAt);
+
+    final currency = initialOrder['currency_code'] as String? ?? 'YER';
+    final codeOffset = await _dbHelper.baseCurrency.getOffsetForCurrency(currency);
+    final baseCurrencyOffset =
+        await _dbHelper.baseCurrency.getOffsetForCurrency('YER');
+    final revenueCode = (4100 + codeOffset).toString();
+    final receivableCode = (1200 + codeOffset).toString();
+    final cogsCode = (3200 + baseCurrencyOffset).toString();
+    final inventoryCode = (1300 + baseCurrencyOffset).toString();
+
+    await db.transaction((txn) async {
+      final order = await _requireOrder(txn, orderId);
+      final status = order['status'] as String? ?? 'draft';
+      if (!ServiceOrderStatusPolicy.canPost(status)) {
+        throw StateError('Service order is not ready for posting: $status');
+      }
+      if ((order['is_posted'] as num?)?.toInt() == 1 ||
+          order['posted_journal_id'] != null) {
+        throw StateError('Service order is already posted: $orderId');
+      }
+      if (order['customer_id'] == null) {
+        throw StateError('A customer is required before posting a service order.');
+      }
+      final customerRows = await txn.query(
+        'customers',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [order['customer_id']],
+        limit: 1,
+      );
+      if (customerRows.isEmpty) {
+        throw StateError('Customer was not found: ${order['customer_id']}');
+      }
+
+      final lineRows = await txn.query(
+        'service_order_lines',
+        where: 'service_order_id = ?',
+        whereArgs: [orderId],
+      );
+      if (lineRows.isEmpty) {
+        throw StateError('A service order must contain at least one line.');
+      }
+      if (currency != (order['currency_code'] as String? ?? 'YER')) {
+        throw StateError('Service order currency changed while posting.');
+      }
+
+      // Recompute from persisted lines inside the same transaction so posting
+      // can never trust stale totals supplied by a caller.
+      await _recalculateOrder(txn, orderId);
+      final refreshedOrder = await _requireOrder(txn, orderId);
+
+      final accountRows = await txn.query(
+        'accounts',
+        where: 'account_code IN (?, ?) AND currency = ? AND is_active = 1',
+        whereArgs: [receivableCode, revenueCode, currency],
+      );
+      Map<String, dynamic>? accountFor(String code) {
+        for (final row in accountRows) {
+          if (row['account_code'] == code) return row;
+        }
+        return null;
+      }
+
+      final receivable = accountFor(receivableCode);
+      final revenue = accountFor(revenueCode);
+      if (receivable == null || revenue == null) {
+        throw StateError(
+          'Service receivable or revenue account is missing for $currency.',
+        );
+      }
+
+      final amountMinorUnits = (refreshedOrder['total'] as num?)?.round() ?? 0;
+      if (amountMinorUnits <= 0) {
+        throw StateError('A service order total must be positive before posting.');
+      }
+      final exchangeRate =
+          (refreshedOrder['exchange_rate'] as num?)?.toDouble() ?? 1.0;
+      if (exchangeRate <= 0) {
+        throw StateError('Service order exchange rate must be positive.');
+      }
+      final amountBaseMinorUnits = const CurrencyEngine().convertMinorUnits(
+        amountMinorUnits: amountMinorUnits,
+        exchangeRateMicros: CurrencyEngine.rateToMicros(exchangeRate),
+      );
+      final amount = MoneyHelper.fromCents(amountMinorUnits);
+      final journalId = generateUniqueJournalId();
+      final now = DateTime.now().toIso8601String();
+      final referenceId = orderId;
+
+      final cogsRows = await txn.query(
+        'accounts',
+        where: 'account_code IN (?, ?) AND currency = ? AND is_active = 1',
+        whereArgs: [cogsCode, inventoryCode, 'YER'],
+      );
+      int? defaultCogsAccountId;
+      int? defaultInventoryAccountId;
+      for (final row in cogsRows) {
+        if (row['account_code'] == cogsCode) {
+          defaultCogsAccountId = row['id'] as int;
+        } else if (row['account_code'] == inventoryCode) {
+          defaultInventoryAccountId = row['id'] as int;
+        }
+      }
+
+      final cogsGroups = <String, double>{};
+      for (final line in lineRows) {
+        if (line['line_type'] != 'part') continue;
+        final productId = (line['product_id'] as num?)?.toInt();
+        if (productId == null) {
+          throw StateError('Every part line must reference a product.');
+        }
+        final productRows = await txn.query(
+          'products',
+          where: 'id = ?',
+          whereArgs: [productId],
+          limit: 1,
+        );
+        if (productRows.isEmpty) {
+          throw StateError('Part product was not found: $productId');
+        }
+        final product = productRows.single;
+        final trackStock = (product['track_stock'] as num?)?.toInt() == 1;
+        final productKind = ProductKind.fromValue(product['product_kind'] as String?);
+        if (!ServiceOrderLinePolicy.canAffectInventory(
+          lineType: 'part',
+          productKind: productKind,
+          trackStock: trackStock,
+        )) {
+          throw StateError('Part line product is not stock-moving: $productId');
+        }
+        final quantity = (line['quantity'] as num?)?.toDouble() ?? 0.0;
+        if (quantity <= 0) {
+          throw StateError('Part line quantity must be positive: $productId');
+        }
+        final currentStock =
+            (product['current_stock'] as num?)?.toDouble() ?? 0.0;
+        final allowNegative = (product['allow_negative'] as num?)?.toInt() == 1;
+        if (!allowNegative && quantity > currentStock + 0.005) {
+          throw StateError(
+            'Insufficient stock for part $productId: available $currentStock, required $quantity',
+          );
+        }
+
+        final itemCogs = await _dbHelper.costingEngine.calculateCOGSInTransaction(
+          txn,
+          productId: productId,
+          baseQuantity: quantity,
+          invoiceId: orderId,
+          codeOffset: baseCurrencyOffset,
+        );
+        final cogsAccountId = (product['cogs_account_id'] as num?)?.toInt() ??
+            defaultCogsAccountId;
+        final inventoryAccountId =
+            (product['inventory_account_id'] as num?)?.toInt() ??
+                defaultInventoryAccountId;
+        if (cogsAccountId == null || inventoryAccountId == null) {
+          throw StateError(
+            'COGS or inventory account is missing for part product $productId.',
+          );
+        }
+        if (itemCogs > 0) {
+          final key = '$cogsAccountId:$inventoryAccountId';
+          cogsGroups[key] = (cogsGroups[key] ?? 0.0) + itemCogs;
+        }
+
+        await txn.rawUpdate(
+          'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+          [quantity, now, productId],
+        );
+        final averageCost = MoneyHelper.readMoney(product['average_cost']);
+        final unitCost = quantity > 0 && itemCogs > 0
+            ? itemCogs / quantity
+            : averageCost;
+        await txn.insert('stock_movements', {
+          'product_id': productId,
+          'movement_type': 'sale',
+          'quantity': -quantity,
+          'reference_type': 'service_order',
+          'reference_id': orderId,
+          'unit_cost': MoneyHelper.toCents(unitCost),
+          'created_at': now,
+        });
+      }
+
+      await txn.insert('transactions', {
+        'account_id': receivable['id'],
+        'journal_id': journalId,
+        'debit': amountMinorUnits,
+        'credit': 0,
+        'description': 'Service order $referenceId',
+        'date': receivedAt,
+        'created_at': now,
+        'reference_type': 'service_order',
+        'reference_id': referenceId,
+        'currency_code': currency,
+        'exchange_rate': exchangeRate,
+        'amount_base': amountBaseMinorUnits,
+      });
+      await txn.insert('transactions', {
+        'account_id': revenue['id'],
+        'journal_id': journalId,
+        'debit': 0,
+        'credit': amountMinorUnits,
+        'description': 'Service revenue $referenceId',
+        'date': receivedAt,
+        'created_at': now,
+        'reference_type': 'service_order',
+        'reference_id': referenceId,
+        'currency_code': currency,
+        'exchange_rate': exchangeRate,
+        'amount_base': amountBaseMinorUnits,
+      });
+
+      for (final entry in cogsGroups.entries) {
+        final ids = entry.key.split(':');
+        final cogsAccountId = int.parse(ids[0]);
+        final inventoryAccountId = int.parse(ids[1]);
+        final totalCogs = entry.value;
+        final cogsMinorUnits = MoneyHelper.toCents(totalCogs);
+        final cogsAmount = MoneyHelper.fromCents(cogsMinorUnits);
+        await txn.insert('transactions', {
+          'account_id': cogsAccountId,
+          'journal_id': journalId,
+          'debit': cogsMinorUnits,
+          'credit': 0,
+          'description': 'COGS for service order $referenceId',
+          'date': receivedAt,
+          'created_at': now,
+          'reference_type': 'service_order',
+          'reference_id': referenceId,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': cogsMinorUnits,
+        });
+        await txn.insert('transactions', {
+          'account_id': inventoryAccountId,
+          'journal_id': journalId,
+          'debit': 0,
+          'credit': cogsMinorUnits,
+          'description': 'Inventory reduction for service order $referenceId',
+          'date': receivedAt,
+          'created_at': now,
+          'reference_type': 'service_order',
+          'reference_id': referenceId,
+          'currency_code': 'YER',
+          'exchange_rate': 1.0,
+          'amount_base': cogsMinorUnits,
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn,
+          cogsAccountId,
+          cogsAmount,
+          0.0,
+          now,
+        );
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn,
+          inventoryAccountId,
+          0.0,
+          cogsAmount,
+          now,
+        );
+      }
+
+      await _dbHelper.journal.updateAccountBalanceWithJournal(
+        txn,
+        receivable['id'] as int,
+        amount,
+        0.0,
+        now,
+      );
+      await _dbHelper.journal.updateAccountBalanceWithJournal(
+        txn,
+        revenue['id'] as int,
+        0.0,
+        amount,
+        now,
+      );
+      await _dbHelper.journal.validateJournalBalanceInTransaction(txn, journalId);
+      await _dbHelper.journal.validateJournalBaseBalanceInTransaction(txn, journalId);
+
+      await txn.update(
+        'service_order_lines',
+        {'is_posted': 1},
+        where: 'service_order_id = ? AND is_posted = 0',
+        whereArgs: [orderId],
+      );
+      await txn.update(
+        'service_orders',
+        {
+          'is_posted': 1,
+          'posted_journal_id': journalId,
+          'updated_at': now,
+        },
+        where: 'id = ? AND is_posted = 0 AND posted_journal_id IS NULL',
+        whereArgs: [orderId],
+      );
+      await txn.insert('service_status_history', {
+        'service_order_id': orderId,
+        'from_status': status,
+        'to_status': status,
+        'note': 'Posted journal $journalId',
+        'created_at': now,
+      });
+    });
+  }
+
+  /// Cancel a posted service order by creating a new reversing journal.
+  /// The original journal and source order remain auditable and untouched.
+  Future<void> cancelServiceOrder({
+    required String orderId,
+    required String reason,
+  }) async {
+    if (reason.trim().isEmpty) {
+      throw ArgumentError('A cancellation reason is required.');
+    }
+    final db = await _db;
+    final initialRows = await db.query(
+      'service_orders',
+      where: 'id = ?',
+      whereArgs: [orderId],
+      limit: 1,
+    );
+    if (initialRows.isEmpty) {
+      throw StateError('Service order not found: $orderId');
+    }
+    final receivedAt = initialRows.single['received_at'] as String?;
+    if (receivedAt == null || receivedAt.trim().isEmpty) {
+      throw StateError('A received date is required before cancellation.');
+    }
+    final cancellationDate = DateTime.now().toIso8601String();
+    await _dbHelper.journal.checkFiscalPeriodOpen(cancellationDate);
+
+    await db.transaction((txn) async {
+      final order = await _requireOrder(txn, orderId);
+      if ((order['is_posted'] as num?)?.toInt() != 1 ||
+          order['posted_journal_id'] == null) {
+        throw StateError('Only a posted service order can be cancelled.');
+      }
+      if ((order['status'] as String?) == 'cancelled') {
+        throw StateError('Service order is already cancelled: $orderId');
+      }
+
+      final originalRows = await txn.query(
+        'transactions',
+        where: 'reference_type = ? AND reference_id = ?',
+        whereArgs: ['service_order', orderId],
+        orderBy: 'id ASC',
+      );
+      if (originalRows.isEmpty) {
+        throw StateError('Original service-order journal was not found.');
+      }
+
+      // Restore FIFO/LIFO layers before reversing the accounting effect. The
+      // helper is transaction-aware and removes only this order's allocations.
+      await _dbHelper.costingEngine.reverseCOGSAllocationsInTransaction(
+        txn,
+        invoiceId: orderId,
+      );
+      final stockMovements = await txn.query(
+        'stock_movements',
+        where: 'reference_type = ? AND reference_id = ?',
+        whereArgs: ['service_order', orderId],
+        orderBy: 'id ASC',
+      );
+      final journalId = generateUniqueJournalId();
+      final now = cancellationDate;
+      for (final movement in stockMovements) {
+        final quantity = (movement['quantity'] as num?)?.toDouble() ?? 0.0;
+        if (quantity.abs() <= 0.000001) continue;
+        final productId = (movement['product_id'] as num).toInt();
+        await txn.rawUpdate(
+          'UPDATE products SET current_stock = current_stock - ?, updated_at = ? WHERE id = ?',
+          [quantity, now, productId],
+        );
+        await txn.insert('stock_movements', {
+          'product_id': productId,
+          'movement_type': 'return',
+          'quantity': -quantity,
+          'reference_type': 'service_order_reversal',
+          'reference_id': orderId,
+          'unit_cost': movement['unit_cost'] ?? 0,
+          'created_at': now,
+        });
+      }
+      final reversalRows = <Map<String, dynamic>>[];
+      for (final original in originalRows) {
+        final debitMinorUnits = (original['debit'] as num?)?.round() ?? 0;
+        final creditMinorUnits = (original['credit'] as num?)?.round() ?? 0;
+        reversalRows.add({
+          'account_id': original['account_id'],
+          'journal_id': journalId,
+          'debit': creditMinorUnits,
+          'credit': debitMinorUnits,
+          'description': 'Reversal of service order $orderId: $reason',
+          'date': now,
+          'created_at': now,
+          'reference_type': 'service_order_reversal',
+          'reference_id': orderId,
+          'currency_code': original['currency_code'] ?? 'YER',
+          'exchange_rate': original['exchange_rate'] ?? 1.0,
+          'amount_base': original['amount_base'] ?? 0,
+        });
+      }
+      for (final reversal in reversalRows) {
+        await txn.insert('transactions', reversal);
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn,
+          reversal['account_id'] as int,
+          MoneyHelper.fromCents((reversal['debit'] as num).round()),
+          MoneyHelper.fromCents((reversal['credit'] as num).round()),
+          now,
+        );
+      }
+      await _dbHelper.journal.validateJournalBalanceInTransaction(txn, journalId);
+      await _dbHelper.journal.validateJournalBaseBalanceInTransaction(txn, journalId);
+
+      final previousStatus = order['status'] as String? ?? 'draft';
+      await txn.update(
+        'service_orders',
+        {'status': 'cancelled', 'updated_at': now},
+        where: 'id = ? AND status != ?',
+        whereArgs: [orderId, 'cancelled'],
+      );
+      await txn.insert('service_status_history', {
+        'service_order_id': orderId,
+        'from_status': previousStatus,
+        'to_status': 'cancelled',
+        'note': reason,
+        'created_at': now,
+      });
+    });
+  }
+
   Future<List<ServicePayment>> getPayments(String orderId) async {
     final db = await _db;
     final rows = await db.query(
