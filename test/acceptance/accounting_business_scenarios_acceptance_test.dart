@@ -256,6 +256,131 @@ void main() {
       expect(row['amount_base'], row['debit'] as int == 0 ? row['credit'] : row['debit']);
     }
   });
+
+  test('records a partial payment and keeps invoice, cash, and customer state consistent', () async {
+    await _seedAccounts(db, const ['1100', '1200', '1300', '3100', '3200', '4100']);
+    final customerId = await db.insert('customers', {
+      'name': 'عميل دفع جزئي قبول',
+      'currency': 'YER',
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
+    final cashBoxId = await db.insert('cash_boxes', {
+      'name': 'صندوق قبول الدفع',
+      'type': 'cash_box',
+      'currency': 'YER',
+      'balance': 0,
+      'balance_type': 'credit',
+      'is_active': 1,
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
+    final invoices = InvoiceRepository(dbHelper);
+    final invoice = _invoice(
+      id: 'SALE-PAYMENT-ACCEPT-001',
+      type: 'sale',
+      subtotal: 100,
+      total: 100,
+      paidAmount: 0,
+    )
+      ..['payment_mechanism'] = 'credit'
+      ..['customer_id'] = customerId
+      ..['cash_box_id'] = cashBoxId;
+
+    await _withScenarioTimeout(
+      'credit sale for payment acceptance',
+      invoices.saveInvoiceWithJournalEntries(
+        invoice,
+        const [],
+        invoiceType: 'sale',
+        paymentMechanism: 'credit',
+        isReturn: false,
+        paidAmount: 0,
+      ),
+    );
+    await _withScenarioTimeout(
+      'partial invoice payment',
+      invoices.recordInvoicePayment(
+        invoiceId: 'SALE-PAYMENT-ACCEPT-001',
+        amount: 40,
+        cashBoxId: cashBoxId,
+      ),
+    );
+
+    final row = (await db.query(
+      'invoices',
+      where: 'id = ?',
+      whereArgs: ['SALE-PAYMENT-ACCEPT-001'],
+    )).single;
+    final cashBox = (await db.query(
+      'cash_boxes',
+      where: 'id = ?',
+      whereArgs: [cashBoxId],
+    )).single;
+    expect(MoneyHelper.readMoney(row['paid_amount']), 40);
+    expect(MoneyHelper.readMoney(row['remaining']), 60);
+    expect(row['status'], 'partial');
+    expect(cashBox['balance'], MoneyHelper.toCents(40));
+  });
+
+  test('cancels a posted sale with reversal entries and restores stock', () async {
+    await _seedAccounts(db, const ['1100', '1200', '1300', '3100', '3200', '4100']);
+    final productId = await _createProduct(
+      db,
+      code: 'CANCEL-ACCEPT-001',
+      name: 'صنف إلغاء قبول',
+      averageCost: 20,
+      costPrice: 20,
+      currentStock: 5,
+    );
+    final invoices = InvoiceRepository(dbHelper);
+    final invoice = _invoice(
+      id: 'SALE-CANCEL-ACCEPT-001',
+      type: 'sale',
+      subtotal: 60,
+      total: 60,
+      paidAmount: 0,
+    )
+      ..['payment_mechanism'] = 'credit';
+
+    await _withScenarioTimeout(
+      'sale for cancellation acceptance',
+      invoices.saveInvoiceWithJournalEntries(
+        invoice,
+        [_item('SALE-CANCEL-ACCEPT-001', productId, quantity: 3, unitPrice: 20, total: 60, unitCost: 20)],
+        invoiceType: 'sale',
+        paymentMechanism: 'credit',
+        isReturn: false,
+        paidAmount: 0,
+      ),
+    );
+    await _withScenarioTimeout(
+      'cancel posted sale',
+      invoices.cancelInvoice('SALE-CANCEL-ACCEPT-001'),
+    );
+
+    final row = (await db.query(
+      'invoices',
+      where: 'id = ?',
+      whereArgs: ['SALE-CANCEL-ACCEPT-001'],
+    )).single;
+    final product = await _product(db, productId);
+    final original = await db.query(
+      'transactions',
+      where: 'reference_type = ? AND reference_id = ?',
+      whereArgs: ['invoice', 'SALE-CANCEL-ACCEPT-001'],
+    );
+    final reversals = await db.query(
+      'transactions',
+      where: 'reference_type = ? AND reference_id = ?',
+      whereArgs: ['invoice_reversal', 'SALE-CANCEL-ACCEPT-001'],
+    );
+    expect(row['status'], 'cancelled');
+    expect((product['current_stock'] as num).toDouble(), closeTo(5, 0.001));
+    expect(original, isNotEmpty);
+    expect(reversals, isNotEmpty);
+    expect(_debitTotal(reversals), _creditTotal(reversals));
+  });
 }
 
 const _timestamp = '2026-08-18T00:00:00.000Z';
