@@ -2265,6 +2265,11 @@ class InvoiceRepository {
       newStatus = 'unpaid';
     }
 
+    // BaseCurrencyService performs its own database read; resolve it before
+    // opening the transaction to avoid nested SQLite access.
+    final codeOffset =
+        await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
+
     await db.transaction((txn) async {
       // 4. Update invoice paid_amount, remaining, status
       await txn.update(
@@ -2280,7 +2285,6 @@ class InvoiceRepository {
 
       // 5. Create journal entries
       final journalId = generateUniqueJournalId();
-      final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
       final double effectiveExchangeRate =
           exchangeRate > 0 ? exchangeRate : 1.0;
       int toBaseMinorUnits(double amount) => const CurrencyEngine().convertMinorUnits(
@@ -2523,6 +2527,10 @@ class InvoiceRepository {
       // Fetch items for stock reversal
       final items = await db
           .query('invoice_items', where: 'invoice_id = ?', whereArgs: [id]);
+      // BaseCurrencyService performs its own database read; resolve it before
+      // opening the transaction to avoid nested SQLite access.
+      final codeOffset =
+          await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
 
       await db.transaction((txn) async {
         // 1. Set status to cancelled
@@ -2535,7 +2543,6 @@ class InvoiceRepository {
               amountMinorUnits: MoneyHelper.toCents(amount),
               exchangeRateMicros: CurrencyEngine.rateToMicros(exchangeRate),
             );
-        final codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
 
         final salesAccount = await txn.query('accounts',
             where: 'account_code = ? AND currency = ?',
