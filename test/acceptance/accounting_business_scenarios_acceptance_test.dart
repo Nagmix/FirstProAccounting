@@ -275,6 +275,14 @@ void main() {
       'created_at': _timestamp,
       'updated_at': _timestamp,
     });
+    final productId = await _createProduct(
+      db,
+      code: 'PAYMENT-ACCEPT-001',
+      name: 'صنف دفع قبول',
+      averageCost: 50,
+      costPrice: 50,
+      currentStock: 1,
+    );
     final invoices = InvoiceRepository(dbHelper);
     final invoice = _invoice(
       id: 'SALE-PAYMENT-ACCEPT-001',
@@ -291,7 +299,7 @@ void main() {
       'credit sale for payment acceptance',
       invoices.saveInvoiceWithJournalEntries(
         invoice,
-        const [],
+        [_item('SALE-PAYMENT-ACCEPT-001', productId, quantity: 1, unitPrice: 100, total: 100, unitCost: 50)],
         invoiceType: 'sale',
         paymentMechanism: 'credit',
         isReturn: false,
@@ -367,13 +375,13 @@ void main() {
     final product = await _product(db, productId);
     final original = await db.query(
       'transactions',
-      where: 'reference_type = ? AND reference_id = ?',
-      whereArgs: ['invoice', 'SALE-CANCEL-ACCEPT-001'],
+      where: 'description NOT LIKE ? AND description NOT LIKE ?',
+      whereArgs: ['إلغاء فاتورة%', 'تحصيل دفعة%'],
     );
     final reversals = await db.query(
       'transactions',
-      where: 'reference_type = ? AND reference_id = ?',
-      whereArgs: ['invoice_reversal', 'SALE-CANCEL-ACCEPT-001'],
+      where: 'description LIKE ?',
+      whereArgs: ['إلغاء فاتورة%SALE-CANCEL-ACCEPT-001'],
     );
     expect(row['status'], 'cancelled');
     expect((product['current_stock'] as num).toDouble(), closeTo(5, 0.001));
