@@ -264,7 +264,9 @@ class InvoiceRepository {
             );
           }
 
-          if (invoiceType == 'sale' || invoiceType == 'pos') {
+          if (invoiceType == 'sale' ||
+              invoiceType == 'pos' ||
+              invoiceType == 'sale_return') {
             if (!isReturn) {
               // Sale: stock leaves warehouse (always in base units).
               // Insufficient stock was rejected before entering this branch.
