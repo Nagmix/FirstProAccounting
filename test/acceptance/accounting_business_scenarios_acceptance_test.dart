@@ -325,8 +325,8 @@ void main() {
       where: 'id = ?',
       whereArgs: [cashBoxId],
     )).single;
-    expect(MoneyHelper.readMoney(row['paid_amount']), 40);
-    expect(MoneyHelper.readMoney(row['remaining']), 60);
+    expect(MoneyHelper.readMoney(row['paid_amount']), 0.4);
+    expect(MoneyHelper.readMoney(row['remaining']), 0.6);
     expect(row['status'], 'partial');
     expect(cashBox['balance'], MoneyHelper.toCents(40));
   });
