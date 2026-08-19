@@ -143,6 +143,12 @@ class InvoiceRepository {
         throw Exception('لا يمكن إضافة فاتورة في سنة مالية مغلقة');
       }
 
+      // Resolve currency configuration before opening the SQLite transaction.
+      // BaseCurrencyService performs its own database read and must not be
+      // called through the same DatabaseHelper while a transaction is active.
+      final int codeOffset =
+          await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
+
       await db.transaction((txn) async {
         // Convert money fields to cents before inserting (UI sends raw doubles)
         final dbInvoiceMap =
@@ -550,8 +556,8 @@ class InvoiceRepository {
         final double journalEffectivePaid = effectivePaid;
         final double journalRemainingAmount = remainingAmount;
 
-        // Determine codeOffset via BaseCurrencyService to support dynamic currencies.
-        final int codeOffset = await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
+        // codeOffset was resolved before opening the transaction to avoid
+        // re-entering DatabaseHelper through BaseCurrencyService.
         final String journalCurrency = invoiceCurrency;
 
         // ── Discount, Transport & Tax amounts for journal ──
