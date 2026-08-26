@@ -40,7 +40,6 @@ class FeatureVisibilityService extends ChangeNotifier {
   bool canDisable(String code) {
     final definition = CapabilityCatalog.byCode(code);
     if (definition.isCore) return false;
-    if (!_enabledCodes.contains(code)) return true;
 
     return !CapabilityCatalog.definitions.any(
       (candidate) =>

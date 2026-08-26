@@ -193,14 +193,14 @@ class NavigationCatalog {
       route: AppConstants.reports,
       labelAr: 'التقارير',
       icon: Icons.assessment,
-      requiredCapabilities: <String>{'reporting'},
+      isCore: true,
       priority: 90,
     ),
     NavigationDefinition(
       route: AppConstants.statistics,
       labelAr: 'الإحصاءات',
       icon: Icons.bar_chart,
-      requiredCapabilities: <String>{'reporting'},
+      isCore: true,
       priority: 91,
     ),
     NavigationDefinition(
