@@ -1642,6 +1642,11 @@ class CashBoxService {
     final voucherPreCheck = await db.query('vouchers',
         where: 'id = ?', whereArgs: [voucherId], limit: 1);
     if (voucherPreCheck.isNotEmpty) {
+      final voucherIsPosted =
+          (voucherPreCheck.first['is_posted'] as num?)?.toInt() == 1;
+      if (voucherIsPosted) {
+        throw StateError('لا يمكن حذف سند مرحّل؛ استخدم الإلغاء لإنشاء قيد عكسي');
+      }
       final preCheckDate = voucherPreCheck.first['date'] as String? ?? now;
       await _dbHelper.journal.checkFiscalPeriodOpen(preCheckDate);
     }
