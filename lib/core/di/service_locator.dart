@@ -9,6 +9,7 @@ import 'package:firstpro/data/datasources/repositories/supplier_repository.dart'
 import 'package:firstpro/data/datasources/repositories/expense_repository.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 import 'package:firstpro/data/datasources/repositories/business_profile_repository.dart';
+import 'package:firstpro/data/datasources/repositories/capability_repository.dart';
 import 'package:firstpro/data/datasources/repositories/order_repository.dart';
 import 'package:firstpro/data/datasources/repositories/voucher_repository.dart';
 import 'package:firstpro/data/datasources/repositories/employee_repository.dart';
@@ -72,6 +73,9 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<BusinessProfileRepository>(
     () => BusinessProfileRepository(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<CapabilityRepository>(
+    () => CapabilityRepository(locator<DatabaseHelper>()),
   );
   locator.registerLazySingleton<OrderRepository>(
     () => OrderRepository(locator<DatabaseHelper>()),
