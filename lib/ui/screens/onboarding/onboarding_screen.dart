@@ -18,6 +18,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   late final TextEditingController _businessNameController;
+  late final FocusNode _businessNameFocusNode;
 
   OnboardingViewModel get viewModel => widget.viewModel;
 
@@ -25,12 +26,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void initState() {
     super.initState();
     _businessNameController = TextEditingController();
+    _businessNameFocusNode = FocusNode();
     WidgetsBinding.instance.addPostFrameCallback((_) => viewModel.load());
   }
 
   @override
   void dispose() {
     _businessNameController.dispose();
+    _businessNameFocusNode.dispose();
     super.dispose();
   }
 
@@ -46,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           return _buildError(context);
         }
         if (_businessNameController.text != viewModel.businessName &&
-            !_businessNameController.hasFocus) {
+            !_businessNameFocusNode.hasFocus) {
           _businessNameController.text = viewModel.businessName;
         }
         return _buildContent(context);
@@ -140,6 +143,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 28),
           TextField(
             controller: _businessNameController,
+            focusNode: _businessNameFocusNode,
             textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
               labelText: 'اسم النشاط',
