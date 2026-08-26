@@ -45,9 +45,17 @@ class TaxPolicyRepository {
   }
 
   Future<void> saveSnapshot(DocumentTaxSnapshot snapshot) async {
-    _validateSnapshot(snapshot);
     final db = await _db;
-    final existing = await db.query(
+    await saveSnapshotInTransaction(db, snapshot);
+  }
+
+  Future<void> saveSnapshotInTransaction(
+    DatabaseExecutor executor,
+    DocumentTaxSnapshot snapshot, {
+    String? now,
+  }) async {
+    _validateSnapshot(snapshot);
+    final existing = await executor.query(
       'document_tax_snapshots',
       where: 'document_type = ? AND document_id = ?',
       whereArgs: [snapshot.documentType, snapshot.documentId],
@@ -62,8 +70,10 @@ class TaxPolicyRepository {
       return;
     }
 
-    final now = DateTime.now().toIso8601String();
-    await db.insert('document_tax_snapshots', snapshot.toColumns(now: now));
+    await executor.insert(
+      'document_tax_snapshots',
+      snapshot.toColumns(now: now ?? DateTime.now().toIso8601String()),
+    );
   }
 
   Future<DocumentTaxSnapshot?> getSnapshot(

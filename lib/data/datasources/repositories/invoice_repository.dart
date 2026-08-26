@@ -8,6 +8,8 @@ import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/data/models/invoice_model.dart';
 import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 import 'package:firstpro/data/models/product_model.dart';
+import 'package:firstpro/data/models/document_tax_snapshot_model.dart';
+import 'package:firstpro/core/finance/tax_policy_resolver.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
@@ -16,7 +18,10 @@ part 'invoice_repository_reports.dart';
 
 class InvoiceRepository {
   final DatabaseHelper _dbHelper;
-  InvoiceRepository(this._dbHelper);
+  final TaxPolicyResolver? _taxPolicyResolver;
+
+  InvoiceRepository(this._dbHelper, {TaxPolicyResolver? taxPolicyResolver})
+      : _taxPolicyResolver = taxPolicyResolver;
 
   Future<Database> get _db => _dbHelper.database;
 
@@ -148,6 +153,60 @@ class InvoiceRepository {
       // called through the same DatabaseHelper while a transaction is active.
       final int codeOffset =
           await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
+
+      DocumentTaxSnapshot? taxSnapshot;
+      if (_taxPolicyResolver != null) {
+        final profileRows = await db.query(
+          'business_profile',
+          columns: ['country_code'],
+          where: 'id = 1',
+          limit: 1,
+        );
+        final countryCode = profileRows.isEmpty
+            ? 'YE'
+            : (profileRows.first['country_code'] as String? ?? 'YE');
+        final taxProfile = await _taxPolicyResolver!.resolveFor(
+          date: DateTime.parse(invoiceDate),
+          countryCode: countryCode,
+        );
+        if (taxProfile != null) {
+          final policyTotals = _taxPolicyResolver!.calculateTotals(
+            profile: taxProfile,
+            subtotalMinorUnits: MoneyHelper.toCents(declaredSubtotal),
+            discountMinorUnits: MoneyHelper.toCents(discountAmount),
+            transportMinorUnits: MoneyHelper.toCents(transportCharges),
+            taxInclusive: invoiceMap['tax_inclusive'] == true ||
+                invoiceMap['tax_inclusive'] == 1,
+          );
+          final expectedTax = MoneyHelper.fromCents(policyTotals.taxMinorUnits);
+          final expectedTotal = MoneyHelper.fromCents(policyTotals.totalMinorUnits);
+          if ((taxAmount - expectedTax).abs() > 0.005 ||
+              (total - expectedTotal).abs() > 0.005) {
+            throw ArgumentError(
+              'إجمالي الفاتورة لا يتطابق مع سياسة الضريبة المؤرخة',
+            );
+          }
+          taxSnapshot = DocumentTaxSnapshot(
+            documentType: isReturn ? 'credit_note' : 'invoice',
+            documentId: invoiceMap['id'] as String,
+            taxProfileId: taxProfile.id,
+            countryCode: taxProfile.countryCode,
+            regimeCode: taxProfile.regimeCode,
+            rateBasisPoints: taxProfile.rateBasisPoints,
+            calculationMethod: taxProfile.calculationMethod,
+            transportTaxable: taxProfile.transportTaxable,
+            taxableSubtotalMinor:
+                MoneyHelper.toCents(declaredSubtotal - discountAmount),
+            taxableTransportMinor: taxProfile.transportTaxable
+                ? MoneyHelper.toCents(transportCharges)
+                : 0,
+            discountMinor: MoneyHelper.toCents(discountAmount),
+            taxMinor: policyTotals.taxMinorUnits,
+            roundingMode: 'half_up',
+            source: 'invoice_posting',
+          );
+        }
+      }
 
       await db.transaction((txn) async {
         // Convert money fields to cents before inserting (UI sends raw doubles)
@@ -3159,6 +3218,13 @@ class InvoiceRepository {
           txn,
           journalId,
         );
+        if (taxSnapshot != null) {
+          await _taxPolicyResolver!.saveSnapshotInTransaction(
+            txn,
+            taxSnapshot!,
+            now: now,
+          );
+        }
       });
       // Log audit event for invoice cancellation
       await _dbHelper.audit.logAuditEvent(

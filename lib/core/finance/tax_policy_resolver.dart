@@ -1,6 +1,8 @@
 import 'package:firstpro/core/finance/invoice_totals_engine.dart';
 import 'package:firstpro/data/datasources/repositories/tax_policy_repository.dart';
+import 'package:firstpro/data/models/document_tax_snapshot_model.dart';
 import 'package:firstpro/data/models/tax_profile_model.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 class TaxPolicyResolver {
   final TaxPolicyRepository _repository;
@@ -16,6 +18,14 @@ class TaxPolicyResolver {
     required String countryCode,
   }) {
     return _repository.resolveActive(countryCode: countryCode, date: date);
+  }
+
+  Future<void> saveSnapshotInTransaction(
+    DatabaseExecutor executor,
+    DocumentTaxSnapshot snapshot, {
+    String? now,
+  }) {
+    return _repository.saveSnapshotInTransaction(executor, snapshot, now: now);
   }
 
   InvoiceTotals calculateTotals({

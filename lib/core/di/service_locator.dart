@@ -61,7 +61,10 @@ Future<void> setupLocator() async {
     () => CustomerRepository(locator<DatabaseHelper>()),
   );
   locator.registerLazySingleton<InvoiceRepository>(
-    () => InvoiceRepository(locator<DatabaseHelper>()),
+    () => InvoiceRepository(
+      locator<DatabaseHelper>(),
+      taxPolicyResolver: locator<TaxPolicyResolver>(),
+    ),
   );
   locator.registerLazySingleton<ProductRepository>(
     () => ProductRepository(locator<DatabaseHelper>()),
