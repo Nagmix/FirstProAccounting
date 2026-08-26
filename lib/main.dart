@@ -12,6 +12,7 @@ import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/license/license_models.dart';
 import 'package:firstpro/core/platform/onboarding_viewmodel.dart';
+import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/core/theme/app_theme.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -109,6 +110,13 @@ class _FirstProAppState extends State<FirstProApp> {
       } catch (e) {
         if (kDebugMode) debugPrint('FirstProApp: onboarding state read failed: $e');
       }
+
+      // Load the capability state before the main shell so hidden routes never
+      // flash as available during the first navigation frame.
+      await locator<FeatureVisibilityService>().load().timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {},
+          );
 
       // Initialize license service
       await _licenseProvider.initialize().timeout(

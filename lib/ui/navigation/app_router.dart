@@ -54,6 +54,11 @@ import 'package:firstpro/ui/screens/bank_reconciliation/bank_reconciliation_deta
 import 'package:firstpro/ui/screens/bank_reconciliation/bank_statement_import_screen.dart';
 
 import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/platform/feature_visibility_service.dart';
+import 'package:firstpro/ui/navigation/capability_route_guard.dart';
+import 'package:firstpro/ui/navigation/navigation_catalog.dart';
+import 'package:firstpro/ui/navigation/navigation_definition.dart';
 import 'package:firstpro/data/models/account_model.dart';
 import 'package:firstpro/ui/screens/license/license_activation_screen.dart';
 import 'package:firstpro/ui/screens/license/license_status_screen.dart';
@@ -134,7 +139,32 @@ class AppRouter {
   static Future<T?> push<T extends Object?>(
       BuildContext context, String routeName,
       {Object? arguments}) {
+    final definition = _tryDefinition(routeName);
+    if (definition != null && locator.isRegistered<FeatureVisibilityService>()) {
+      final service = locator<FeatureVisibilityService>();
+      if (!service.isVisible(
+        definition.requiredCapabilities,
+        isCore: definition.isCore,
+      )) {
+        return Navigator.of(context).push<T>(
+          MaterialPageRoute<T>(
+            builder: (_) => CapabilityRouteGuardScreen(
+              definition: definition,
+              service: service,
+            ),
+          ),
+        );
+      }
+    }
     return Navigator.of(context).pushNamed<T>(routeName, arguments: arguments);
+  }
+
+  static NavigationDefinition? _tryDefinition(String routeName) {
+    try {
+      return NavigationCatalog.byRoute(routeName);
+    } on ArgumentError {
+      return null;
+    }
   }
 
   static Future<T?> replace<T extends Object?, TO extends Object?>(

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
+import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/theme/design_system.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
+import 'package:firstpro/ui/navigation/navigation_catalog.dart';
 import 'package:firstpro/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:firstpro/ui/screens/customers/customers_screen.dart';
 import 'package:firstpro/ui/screens/invoices/invoices_screen.dart';
@@ -250,6 +253,27 @@ class _MainScaffoldState extends State<MainScaffold>
     ),
   ];
 
+  List<_DrawerSection> get _visibleDrawerSections {
+    if (!locator.isRegistered<FeatureVisibilityService>()) {
+      return _drawerSections;
+    }
+    final service = locator<FeatureVisibilityService>();
+    final visibleRoutes = NavigationCatalog.visibleCodes(service.enabledCodes)
+        .map((definition) => definition.route)
+        .toSet();
+    return _drawerSections
+        .map(
+          (section) => _DrawerSection(
+            title: section.title,
+            items: section.items
+                .where((item) => visibleRoutes.contains(item.route))
+                .toList(growable: false),
+          ),
+        )
+        .where((section) => section.items.isNotEmpty)
+        .toList(growable: false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -456,6 +480,7 @@ class _MainScaffoldState extends State<MainScaffold>
   }
 
   Widget _buildDrawer(ThemeData theme, bool isDark) {
+    final visibleSections = _visibleDrawerSections;
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -509,9 +534,9 @@ class _MainScaffoldState extends State<MainScaffold>
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                itemCount: _drawerSections.length,
+                itemCount: visibleSections.length,
                 itemBuilder: (context, sectionIndex) {
-                  final section = _drawerSections[sectionIndex];
+                  final section = visibleSections[sectionIndex];
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

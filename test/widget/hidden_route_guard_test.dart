@@ -4,6 +4,7 @@ import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/repositories/capability_repository.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 
 void main() {
@@ -12,6 +13,9 @@ void main() {
     final repository = _FakeCapabilityRepository();
     final service = FeatureVisibilityService(repository);
     await service.load();
+    await locator.reset();
+    locator.registerSingleton<FeatureVisibilityService>(service);
+    addTearDown(locator.reset);
 
     await tester.pumpWidget(
       MaterialApp(
