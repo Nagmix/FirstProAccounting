@@ -1,4 +1,5 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v59.dart';
 import 'package:firstpro/data/datasources/migrations/seeds.dart';
 
 class DatabaseSchema {
@@ -1459,5 +1460,8 @@ class DatabaseSchema {
       'CREATE INDEX IF NOT EXISTS idx_production_status_history_order '
       'ON production_status_history(production_order_id, created_at)',
     );
+
+    // v59 — General platform profile, capabilities, tax snapshots, reversals
+    await MigrationV59.migrate(db);
   }
 }
