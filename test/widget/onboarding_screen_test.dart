@@ -61,7 +61,7 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(continueButton);
+    tester.widget<ElevatedButton>(continueButton).onPressed!();
     await tester.pump();
 
     expect(completed, isTrue);
