@@ -50,7 +50,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('لنبدأ بإعداد برنامجك'), findsOneWidget);
       expect(find.text('ما الذي تريد إدارته؟'), findsOneWidget);
@@ -68,7 +69,8 @@ void main() {
           isNotNull);
 
       await tester.tap(find.widgetWithText(ElevatedButton, 'متابعة'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(completed, isTrue);
       expect(await db.query('business_profile'), hasLength(1));
@@ -78,6 +80,13 @@ void main() {
   });
 
   testWidgets('onboarding shows retry state when loading fails', (tester) async {
+    final db = await openDatabase(
+      inMemoryDatabasePath,
+      version: 59,
+      onCreate: (database, version) => DatabaseSchema.onCreate(database, version),
+    );
+    await db.close();
+    DatabaseHelper.useTestDatabase(db);
     final viewModel = OnboardingViewModel(
       profileRepository: BusinessProfileRepository(DatabaseHelper()),
       capabilityRepository: CapabilityRepository(DatabaseHelper()),
@@ -86,7 +95,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: OnboardingScreen(viewModel: viewModel)),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('تعذر تحميل إعدادات البداية. حاول مرة أخرى.'), findsOneWidget);
     expect(find.text('إعادة المحاولة'), findsOneWidget);
