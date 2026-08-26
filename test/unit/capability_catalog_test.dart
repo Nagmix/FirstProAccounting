@@ -65,6 +65,51 @@ void main() {
     }
   });
 
+  test('repository refuses disabling core capabilities', () async {
+    final (db, repository) = await createRepository();
+    try {
+      await expectLater(
+        repository.setEnabled('backup', false, source: 'settings'),
+        throwsA(isA<StateError>()),
+      );
+    } finally {
+      await db.close();
+    }
+  });
+
+  test('repository refuses disabling a capability required by an enabled dependent', () async {
+    final (db, repository) = await createRepository();
+    try {
+      await repository.setEnabled('transform', true, source: 'settings');
+      await expectLater(
+        repository.setEnabled('stock', false, source: 'settings'),
+        throwsA(isA<StateError>()),
+      );
+      expect(await repository.getEnabledCodes(), containsAll({'transform', 'stock'}));
+    } finally {
+      await db.close();
+    }
+  });
+
+  test('schedule data check reads the persisted promised_at field', () async {
+    final (db, repository) = await createRepository();
+    try {
+      await db.insert('service_orders', {
+        'id': 'SCHEDULE-1',
+        'order_number': 'SO-1',
+        'status': 'draft',
+        'received_at': '2026-08-26T08:00:00.000Z',
+        'promised_at': '2026-08-27T08:00:00.000Z',
+        'created_at': '2026-08-26T08:00:00.000Z',
+        'updated_at': '2026-08-26T08:00:00.000Z',
+      });
+
+      expect(await repository.hasDataFor('schedule'), isTrue);
+    } finally {
+      await db.close();
+    }
+  });
+
   test('disabling a used capability hides it without deleting financial data', () async {
     final (db, repository) = await createRepository();
     try {
