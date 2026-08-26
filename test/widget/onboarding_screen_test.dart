@@ -40,7 +40,9 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'متجر البداية');
     await tester.tap(find.byType(CheckboxListTile).at(0));
-    await tester.tap(find.byType(CheckboxListTile).at(3));
+    final serviceTile = find.byType(CheckboxListTile).at(3);
+    await tester.ensureVisible(serviceTile);
+    await tester.tap(serviceTile);
     await tester.pump();
 
     expect(find.text('متابعة'), findsOneWidget);
@@ -53,7 +55,9 @@ void main() {
       isNotNull,
     );
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'متابعة'));
+    final continueButton = find.widgetWithText(ElevatedButton, 'متابعة');
+    await tester.ensureVisible(continueButton);
+    await tester.tap(continueButton);
     await tester.pump();
 
     expect(completed, isTrue);
