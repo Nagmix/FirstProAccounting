@@ -18,6 +18,7 @@ import 'package:firstpro/data/datasources/migrations/migration_v55.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v56.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v57.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v58.dart';
+import 'package:firstpro/data/datasources/migrations/migration_v59.dart';
 
 class MigrationRunner {
   /// Runs all necessary migrations from oldVersion to the current version.
@@ -118,5 +119,8 @@ class MigrationRunner {
 
     // v58 — Recipes and production orders
     if (oldVersion < 58) await MigrationV58.migrate(db);
+
+    // v59 — General platform profile, capabilities, tax snapshots, reversals
+    if (oldVersion < 59) await MigrationV59.migrate(db);
   }
 }
