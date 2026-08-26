@@ -11,6 +11,7 @@ import 'package:firstpro/core/helpers/currency_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/license/license_models.dart';
+import 'package:firstpro/core/platform/onboarding_viewmodel.dart';
 import 'package:firstpro/core/theme/app_theme.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -21,6 +22,7 @@ import 'package:firstpro/ui/navigation/main_scaffold.dart';
 import 'package:firstpro/ui/screens/app_lock/app_lock_screen.dart';
 import 'package:firstpro/ui/screens/license/license_activation_screen.dart';
 import 'package:firstpro/ui/screens/license/license_expiry_screen.dart';
+import 'package:firstpro/ui/screens/onboarding/onboarding_screen.dart';
 import 'package:firstpro/ui/screens/splash/splash_screen.dart';
 
 void main() async {
@@ -50,6 +52,9 @@ class _FirstProAppState extends State<FirstProApp> {
 
   /// Whether initialization is complete (splash can transition)
   bool _initComplete = false;
+
+  /// Whether a new local owner needs first-run setup.
+  bool _needsOnboarding = false;
 
   /// Whether splash timer has elapsed (3 seconds)
   bool _splashTimerDone = false;
@@ -94,6 +99,16 @@ class _FirstProAppState extends State<FirstProApp> {
             const Duration(seconds: 5),
             onTimeout: () => null,
           );
+
+      // Read typed profile state without blocking the app if the database is unavailable.
+      try {
+        final profile = await locator<OnboardingViewModel>().profileRepository
+            .getOrCreateProfile();
+        _needsOnboarding = profile.source == 'migration' &&
+            profile.setupStatus != 'completed';
+      } catch (e) {
+        if (kDebugMode) debugPrint('FirstProApp: onboarding state read failed: $e');
+      }
 
       // Initialize license service
       await _licenseProvider.initialize().timeout(
@@ -247,6 +262,16 @@ class _FirstProAppState extends State<FirstProApp> {
     // PIN lock enabled → show lock screen first
     if (_pinEnabled == true) {
       return const AppLockScreen();
+    }
+
+    // First-run typed setup appears only after license/PIN gates pass.
+    if (_needsOnboarding) {
+      return OnboardingScreen(
+        viewModel: locator<OnboardingViewModel>(),
+        onCompleted: () {
+          if (mounted) setState(() => _needsOnboarding = false);
+        },
+      );
     }
 
     // PIN not enabled → go directly to main app
