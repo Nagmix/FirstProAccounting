@@ -56,9 +56,16 @@ void main() {
       final enabled = await repository.getEnabledCodes();
       expect(enabled, containsAll({'transform', 'stock'}));
       expect(
+        (await db.rawQuery(
+          "SELECT COUNT(*) AS count FROM business_capabilities "
+          "WHERE capability_code IN ('transform', 'stock')",
+        )).single['count'],
+        2,
+      );
+      expect(
         (await db.rawQuery('SELECT COUNT(*) AS count FROM business_capabilities'))
             .single['count'],
-        2,
+        5,
       );
     } finally {
       await db.close();
