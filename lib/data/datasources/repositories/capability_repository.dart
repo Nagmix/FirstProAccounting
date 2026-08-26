@@ -31,9 +31,15 @@ class CapabilityRepository {
     Iterable<String> requested, {
     required String source,
   }) async {
-    final resolved = CapabilityCatalog.resolveDependencies(requested);
+    final resolved = CapabilityCatalog.resolveDependencies(requested)
+      ..addAll(_coreCodes);
     final db = await _db;
     final now = DateTime.now().toIso8601String();
+    final currentEnabled = await getEnabledCodes();
+
+    for (final code in currentEnabled.difference(resolved)) {
+      _ensureCanDisable(code, resultingEnabled: resolved);
+    }
 
     await db.transaction((txn) async {
       final existing = await txn.query(
@@ -61,9 +67,18 @@ class CapabilityRepository {
     final definition = CapabilityCatalog.byCode(code);
     final db = await _db;
     final now = DateTime.now().toIso8601String();
+    final currentEnabled = await getEnabledCodes();
     final resolved = enabled
         ? CapabilityCatalog.resolveDependencies(<String>{code})
         : <String>{definition.code};
+
+    if (!enabled) {
+      _ensureCanDisable(
+        code,
+        currentEnabled: currentEnabled,
+        resultingEnabled: {...currentEnabled}..remove(code),
+      );
+    }
 
     await db.transaction((txn) async {
       for (final resolvedCode in resolved) {
@@ -90,7 +105,7 @@ class CapabilityRepository {
         ('service_orders', '1 = 1', <Object?>[]),
       ],
       'schedule': <(String, String, List<Object?>)>[
-        ('service_orders', 'scheduled_at IS NOT NULL', <Object?>[]),
+        ('service_orders', 'promised_at IS NOT NULL', <Object?>[]),
       ],
       'transform': <(String, String, List<Object?>)>[
         ('production_orders', '1 = 1', <Object?>[]),
@@ -126,6 +141,32 @@ class CapabilityRepository {
       }
     }
     return false;
+  }
+
+  static final Set<String> _coreCodes = CapabilityCatalog.definitions
+      .where((definition) => definition.isCore)
+      .map((definition) => definition.code)
+      .toSet();
+
+  void _ensureCanDisable(
+    String code, {
+    Set<String>? currentEnabled,
+    required Set<String> resultingEnabled,
+  }) {
+    final definition = CapabilityCatalog.byCode(code);
+    if (definition.isCore) {
+      throw StateError('لا يمكن تعطيل وظيفة أساسية للنظام');
+    }
+
+    for (final candidate in CapabilityCatalog.definitions) {
+      if (candidate.code == code || !resultingEnabled.contains(candidate.code)) {
+        continue;
+      }
+      if (candidate.dependencies.contains(code) &&
+          (currentEnabled == null || currentEnabled.contains(candidate.code))) {
+        throw StateError('لا يمكن تعطيل وظيفة مطلوبة لوظيفة مفعلة');
+      }
+    }
   }
 
   Future<void> _setEnabled(
