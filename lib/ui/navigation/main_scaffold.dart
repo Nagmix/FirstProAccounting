@@ -7,6 +7,7 @@ import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/theme/design_system.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 import 'package:firstpro/ui/navigation/navigation_catalog.dart';
+import 'package:firstpro/ui/navigation/navigation_definition.dart';
 import 'package:firstpro/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:firstpro/ui/screens/customers/customers_screen.dart';
 import 'package:firstpro/ui/screens/invoices/invoices_screen.dart';
@@ -683,179 +684,179 @@ class _MoreTab extends StatelessWidget {
           // ── Section: المبيعات والشراء ────────────────────────────
           _buildSectionHeader(context, 'المبيعات والشراء'),
           const SizedBox(height: 8),
-          _MoreTile(
+          _visibleFor(AppConstants.pos, _MoreTile(
             icon: Icons.storefront,
             title: 'نقطة البيع',
             subtitle: 'واجهة بيع سريعة',
             color: AppColors.accentBlue,
             onTap: () => AppRouter.push(context, AppConstants.pos),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.quotations, _MoreTile(
             icon: Icons.description,
             title: 'عروض الأسعار',
             subtitle: 'إدارة عروض الأسعار',
             color: Colors.purple,
             onTap: () => AppRouter.push(context, AppConstants.quotations),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.purchaseOrders, _MoreTile(
             icon: Icons.shopping_cart,
             title: 'طلبات الشراء',
             subtitle: 'إدارة طلبات الشراء',
             color: Colors.teal,
             onTap: () => AppRouter.push(context, AppConstants.purchaseOrders),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.salesOrders, _MoreTile(
             icon: Icons.inventory_2,
             title: 'طلبات البيع',
             subtitle: 'إدارة طلبات البيع',
             color: Colors.indigo,
             onTap: () => AppRouter.push(context, AppConstants.salesOrders),
-          ),
+          )),
 
           // ── Section: إدارة الأعمال ───────────────────────────────
           const SizedBox(height: 16),
           _buildSectionHeader(context, 'إدارة الأعمال'),
           const SizedBox(height: 8),
-          _MoreTile(
+          _visibleFor(AppConstants.products, _MoreTile(
             icon: Icons.inventory_2,
             title: 'المنتجات والمخزون',
             subtitle: 'إدارة الأصناف والمخازن',
             color: AppColors.secondary,
             onTap: () => AppRouter.push(context, AppConstants.products),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.expenses, _MoreTile(
             icon: Icons.attach_money,
             title: 'المصروفات',
             subtitle: 'إدارة المصروفات والمصاريف',
             color: AppColors.error,
             onTap: () => AppRouter.push(context, AppConstants.expenses),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.employees, _MoreTile(
             icon: Icons.person,
             title: 'الموظفين',
             subtitle: 'إدارة الموظفين والأرصدة',
             color: AppColors.accentBlue,
             onTap: () => AppRouter.push(context, AppConstants.employees),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.suppliers, _MoreTile(
             icon: Icons.local_shipping,
             title: 'الموردين',
             subtitle: 'إدارة الموردين وأرصدتهم',
             color: AppColors.info,
             onTap: () => AppRouter.push(context, AppConstants.suppliers),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.warehouses, _MoreTile(
             icon: Icons.warehouse,
             title: 'المستودعات',
             subtitle: 'إدارة المستودعات والمخازن',
             color: AppColors.secondaryDark,
             onTap: () => AppRouter.push(context, AppConstants.warehouses),
-          ),
+          )),
 
           // ── Section: المالية والحسابات ──────────────────────────
           const SizedBox(height: 16),
           _buildSectionHeader(context, 'المالية والحسابات'),
           const SizedBox(height: 8),
-          _MoreTile(
+          _visibleFor(AppConstants.cashBoxes, _MoreTile(
             icon: Icons.account_balance_wallet,
             title: 'الصناديق والبنوك',
             subtitle: 'إدارة الصناديق والبنوك والأرصدة',
             color: AppColors.success,
             onTap: () => AppRouter.push(context, AppConstants.cashBoxes),
-          ),
+          )),
           // ── New: Currency Exchange ────────────────────────────────
-          _MoreTile(
+          _visibleFor(AppConstants.currencyExchange, _MoreTile(
             icon: Icons.swap_horiz,
             title: 'مصارفة عملات',
             subtitle: 'تحويل العملات بأسعار الصرف',
             color: const Color(0xFF00ACC1),
             onTap: () => AppRouter.push(context, AppConstants.currencyExchange),
-          ),
+          )),
           // ── New: Cash Transfers ───────────────────────────────────
-          _MoreTile(
+          _visibleFor(AppConstants.cashTransfers, _MoreTile(
             icon: Icons.swap_horiz,
             title: 'تحويل بين الصناديق',
             subtitle: 'تحويل الأموال بين الصناديق والبنوك',
             color: const Color(0xFF1E88E5),
             onTap: () => AppRouter.push(context, AppConstants.cashTransfers),
-          ),
+          )),
           // ── New: Debt Tracking ────────────────────────────────────
-          _MoreTile(
+          _visibleFor(AppConstants.debts, _MoreTile(
             icon: Icons.savings,
             title: 'تتبع الديون',
             subtitle: 'متابعة الديون المستحقة والمطلوبة',
             color: const Color(0xFFE65100),
             onTap: () => AppRouter.push(context, AppConstants.debts),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.vouchers, _MoreTile(
             icon: Icons.receipt_long,
             title: 'السندات',
             subtitle: 'سندات القبض والصرف والتسوية',
             color: const Color(0xFF7B1FA2),
             onTap: () => AppRouter.push(context, AppConstants.vouchers),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.bankReconciliation, _MoreTile(
             icon: Icons.balance,
             title: 'التسوية البنكية',
             subtitle: 'تسوية كشوفات الحسابات البنكية',
             color: const Color(0xFF00897B),
             onTap: () =>
                 AppRouter.push(context, AppConstants.bankReconciliation),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.chartOfAccounts, _MoreTile(
             icon: Icons.pie_chart,
             title: 'دليل الحسابات',
             subtitle: 'شجرة الحسابات المحاسبية',
             color: AppColors.primary,
             onTap: () => AppRouter.push(context, AppConstants.chartOfAccounts),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.currencies, _MoreTile(
             icon: Icons.attach_money,
             title: 'إدارة العملات',
             subtitle: 'العملات وأسعار الصرف',
             color: AppColors.success,
             onTap: () => AppRouter.push(context, AppConstants.currencies),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.reports, _MoreTile(
             icon: Icons.bar_chart,
             title: 'التقارير',
             subtitle: 'تقارير المبيعات والمشتريات',
             color: AppColors.primaryLight,
             onTap: () => AppRouter.push(context, AppConstants.reports),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.statistics, _MoreTile(
             icon: Icons.show_chart,
             title: 'الإحصائيات',
             subtitle: 'إحصائيات شاملة',
             color: const Color(0xFF7B1FA2),
             onTap: () => AppRouter.push(context, AppConstants.statistics),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.shifts, _MoreTile(
             icon: Icons.history,
             title: 'الورديات',
             subtitle: 'إدارة ورديات الكاشير',
             color: Colors.brown,
             onTap: () => AppRouter.push(context, AppConstants.shifts),
-          ),
+          )),
 
           // ── Section: أخرى ────────────────────────────────────────
           const SizedBox(height: 16),
           _buildSectionHeader(context, 'أخرى'),
           const SizedBox(height: 8),
-          _MoreTile(
+          _visibleFor(AppConstants.settings, _MoreTile(
             icon: Icons.settings,
             title: 'الإعدادات',
             subtitle: 'تخصيص التطبيق',
             color: AppColors.textSecondary,
             onTap: () => AppRouter.push(context, AppConstants.settings),
-          ),
-          _MoreTile(
+          )),
+          _visibleFor(AppConstants.support, _MoreTile(
             icon: Icons.headset,
             title: 'الدعم الفني',
             subtitle: 'الشكاوى والملاحظات',
             color: AppColors.warning,
             onTap: () => AppRouter.push(context, AppConstants.support),
-          ),
+          )),
 
           const Divider(height: 32),
           Text(
@@ -872,6 +873,23 @@ class _MoreTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _visibleFor(String route, Widget child) {
+    if (!locator.isRegistered<FeatureVisibilityService>()) return child;
+    final service = locator<FeatureVisibilityService>();
+    NavigationDefinition? definition;
+    try {
+      definition = NavigationCatalog.byRoute(route);
+    } on ArgumentError {
+      return child;
+    }
+    return service.isVisible(
+      definition.requiredCapabilities,
+      isCore: definition.isCore,
+    )
+        ? child
+        : const SizedBox.shrink();
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {

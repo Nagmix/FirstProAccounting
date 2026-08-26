@@ -85,6 +85,13 @@ class NavigationCatalog {
       priority: 33,
     ),
     NavigationDefinition(
+      route: AppConstants.recurringInvoices,
+      labelAr: 'الفواتير المتكررة',
+      icon: Icons.repeat,
+      requiredCapabilities: <String>{'sell'},
+      priority: 34,
+    ),
+    NavigationDefinition(
       route: AppConstants.products,
       labelAr: 'المنتجات والمخزون',
       icon: Icons.inventory_2,
@@ -169,6 +176,13 @@ class NavigationCatalog {
       priority: 81,
     ),
     NavigationDefinition(
+      route: AppConstants.currencyExchange,
+      labelAr: 'مصارفة العملات',
+      icon: Icons.currency_exchange,
+      requiredCapabilities: <String>{'settle'},
+      priority: 81,
+    ),
+    NavigationDefinition(
       route: AppConstants.debts,
       labelAr: 'تتبع الديون',
       icon: Icons.savings,
@@ -183,11 +197,39 @@ class NavigationCatalog {
       priority: 83,
     ),
     NavigationDefinition(
+      route: AppConstants.bankReconciliation,
+      labelAr: 'التسوية البنكية',
+      icon: Icons.account_balance,
+      requiredCapabilities: <String>{'settle'},
+      priority: 84,
+    ),
+    NavigationDefinition(
+      route: AppConstants.chartOfAccounts,
+      labelAr: 'دليل الحسابات',
+      icon: Icons.account_tree,
+      isCore: true,
+      priority: 85,
+    ),
+    NavigationDefinition(
       route: AppConstants.expenses,
       labelAr: 'المصروفات',
       icon: Icons.payments,
       requiredCapabilities: <String>{'settle'},
       priority: 84,
+    ),
+    NavigationDefinition(
+      route: AppConstants.dailySalesReport,
+      labelAr: 'تقرير المبيعات اليومية',
+      icon: Icons.today,
+      isCore: true,
+      priority: 89,
+    ),
+    NavigationDefinition(
+      route: AppConstants.employees,
+      labelAr: 'الموظفون',
+      icon: Icons.badge,
+      isCore: true,
+      priority: 88,
     ),
     NavigationDefinition(
       route: AppConstants.reports,
