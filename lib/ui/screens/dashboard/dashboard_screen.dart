@@ -7,8 +7,10 @@ import 'package:firstpro/core/utils/currency_formatter.dart';
 import 'package:firstpro/core/utils/date_formatter.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
+import 'package:firstpro/ui/dashboard/action_catalog.dart';
 import 'package:firstpro/ui/widgets/animated_entry.dart';
 
 /// The main dashboard screen – the first thing the user sees.
@@ -105,7 +107,28 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ══════════════════════════════════════════════════════════════════
   //  ALL ACTION ITEMS — unified single list
   // ══════════════════════════════════════════════════════════════════
-  List<_ActionItem> get _allActions => [
+  List<_ActionItem> get _allActions {
+    if (!locator.isRegistered<FeatureVisibilityService>()) {
+      return _legacyActions;
+    }
+    final service = locator<FeatureVisibilityService>();
+    return ActionCatalog.prioritizedActions(
+      service.enabledCodes,
+      limit: 6,
+    )
+        .map(
+          (action) => _ActionItem(
+            label: action.labelAr,
+            icon: action.icon,
+            color: action.color,
+            bgColor: action.backgroundColor,
+            route: action.route,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<_ActionItem> get _legacyActions => [
         // Row 1: Quick Ops
         _ActionItem(
             label: 'نقطة البيع',
