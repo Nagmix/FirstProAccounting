@@ -42,10 +42,12 @@ void main() {
     final (db, viewModel) = await createViewModel();
     var completed = false;
     try {
+      await viewModel.load();
       await tester.pumpWidget(
         MaterialApp(
           home: OnboardingScreen(
             viewModel: viewModel,
+            loadOnInit: false,
             onCompleted: () => completed = true,
           ),
         ),
@@ -91,9 +93,12 @@ void main() {
       profileRepository: BusinessProfileRepository(DatabaseHelper()),
       capabilityRepository: CapabilityRepository(DatabaseHelper()),
     );
+    await viewModel.load();
 
     await tester.pumpWidget(
-      MaterialApp(home: OnboardingScreen(viewModel: viewModel)),
+      MaterialApp(
+        home: OnboardingScreen(viewModel: viewModel, loadOnInit: false),
+      ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

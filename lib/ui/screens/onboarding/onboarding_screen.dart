@@ -5,11 +5,13 @@ import 'package:firstpro/core/platform/onboarding_viewmodel.dart';
 class OnboardingScreen extends StatefulWidget {
   final OnboardingViewModel viewModel;
   final VoidCallback? onCompleted;
+  final bool loadOnInit;
 
   const OnboardingScreen({
     super.key,
     required this.viewModel,
     this.onCompleted,
+    this.loadOnInit = true,
   });
 
   @override
@@ -27,7 +29,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.initState();
     _businessNameController = TextEditingController();
     _businessNameFocusNode = FocusNode();
-    WidgetsBinding.instance.addPostFrameCallback((_) => viewModel.load());
+    if (widget.loadOnInit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => viewModel.load());
+    }
   }
 
   @override
