@@ -9,6 +9,7 @@ import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/core/finance/currency_engine.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
+import 'package:firstpro/data/models/document_reversal_model.dart';
 
 class CashBoxService {
   final DatabaseHelper _dbHelper;
@@ -1633,162 +1634,249 @@ class CashBoxService {
         where: 'voucher_id = ?', whereArgs: [voucherId]);
   }
 
-  /// حذف سند وعكس القيود اليومية
+  /// إلغاء سند مرحّل دون حذف المصدر أو بنوده، عبر قيد عكسي واحد.
+  Future<int> cancelVoucher(int voucherId, {required String reason}) async {
+    final normalizedReason = reason.trim();
+    if (normalizedReason.isEmpty) {
+      throw ArgumentError.value(reason, 'reason', 'سبب الإلغاء مطلوب');
+    }
+
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+    final voucherPreCheck = await db.query(
+      'vouchers',
+      where: 'id = ?',
+      whereArgs: [voucherId],
+      limit: 1,
+    );
+    if (voucherPreCheck.isEmpty) {
+      throw StateError('السند غير موجود');
+    }
+    if ((voucherPreCheck.first['is_posted'] as num?)?.toInt() != 1) {
+      throw StateError('لا يمكن إلغاء سند غير مرحّل؛ احذفه من المسودات');
+    }
+    await _dbHelper.journal.checkFiscalPeriodOpen(
+      voucherPreCheck.first['date'] as String? ?? now,
+    );
+
+    final existingReversal = await db.query(
+      'document_reversals',
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['voucher', voucherId.toString()],
+      limit: 1,
+    );
+    if (existingReversal.isNotEmpty) {
+      throw StateError('السند ملغى مسبقاً');
+    }
+
+    late int reversalJournalId;
+    await db.transaction((txn) async {
+      final voucher = await txn.query(
+        'vouchers',
+        where: 'id = ?',
+        whereArgs: [voucherId],
+        limit: 1,
+      );
+      if (voucher.isEmpty) {
+        throw StateError('السند غير موجود');
+      }
+      final voucherData = voucher.first;
+      if ((voucherData['is_posted'] as num?)?.toInt() != 1) {
+        throw StateError('لا يمكن إلغاء سند غير مرحّل؛ احذفه من المسودات');
+      }
+      final duplicateCheck = await txn.query(
+        'document_reversals',
+        where: 'document_type = ? AND document_id = ?',
+        whereArgs: ['voucher', voucherId.toString()],
+        limit: 1,
+      );
+      if (duplicateCheck.isNotEmpty) {
+        throw StateError('السند ملغى مسبقاً');
+      }
+
+      reversalJournalId = await _createVoucherReversalInTransaction(
+        txn,
+        voucherData,
+        now,
+      );
+      await txn.insert(
+        'document_reversals',
+        DocumentReversalModel(
+          documentType: 'voucher',
+          documentId: voucherId.toString(),
+          reversalJournalId: reversalJournalId,
+          reason: normalizedReason,
+          cancelledAt: now,
+          source: 'cash_box_service',
+        ).toMap(),
+      );
+    });
+    return reversalJournalId;
+  }
+
+  /// حذف مسودة سند فقط. السند المرحّل لا يُحذف؛ استخدم [cancelVoucher].
   Future<int> deleteVoucher(int voucherId) async {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
-
-    // Pre-check: verify the voucher's date is not in a closed fiscal period
-    final voucherPreCheck = await db.query('vouchers',
-        where: 'id = ?', whereArgs: [voucherId], limit: 1);
+    final voucherPreCheck = await db.query(
+      'vouchers',
+      where: 'id = ?',
+      whereArgs: [voucherId],
+      limit: 1,
+    );
     if (voucherPreCheck.isNotEmpty) {
-      final voucherIsPosted =
-          (voucherPreCheck.first['is_posted'] as num?)?.toInt() == 1;
-      if (voucherIsPosted) {
+      if ((voucherPreCheck.first['is_posted'] as num?)?.toInt() == 1) {
         throw StateError('لا يمكن حذف سند مرحّل؛ استخدم الإلغاء لإنشاء قيد عكسي');
       }
-      final preCheckDate = voucherPreCheck.first['date'] as String? ?? now;
-      await _dbHelper.journal.checkFiscalPeriodOpen(preCheckDate);
+      await _dbHelper.journal.checkFiscalPeriodOpen(
+        voucherPreCheck.first['date'] as String? ?? now,
+      );
     }
 
     await db.transaction((txn) async {
-      // جلب بيانات السند
-      final voucher = await txn.query('vouchers',
-          where: 'id = ?', whereArgs: [voucherId], limit: 1);
-      if (voucher.isEmpty) return;
-
-      final voucherData = voucher.first;
-      final voucherDate = voucherData['date'] as String? ?? now;
-      final voucherNumber = voucherData['voucher_number'] as String? ?? '';
-      final voucherType = voucherData['voucher_type'] as String? ?? '';
-      final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
-      final cashBoxId = voucherData['cash_box_id'];
-
-      // Look up voucher currency exchange rate for reversal
-      final voucherCurrency = (voucherData['currency'] as String?) ?? 'YER';
-      final voucherRate = await _getExchangeRate(txn, voucherCurrency);
-
-      // جلب بنود السند وعكس القيود في Journal واحد حتى يبقى العكس
-      // متوازناً وقابلاً للتدقيق كسند مستقل.
-      final items = await txn.query('voucher_items',
-          where: 'voucher_id = ?', whereArgs: [voucherId]);
-      final reversalJournalId = generateUniqueJournalId();
-      for (final item in items) {
-        final accountId = (item['account_id'] as num?)?.toInt();
-        final debit = MoneyHelper.readMoney(item['debit']);
-        final credit = MoneyHelper.readMoney(item['credit']);
-        if (accountId != null && (debit > 0 || credit > 0)) {
-          // عكس القيد:debit يصبح credit والعكس
-          final reversalAmount = credit > 0 ? credit : debit;
-          await txn.insert('transactions', {
-            'account_id': accountId,
-            'journal_id': reversalJournalId,
-            'debit': MoneyHelper.toCents(credit),
-            'credit': MoneyHelper.toCents(debit),
-            'description': 'عكس سند $voucherNumber',
-            'date': voucherDate,
-            'created_at': now,
-            'currency_code': voucherCurrency,
-            'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
-            'amount_base':
-                (MoneyHelper.toCents(reversalAmount) * voucherRate).round(),
-                    'reference_type': 'cash_box_journal',
-          'reference_id': voucherId.toString(),
-});
-
-          // تحديث رصيد الحساب (عكس) باستخدام منطق balance_type
-          await _dbHelper.journal.updateAccountBalanceWithJournal(
-              txn, accountId, credit, debit, now);
-        }
-      }
-
-      await _dbHelper.journal.validateJournalBalanceInTransaction(
-        txn,
-        reversalJournalId,
+      final voucher = await txn.query(
+        'vouchers',
+        where: 'id = ?',
+        whereArgs: [voucherId],
+        limit: 1,
       );
-
-      // عكس تأثير الصندوق مع الحفاظ على تمثيل الرصيد signed balance.
-      if (cashBoxId != null) {
-        final cashBox = await txn.query('cash_boxes',
-            where: 'id = ?', whereArgs: [cashBoxId], limit: 1);
-        if (cashBox.isNotEmpty) {
-          final currentBalance =
-              MoneyHelper.readMoney(cashBox.first['balance']);
-          final cashBoxBalanceType =
-              cashBox.first['balance_type'] as String? ?? 'credit';
-          // عكس: قبض (كان أدخل) → نخرج | صرف (كان أخرج) → ندخل.
-          final signedBalance = cashBoxBalanceType == 'credit'
-              ? currentBalance
-              : -currentBalance;
-          final isCashIn = voucherType == 'receipt';
-          final reversedSignedBalance =
-              signedBalance + (isCashIn ? -totalAmount : totalAmount);
-          final newCashBalance = reversedSignedBalance.abs();
-          final newBalanceType =
-              reversedSignedBalance >= 0 ? 'credit' : 'debit';
-          await txn.update(
-              'cash_boxes',
-              {
-                'balance': MoneyHelper.toCents(newCashBalance),
-                'balance_type': newBalanceType,
-                'updated_at': now
-              },
-              where: 'id = ?',
-              whereArgs: [cashBoxId]);
-        }
+      if (voucher.isEmpty) return;
+      if ((voucher.first['is_posted'] as num?)?.toInt() == 1) {
+        throw StateError('لا يمكن حذف سند مرحّل؛ استخدم الإلغاء لإنشاء قيد عكسي');
       }
-
-      // ── Reverse customer/supplier balance with balance_type-aware logic ──
-      // REVERSAL: opposite of original operation
-      final voucherCustomerId = voucherData['customer_id'];
-      final voucherSupplierId = voucherData['supplier_id'];
-      if (voucherCustomerId != null && totalAmount > 0) {
-        if (voucherType == 'receipt') {
-          // Original receipt: credit effect → reversal is debit effect
-          await EntityBalanceHelper.customerPayment(
-            txn: txn,
-            customerId: voucherCustomerId as int,
-            amount: totalAmount,
-            now: now,
-          );
-        } else if (voucherType == 'payment') {
-          // Original payment: debit effect → reversal is credit effect
-          await EntityBalanceHelper.customerReceipt(
-            txn: txn,
-            customerId: voucherCustomerId as int,
-            amount: totalAmount,
-            now: now,
-          );
-        }
-      }
-      if (voucherSupplierId != null && totalAmount > 0) {
-        if (voucherType == 'payment') {
-          // Original payment: debit effect → reversal is credit effect
-          await EntityBalanceHelper.supplierPurchaseOnCredit(
-            txn: txn,
-            supplierId: voucherSupplierId as int,
-            amount: totalAmount,
-            now: now,
-          );
-        } else if (voucherType == 'receipt') {
-          // Original receipt: debit effect → reversal is credit effect
-          await EntityBalanceHelper.supplierPurchaseReturn(
-            txn: txn,
-            supplierId: voucherSupplierId as int,
-            amount: totalAmount,
-            now: now,
-          );
-        }
-      }
-
-      // حذف بنود السند ثم السند نفسه
-      await txn.delete('voucher_items',
-          where: 'voucher_id = ?', whereArgs: [voucherId]);
+      await txn.delete(
+        'voucher_items',
+        where: 'voucher_id = ?',
+        whereArgs: [voucherId],
+      );
       await txn.delete('vouchers', where: 'id = ?', whereArgs: [voucherId]);
     });
     return 1;
   }
 
+  Future<int> _createVoucherReversalInTransaction(
+    Transaction txn,
+    Map<String, dynamic> voucherData,
+    String now,
+  ) async {
+    final voucherDate = voucherData['date'] as String? ?? now;
+    final voucherNumber = voucherData['voucher_number'] as String? ?? '';
+    final voucherType = voucherData['voucher_type'] as String? ?? '';
+    final totalAmount = MoneyHelper.readMoney(voucherData['total_amount']);
+    final cashBoxId = voucherData['cash_box_id'];
+    final voucherCurrency = (voucherData['currency'] as String?) ?? 'YER';
+    final voucherRate = await _getExchangeRate(txn, voucherCurrency);
+    final items = await txn.query(
+      'voucher_items',
+      where: 'voucher_id = ?',
+      whereArgs: [voucherData['id']],
+    );
+    final reversalJournalId = generateUniqueJournalId();
+
+    for (final item in items) {
+      final accountId = (item['account_id'] as num?)?.toInt();
+      final debit = MoneyHelper.readMoney(item['debit']);
+      final credit = MoneyHelper.readMoney(item['credit']);
+      if (accountId != null && (debit > 0 || credit > 0)) {
+        final reversalAmount = credit > 0 ? credit : debit;
+        await txn.insert('transactions', {
+          'account_id': accountId,
+          'journal_id': reversalJournalId,
+          'debit': MoneyHelper.toCents(credit),
+          'credit': MoneyHelper.toCents(debit),
+          'description': 'عكس سند $voucherNumber',
+          'date': voucherDate,
+          'created_at': now,
+          'currency_code': voucherCurrency,
+          'exchange_rate': voucherCurrency == 'YER' ? 1.0 : voucherRate,
+          'amount_base':
+              (MoneyHelper.toCents(reversalAmount) * voucherRate).round(),
+          'reference_type': 'cash_box_journal',
+          'reference_id': voucherData['id'].toString(),
+        });
+        await _dbHelper.journal.updateAccountBalanceWithJournal(
+          txn,
+          accountId,
+          credit,
+          debit,
+          now,
+        );
+      }
+    }
+
+    await _dbHelper.journal.validateJournalBalanceInTransaction(
+      txn,
+      reversalJournalId,
+    );
+
+    if (cashBoxId != null) {
+      final cashBox = await txn.query(
+        'cash_boxes',
+        where: 'id = ?',
+        whereArgs: [cashBoxId],
+        limit: 1,
+      );
+      if (cashBox.isNotEmpty) {
+        final currentBalance = MoneyHelper.readMoney(cashBox.first['balance']);
+        final cashBoxBalanceType =
+            cashBox.first['balance_type'] as String? ?? 'credit';
+        final signedBalance = cashBoxBalanceType == 'credit'
+            ? currentBalance
+            : -currentBalance;
+        final isCashIn = voucherType == 'receipt';
+        final reversedSignedBalance =
+            signedBalance + (isCashIn ? -totalAmount : totalAmount);
+        await txn.update(
+          'cash_boxes',
+          {
+            'balance': MoneyHelper.toCents(reversedSignedBalance.abs()),
+            'balance_type': reversedSignedBalance >= 0 ? 'credit' : 'debit',
+            'updated_at': now,
+          },
+          where: 'id = ?',
+          whereArgs: [cashBoxId],
+        );
+      }
+    }
+
+    final voucherCustomerId = voucherData['customer_id'];
+    final voucherSupplierId = voucherData['supplier_id'];
+    if (voucherCustomerId != null && totalAmount > 0) {
+      if (voucherType == 'receipt') {
+        await EntityBalanceHelper.customerPayment(
+          txn: txn,
+          customerId: voucherCustomerId as int,
+          amount: totalAmount,
+          now: now,
+        );
+      } else if (voucherType == 'payment') {
+        await EntityBalanceHelper.customerReceipt(
+          txn: txn,
+          customerId: voucherCustomerId as int,
+          amount: totalAmount,
+          now: now,
+        );
+      }
+    }
+    if (voucherSupplierId != null && totalAmount > 0) {
+      if (voucherType == 'payment') {
+        await EntityBalanceHelper.supplierPurchaseOnCredit(
+          txn: txn,
+          supplierId: voucherSupplierId as int,
+          amount: totalAmount,
+          now: now,
+        );
+      } else if (voucherType == 'receipt') {
+        await EntityBalanceHelper.supplierPurchaseReturn(
+          txn: txn,
+          supplierId: voucherSupplierId as int,
+          amount: totalAmount,
+          now: now,
+        );
+      }
+    }
+    return reversalJournalId;
+  }
   /// جلب سند برقمه
   Future<Map<String, dynamic>?> getVoucherByNumber(String number) async {
     final db = await _db;
