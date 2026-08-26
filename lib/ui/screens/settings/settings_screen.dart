@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firstpro/core/constants/app_constants.dart';
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/core/license/license_constants.dart';
 import 'package:firstpro/core/license/license_models.dart';
 import 'package:firstpro/core/license/license_provider.dart';
@@ -17,6 +18,7 @@ import 'package:firstpro/ui/screens/currency_exchange/currency_exchange_screen.d
 import 'package:firstpro/ui/screens/cash_transfers/cash_transfer_screen.dart';
 import 'package:firstpro/ui/screens/debts/debts_screen.dart';
 import 'package:firstpro/ui/screens/settings/bluetooth_printer_settings_screen.dart';
+import 'package:firstpro/ui/screens/settings/business_capabilities_screen.dart';
 import 'package:firstpro/ui/screens/settings/widgets/settings_helpers.dart';
 import 'package:firstpro/ui/screens/settings/widgets/settings_profile_section.dart';
 import 'package:firstpro/ui/screens/settings/widgets/settings_data_section.dart';
@@ -485,6 +487,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.work,
               isDark: isDark,
               children: [
+                ActionTile(
+                  icon: Icons.tune,
+                  title: 'إدارة الوظائف التي تريدها',
+                  subtitle: 'إظهار أو إخفاء البيع والمخزون والخدمات وغيرها دون حذف البيانات',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BusinessCapabilitiesScreen(
+                        service: locator<FeatureVisibilityService>(),
+                      ),
+                    ),
+                  ),
+                  isDark: isDark,
+                ),
                 ActionTile(
                   icon: Icons.swap_horiz,
                   title: 'مصارفة عملات',
