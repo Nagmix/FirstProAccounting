@@ -57,6 +57,7 @@ void main() {
 
     final continueButton = find.widgetWithText(ElevatedButton, 'متابعة');
     await tester.ensureVisible(continueButton);
+    await tester.pumpAndSettle();
     await tester.tap(continueButton);
     await tester.pump();
 
