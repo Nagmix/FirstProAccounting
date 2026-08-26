@@ -39,6 +39,55 @@ void main() {
     }
   });
 
+  test('taxable transport is included in the tax base only when policy allows it',
+      () async {
+    final (db, resolver, repository) = await _createResolver();
+    try {
+      await repository.save(_profile(rateBasisPoints: 1000, transportTaxable: true));
+      final profile = await resolver.resolveFor(
+        date: DateTime.utc(2026, 8, 26),
+        countryCode: 'XX',
+      );
+      final totals = resolver.calculateTotals(
+        profile: profile,
+        subtotalMinorUnits: 1000,
+        discountMinorUnits: 0,
+        transportMinorUnits: 100,
+        taxInclusive: false,
+      );
+
+      expect(totals.taxMinorUnits, 110);
+      expect(totals.totalMinorUnits, 1210);
+    } finally {
+      await db.close();
+      DatabaseHelper.clearTestDatabase();
+    }
+  });
+
+  test('exclusive policy overrides a contradictory inclusive caller flag', () async {
+    final (db, resolver, repository) = await _createResolver();
+    try {
+      await repository.save(_profile(rateBasisPoints: 1000));
+      final profile = await resolver.resolveFor(
+        date: DateTime.utc(2026, 8, 26),
+        countryCode: 'XX',
+      );
+      final totals = resolver.calculateTotals(
+        profile: profile,
+        subtotalMinorUnits: 1000,
+        discountMinorUnits: 0,
+        transportMinorUnits: 0,
+        taxInclusive: true,
+      );
+
+      expect(totals.taxMinorUnits, 100);
+      expect(totals.totalMinorUnits, 1100);
+    } finally {
+      await db.close();
+      DatabaseHelper.clearTestDatabase();
+    }
+  });
+
   test('dated policies resolve and no-policy mode produces zero tax', () async {
     final (db, resolver, repository) = await _createResolver();
     try {
@@ -89,6 +138,8 @@ Future<(Database, TaxPolicyResolver, TaxPolicyRepository)> _createResolver() asy
 TaxProfile _profile({
   required int rateBasisPoints,
   DateTime? validFrom,
+  bool transportTaxable = false,
+  String calculationMethod = 'exclusive',
 }) {
   final from = validFrom ?? DateTime.utc(2026, 1, 1);
   return TaxProfile(
@@ -96,8 +147,8 @@ TaxProfile _profile({
     regimeCode: 'standard',
     nameAr: 'سياسة اختبارية',
     rateBasisPoints: rateBasisPoints,
-    calculationMethod: 'exclusive',
-    transportTaxable: false,
+    calculationMethod: calculationMethod,
+    transportTaxable: transportTaxable,
     validFrom: from,
     requiresConfirmation: false,
     sourceNote: 'test',
