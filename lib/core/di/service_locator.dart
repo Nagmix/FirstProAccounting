@@ -10,6 +10,8 @@ import 'package:firstpro/data/datasources/repositories/expense_repository.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
 import 'package:firstpro/data/datasources/repositories/business_profile_repository.dart';
 import 'package:firstpro/data/datasources/repositories/capability_repository.dart';
+import 'package:firstpro/data/datasources/repositories/tax_policy_repository.dart';
+import 'package:firstpro/core/finance/tax_policy_resolver.dart';
 import 'package:firstpro/core/platform/onboarding_viewmodel.dart';
 import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/data/datasources/repositories/order_repository.dart';
@@ -78,6 +80,12 @@ Future<void> setupLocator() async {
   );
   locator.registerLazySingleton<CapabilityRepository>(
     () => CapabilityRepository(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<TaxPolicyRepository>(
+    () => TaxPolicyRepository(locator<DatabaseHelper>()),
+  );
+  locator.registerLazySingleton<TaxPolicyResolver>(
+    () => TaxPolicyResolver(locator<TaxPolicyRepository>()),
   );
   locator.registerLazySingleton<FeatureVisibilityService>(
     () => FeatureVisibilityService(locator<CapabilityRepository>()),

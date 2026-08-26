@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'package:firstpro/core/finance/invoice_totals_engine.dart';
 import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
@@ -37,6 +38,22 @@ class RecurringInvoiceService {
   RecurringInvoiceService(this._dbHelper, this._invoiceRepo, this._refRepo);
 
   Future<Database> get _db => _dbHelper.database;
+
+  InvoiceTotals calculateTemplateTotals({
+    required int subtotalMinorUnits,
+    required int discountMinorUnits,
+    required int transportMinorUnits,
+    required int taxRateBasisPoints,
+    required bool taxInclusive,
+  }) {
+    return const InvoiceTotalsEngine().calculate(
+      subtotalMinorUnits: subtotalMinorUnits,
+      discountMinorUnits: discountMinorUnits,
+      transportMinorUnits: transportMinorUnits,
+      taxRateBasisPoints: taxRateBasisPoints,
+      taxInclusive: taxInclusive,
+    );
+  }
 
   // ── CRUD: recurring invoice templates ────────────────────────────
 
@@ -373,19 +390,33 @@ class RecurringInvoiceService {
     final invoiceId =
         'REC-${templateId.toString()}-${scheduledDate.replaceAll('-', '')}';
 
-    // Compute totals from items.
-    double subtotal = 0;
-    for (final item in items) {
-      subtotal += MoneyHelper.readMoney(item['total_price']);
-    }
-    final discountAmount = MoneyHelper.readMoney(template['discount_amount']);
-    final transportCharges =
-        MoneyHelper.readMoney(template['transport_charges']);
-    final vatRate = (template['vat_rate'] as num?)?.toDouble() ?? 0.0;
-    final taxAmount = (subtotal - discountAmount) * (vatRate / 100);
-    final total = subtotal - discountAmount + taxAmount + transportCharges;
-    final paidAmount =
-        paymentMechanism == 'cash' ? total : 0.0;
+    // Compute totals in minor units through the shared accounting engine.
+    final subtotalMinorUnits = items.fold<int>(
+      0,
+      (sum, item) =>
+          sum + MoneyHelper.toCents(MoneyHelper.readMoney(item['total_price'])),
+    );
+    final discountMinorUnits =
+        MoneyHelper.toCents(MoneyHelper.readMoney(template['discount_amount']));
+    final transportMinorUnits = MoneyHelper.toCents(
+      MoneyHelper.readMoney(template['transport_charges']),
+    );
+    final taxRateBasisPoints = (template['tax_rate_bps'] as num?)?.toInt() ??
+        (((template['vat_rate'] as num?)?.toDouble() ?? 0.0) * 100).round();
+    final totals = calculateTemplateTotals(
+      subtotalMinorUnits: subtotalMinorUnits,
+      discountMinorUnits: discountMinorUnits,
+      transportMinorUnits: transportMinorUnits,
+      taxRateBasisPoints: taxRateBasisPoints,
+      taxInclusive: template['tax_inclusive'] == true ||
+          template['tax_inclusive'] == 1,
+    );
+    final subtotal = MoneyHelper.fromCents(totals.subtotalMinorUnits);
+    final discountAmount = MoneyHelper.fromCents(totals.discountMinorUnits);
+    final transportCharges = MoneyHelper.fromCents(totals.transportMinorUnits);
+    final taxAmount = MoneyHelper.fromCents(totals.taxMinorUnits);
+    final total = MoneyHelper.fromCents(totals.totalMinorUnits);
+    final paidAmount = paymentMechanism == 'cash' ? total : 0.0;
 
     final invoiceMap = <String, dynamic>{
       'id': invoiceId,
