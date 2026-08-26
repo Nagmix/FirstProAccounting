@@ -60,7 +60,7 @@ void main() {
     try {
       final cashAccountId = await db.insert('accounts', {
         'name_ar': 'النقدية',
-        'account_code': '1100',
+        'account_code': '9101',
         'account_type': 'ASSET',
         'currency': 'YER',
         'balance_type': 'debit',
@@ -69,7 +69,7 @@ void main() {
       });
       final incomeAccountId = await db.insert('accounts', {
         'name_ar': 'الإيرادات',
-        'account_code': '4100',
+        'account_code': '9401',
         'account_type': 'REVENUE',
         'currency': 'YER',
         'balance_type': 'credit',
@@ -128,6 +128,98 @@ void main() {
         [reversalJournalId],
       );
       expect(totals.single['debit'], totals.single['credit']);
+    } finally {
+      DatabaseHelper.clearTestDatabase();
+      await db.close();
+    }
+  });
+
+  test('cancelling an already cancelled voucher is rejected without a second reversal',
+      () async {
+    final db = await createDatabase();
+    final service = CashBoxService(DatabaseHelper());
+    try {
+      final debitAccountId = await db.insert('accounts', {
+        'name_ar': 'حساب مدين للاختبار',
+        'account_code': '9102',
+        'account_type': 'ASSET',
+        'currency': 'YER',
+        'balance_type': 'debit',
+        'created_at': '2026-08-26T10:00:00.000Z',
+        'updated_at': '2026-08-26T10:00:00.000Z',
+      });
+      final creditAccountId = await db.insert('accounts', {
+        'name_ar': 'حساب دائن للاختبار',
+        'account_code': '9402',
+        'account_type': 'REVENUE',
+        'currency': 'YER',
+        'balance_type': 'credit',
+        'created_at': '2026-08-26T10:00:00.000Z',
+        'updated_at': '2026-08-26T10:00:00.000Z',
+      });
+      final voucherId = await db.insert('vouchers', {
+        'voucher_number': 'V-POSTED-3',
+        'voucher_type': 'receipt',
+        'date': '2026-08-26',
+        'currency': 'YER',
+        'total_amount': 10000,
+        'is_posted': 1,
+        'created_at': '2026-08-26T10:00:00.000Z',
+        'updated_at': '2026-08-26T10:00:00.000Z',
+      });
+      await db.insert('voucher_items', {
+        'voucher_id': voucherId,
+        'account_id': debitAccountId,
+        'debit': 10000,
+        'credit': 0,
+        'created_at': '2026-08-26T10:00:00.000Z',
+      });
+      await db.insert('voucher_items', {
+        'voucher_id': voucherId,
+        'account_id': creditAccountId,
+        'debit': 0,
+        'credit': 10000,
+        'created_at': '2026-08-26T10:00:00.000Z',
+      });
+
+      await service.cancelVoucher(voucherId, reason: 'تصحيح أول');
+      await expectLater(
+        service.cancelVoucher(voucherId, reason: 'تصحيح ثان'),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        await db.query('document_reversals',
+            where: 'document_type = ? AND document_id = ?',
+            whereArgs: ['voucher', voucherId.toString()]),
+        hasLength(1),
+      );
+    } finally {
+      DatabaseHelper.clearTestDatabase();
+      await db.close();
+    }
+  });
+
+  test('draft voucher deletion removes only the draft and its items', () async {
+    final db = await createDatabase();
+    final service = CashBoxService(DatabaseHelper());
+    try {
+      final voucherId = await db.insert('vouchers', {
+        'voucher_number': 'V-DRAFT-1',
+        'voucher_type': 'receipt',
+        'date': '2026-08-26',
+        'currency': 'YER',
+        'total_amount': 10000,
+        'is_posted': 0,
+        'created_at': '2026-08-26T10:00:00.000Z',
+        'updated_at': '2026-08-26T10:00:00.000Z',
+      });
+      await service.deleteVoucher(voucherId);
+
+      expect(await db.query('vouchers', where: 'id = ?', whereArgs: [voucherId]),
+          isEmpty);
+      expect(await db.query('voucher_items',
+          where: 'voucher_id = ?', whereArgs: [voucherId]), isEmpty);
+      expect(await db.query('document_reversals'), isEmpty);
     } finally {
       DatabaseHelper.clearTestDatabase();
       await db.close();
