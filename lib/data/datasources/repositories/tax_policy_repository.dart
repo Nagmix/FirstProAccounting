@@ -115,11 +115,15 @@ class TaxPolicyRepository {
     if (snapshot.rateBasisPoints < 0 || snapshot.rateBasisPoints > 100000) {
       throw ArgumentError.value(snapshot.rateBasisPoints, 'rateBasisPoints');
     }
-    if (snapshot.taxableSubtotalMinor < 0 ||
-        snapshot.taxableTransportMinor < 0 ||
-        snapshot.discountMinor < 0 ||
-        snapshot.taxMinor < 0) {
-      throw ArgumentError('قيم الضريبة لا يمكن أن تكون سالبة');
+    final allowsSignedAmounts = snapshot.documentType == 'credit_note' ||
+        snapshot.documentType == 'return' ||
+        snapshot.documentType.endsWith('_return');
+    if (!allowsSignedAmounts &&
+        (snapshot.taxableSubtotalMinor < 0 ||
+            snapshot.taxableTransportMinor < 0 ||
+            snapshot.discountMinor < 0 ||
+            snapshot.taxMinor < 0)) {
+      throw ArgumentError('قيم الضريبة لا يمكن أن تكون سالبة للمستندات العادية');
     }
   }
 
