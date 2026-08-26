@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstpro/core/platform/capability_catalog.dart';
+import 'package:firstpro/core/platform/capability_definition.dart';
 import 'package:firstpro/core/platform/feature_visibility_service.dart';
 
 class BusinessCapabilitiesScreen extends StatefulWidget {
