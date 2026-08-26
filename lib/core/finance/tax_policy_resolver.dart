@@ -25,15 +25,16 @@ class TaxPolicyResolver {
     required int transportMinorUnits,
     required bool taxInclusive,
   }) {
-    final effectiveInclusive = profile?.calculationMethod == 'inclusive'
-        ? true
-        : taxInclusive;
+    final effectiveInclusive = profile == null
+        ? taxInclusive
+        : profile.calculationMethod == 'inclusive';
     return _totalsEngine.calculate(
       subtotalMinorUnits: subtotalMinorUnits,
       discountMinorUnits: discountMinorUnits,
       transportMinorUnits: transportMinorUnits,
       taxRateBasisPoints: profile?.rateBasisPoints ?? 0,
       taxInclusive: effectiveInclusive,
+      transportTaxable: profile?.transportTaxable ?? false,
     );
   }
 }

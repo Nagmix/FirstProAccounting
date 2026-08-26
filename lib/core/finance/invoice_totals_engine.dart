@@ -32,6 +32,7 @@ class InvoiceTotalsEngine {
     required int transportMinorUnits,
     required int taxRateBasisPoints,
     required bool taxInclusive,
+    bool transportTaxable = false,
   }) {
     if (subtotalMinorUnits >= 0 && discountMinorUnits < 0) {
       throw ArgumentError.value(
@@ -48,9 +49,11 @@ class InvoiceTotalsEngine {
       );
     }
 
-    final taxableMinorUnits = subtotalMinorUnits - discountMinorUnits;
+    final taxableSubtotalMinorUnits = subtotalMinorUnits - discountMinorUnits;
+    final taxBaseMinorUnits = taxableSubtotalMinorUnits +
+        (transportTaxable ? transportMinorUnits : 0);
     final tax = const TaxEngine().calculate(
-      taxableMinorUnits: taxableMinorUnits,
+      taxableMinorUnits: taxBaseMinorUnits,
       rateBasisPoints: taxRateBasisPoints,
       isInclusive: taxInclusive,
     );
@@ -61,7 +64,8 @@ class InvoiceTotalsEngine {
       taxableMinorUnits: tax.netMinorUnits,
       taxMinorUnits: tax.taxMinorUnits,
       transportMinorUnits: transportMinorUnits,
-      totalMinorUnits: tax.grossMinorUnits + transportMinorUnits,
+      totalMinorUnits: tax.grossMinorUnits +
+          (transportTaxable ? 0 : transportMinorUnits),
     );
   }
 }
