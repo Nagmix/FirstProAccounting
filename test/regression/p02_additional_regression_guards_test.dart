@@ -104,16 +104,16 @@ void main() {
     });
 
     // ── Guard 8: DB version is consistent across files ─────────────
-    test('DB version is 58 in both DatabaseHelper and AppConstants', () {
+    test('DB version is 59 in both DatabaseHelper and AppConstants', () {
       final dbHelperFile = File('lib/data/datasources/database_helper.dart');
       final dbSource = dbHelperFile.readAsStringSync();
-      expect(dbSource.contains('_databaseVersion = 58'), isTrue,
-          reason: 'DatabaseHelper._databaseVersion must be 58.');
+      expect(dbSource.contains('_databaseVersion = 59'), isTrue,
+          reason: 'DatabaseHelper._databaseVersion must be 59.');
 
       final constantsFile = File('lib/core/constants/app_constants.dart');
       final constantsSource = constantsFile.readAsStringSync();
-      expect(constantsSource.contains('dbVersion = 58'), isTrue,
-          reason: 'AppConstants.dbVersion must match DatabaseHelper (58).');
+      expect(constantsSource.contains('dbVersion = 59'), isTrue,
+          reason: 'AppConstants.dbVersion must match DatabaseHelper (59).');
     });
 
     // ── Guard 9: No orphan ThermalPrinterService (B-02) ────────────
