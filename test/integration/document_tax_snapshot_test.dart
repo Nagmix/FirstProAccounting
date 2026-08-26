@@ -57,4 +57,41 @@ void main() {
       DatabaseHelper.clearTestDatabase();
     }
   });
+
+  test('credit note snapshots accept signed tax amounts', () async {
+    final db = await openDatabase(
+      inMemoryDatabasePath,
+      version: 59,
+      onCreate: (database, version) => DatabaseSchema.onCreate(database, version),
+    );
+    DatabaseHelper.useTestDatabase(db);
+    final repository = TaxPolicyRepository(DatabaseHelper());
+    try {
+      final returnSnapshot = DocumentTaxSnapshot(
+        documentType: 'credit_note',
+        documentId: 'CN-TAX-1',
+        countryCode: 'XX',
+        regimeCode: 'standard',
+        rateBasisPoints: 500,
+        calculationMethod: 'exclusive',
+        transportTaxable: true,
+        taxableSubtotalMinor: -1000,
+        taxableTransportMinor: -100,
+        discountMinor: 0,
+        taxMinor: -55,
+        roundingMode: 'half_up',
+        source: 'test',
+      );
+
+      await repository.saveSnapshot(returnSnapshot);
+
+      final stored = await repository.getSnapshot('credit_note', 'CN-TAX-1');
+      expect(stored?.taxableSubtotalMinor, -1000);
+      expect(stored?.taxableTransportMinor, -100);
+      expect(stored?.taxMinor, -55);
+    } finally {
+      await db.close();
+      DatabaseHelper.clearTestDatabase();
+    }
+  });
 }
