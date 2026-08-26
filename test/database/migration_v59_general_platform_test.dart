@@ -48,6 +48,23 @@ void main() {
     }
   });
 
+  test('fresh v59 schema includes general platform tables', () async {
+    final db = await openDatabase(
+      inMemoryDatabasePath,
+      version: 59,
+      onCreate: (database, version) => DatabaseSchema.onCreate(database, version),
+    );
+    try {
+      final rows = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table' "
+        "AND name = 'business_profile'",
+      );
+      expect(rows, hasLength(1));
+    } finally {
+      await db.close();
+    }
+  });
+
   test('v59 migration is idempotent and keeps profile empty', () async {
     final db = await openV58Database();
     try {
