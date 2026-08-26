@@ -59,7 +59,7 @@ void main() {
     await tester.scrollUntilVisible(
       continueButton,
       300,
-      scrollable: find.byType(SingleChildScrollView),
+      scrollable: find.byType(Scrollable),
     );
     await tester.tap(continueButton);
     await tester.pump();
