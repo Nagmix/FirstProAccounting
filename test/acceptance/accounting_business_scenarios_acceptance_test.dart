@@ -538,6 +538,22 @@ void main() {
 
   test('cancelling a partially paid taxed sale reverses net revenue and VAT separately', () async {
     await _seedAccounts(db, const ['1100', '1200', '1300', '2300', '3200', '4100']);
+    final customerId = await db.insert('customers', {
+      'name': 'عميل بيع جزئي ضريبي',
+      'currency': 'YER',
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
+    final cashBoxId = await db.insert('cash_boxes', {
+      'name': 'صندوق بيع جزئي ضريبي',
+      'type': 'cash_box',
+      'currency': 'YER',
+      'balance': 0,
+      'balance_type': 'credit',
+      'is_active': 1,
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
     final productId = await _createProduct(
       db,
       code: 'CANCEL-PARTIAL-TAX-001',
@@ -555,7 +571,9 @@ void main() {
         tax: 15,
         total: 115,
         paidAmount: 40,
-      ),
+      )
+        ..['customer_id'] = customerId
+        ..['cash_box_id'] = cashBoxId,
       [_item('SALE-CANCEL-PARTIAL-TAX-001', productId, quantity: 1, unitPrice: 100, total: 100, unitCost: 20)],
       invoiceType: 'sale',
       paymentMechanism: 'cash',
