@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('portable restore stages attachments before committing the database', () {
     final source = File(
-      'lib/core/services/portable_backup_service.dart',
+      'lib/core/services/portable_backup_file_committer.dart',
     ).readAsStringSync();
 
     expect(source, contains('stagedAttachmentsPath'),
@@ -18,7 +18,7 @@ void main() {
 
   test('portable restore does not condition rollback on dbPath absence', () {
     final source = File(
-      'lib/core/services/portable_backup_service.dart',
+      'lib/core/services/portable_backup_file_committer.dart',
     ).readAsStringSync();
 
     expect(source, contains('rollbackExists'),
