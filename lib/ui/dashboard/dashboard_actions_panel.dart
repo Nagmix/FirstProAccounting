@@ -4,11 +4,13 @@ import 'package:firstpro/ui/dashboard/action_definition.dart';
 class DashboardActionsPanel extends StatelessWidget {
   final List<ActionDefinition> actions;
   final ValueChanged<String> onAction;
+  final VoidCallback? onShowAll;
 
   const DashboardActionsPanel({
     super.key,
     required this.actions,
     required this.onAction,
+    this.onShowAll,
   });
 
   @override
@@ -20,7 +22,7 @@ class DashboardActionsPanel extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 560
             ? 3
@@ -46,6 +48,29 @@ class DashboardActionsPanel extends StatelessWidget {
           },
         );
       },
+    );
+
+    if (onShowAll == null) return content;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'الإجراءات السريعة',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            TextButton.icon(
+              onPressed: onShowAll,
+              icon: const Icon(Icons.apps_rounded, size: 18),
+              label: const Text('كل الوظائف'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        content,
+      ],
     );
   }
 }

@@ -66,7 +66,8 @@ import 'package:firstpro/ui/screens/license/license_status_screen.dart';
 class AppRouter {
   AppRouter._();
 
-  static Map<String, WidgetBuilder> get routes => {
+  static Map<String, WidgetBuilder> get routes {
+    final builders = <String, WidgetBuilder>{
         AppConstants.dashboard: (_) => const DashboardScreen(),
         AppConstants.customers: (_) => const CustomersScreen(),
         AppConstants.products: (_) => const ProductsScreen(),
@@ -135,6 +136,36 @@ class AppRouter {
         AppConstants.licenseActivation: (_) => const LicenseActivationScreen(),
         AppConstants.licenseStatus: (_) => const LicenseStatusScreen(),
       };
+    return {
+      for (final entry in builders.entries)
+        entry.key: (context) => _guardedRouteWidget(
+              context,
+              entry.key,
+              entry.value,
+            ),
+    };
+  }
+
+  static Widget _guardedRouteWidget(
+    BuildContext context,
+    String routeName,
+    WidgetBuilder builder,
+  ) {
+    final definition = _tryDefinition(routeName);
+    if (definition != null && locator.isRegistered<FeatureVisibilityService>()) {
+      final service = locator<FeatureVisibilityService>();
+      if (!service.isVisible(
+        definition.requiredCapabilities,
+        isCore: definition.isCore,
+      )) {
+        return CapabilityRouteGuardScreen(
+          definition: definition,
+          service: service,
+        );
+      }
+    }
+    return builder(context);
+  }
 
   static Future<T?> push<T extends Object?>(
       BuildContext context, String routeName,
@@ -170,42 +201,91 @@ class AppRouter {
   static Future<T?> replace<T extends Object?, TO extends Object?>(
       BuildContext context, String routeName,
       {Object? arguments, TO? result}) {
+    final definition = _tryDefinition(routeName);
+    if (definition != null && locator.isRegistered<FeatureVisibilityService>()) {
+      final service = locator<FeatureVisibilityService>();
+      if (!service.isVisible(
+        definition.requiredCapabilities,
+        isCore: definition.isCore,
+      )) {
+        return Navigator.of(context).pushReplacement<T, TO>(
+          MaterialPageRoute<T>(
+            builder: (_) => CapabilityRouteGuardScreen(
+              definition: definition,
+              service: service,
+            ),
+          ),
+          result: result,
+        );
+      }
+    }
     return Navigator.of(context).pushReplacementNamed<T, TO>(routeName,
         arguments: arguments, result: result);
   }
 
+  /// Push a direct screen while applying the same capability guard as named routes.
+  static Future<T?> _pushDirect<T extends Object?>(
+    BuildContext context,
+    String routeName,
+    WidgetBuilder builder,
+  ) {
+    final definition = _tryDefinition(routeName);
+    if (definition != null && locator.isRegistered<FeatureVisibilityService>()) {
+      final service = locator<FeatureVisibilityService>();
+      if (!service.isVisible(
+        definition.requiredCapabilities,
+        isCore: definition.isCore,
+      )) {
+        return Navigator.of(context).push<T>(
+          MaterialPageRoute<T>(
+            builder: (_) => CapabilityRouteGuardScreen(
+              definition: definition,
+              service: service,
+            ),
+          ),
+        );
+      }
+    }
+    return Navigator.of(context).push<T>(MaterialPageRoute<T>(builder: builder));
+  }
+
   /// Push the AccountLedgerScreen directly (requires an [Account] object).
   static Future<void> pushAccountLedger(BuildContext context, Account account) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => AccountLedgerScreen(account: account)),
+    return _pushDirect<void>(
+      context,
+      AppConstants.chartOfAccounts,
+      (_) => AccountLedgerScreen(account: account),
     );
   }
 
   /// Push the InvoiceDetailScreen directly (requires an invoiceId string).
   static Future<void> pushInvoiceDetail(
       BuildContext context, String invoiceId) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(
-          builder: (_) => InvoiceDetailScreen(invoiceId: invoiceId)),
+    return _pushDirect<void>(
+      context,
+      AppConstants.invoices,
+      (_) => InvoiceDetailScreen(invoiceId: invoiceId),
     );
   }
 
   /// Push the ExpenseAccountDetailScreen directly (requires a sub-account map).
   static Future<void> pushExpenseAccountDetail(
       BuildContext context, Map<String, dynamic> subAccount) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(
-          builder: (_) => ExpenseAccountDetailScreen(subAccount: subAccount)),
+    return _pushDirect<void>(
+      context,
+      AppConstants.expenses,
+      (_) => ExpenseAccountDetailScreen(subAccount: subAccount),
     );
   }
 
   /// Push the BankReconciliationDetailScreen directly.
   static Future<void> pushBankReconciliationDetail(
       BuildContext context, int reconciliationId) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(
-          builder: (_) => BankReconciliationDetailScreen(
-              reconciliationId: reconciliationId)),
+    return _pushDirect<void>(
+      context,
+      AppConstants.bankReconciliation,
+      (_) => BankReconciliationDetailScreen(
+          reconciliationId: reconciliationId),
     );
   }
 }

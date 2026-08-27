@@ -11,6 +11,7 @@ import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/core/viewmodels/dashboard_viewmodel.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 import 'package:firstpro/ui/dashboard/action_catalog.dart';
+import 'package:firstpro/ui/dashboard/dashboard_actions_panel.dart';
 import 'package:firstpro/ui/widgets/animated_entry.dart';
 
 /// The main dashboard screen – the first thing the user sees.
@@ -746,6 +747,24 @@ class _DashboardScreenState extends State<DashboardScreen>
   //  (No GridView — fixed card height guarantees no cutoff ever)
   // ══════════════════════════════════════════════════════════════════
   Widget _buildActionGrid(BuildContext context, bool isDark) {
+    if (locator.isRegistered<FeatureVisibilityService>()) {
+      final service = locator<FeatureVisibilityService>();
+      return AnimatedBuilder(
+        animation: service,
+        builder: (context, _) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: DashboardActionsPanel(
+            actions: ActionCatalog.prioritizedActions(
+              service.enabledCodes,
+              limit: 6,
+            ),
+            onAction: _navigateTo,
+            onShowAll: () => Scaffold.of(context).openEndDrawer(),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(

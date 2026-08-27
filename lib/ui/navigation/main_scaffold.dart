@@ -69,36 +69,47 @@ class _MainScaffoldState extends State<MainScaffold>
   int _currentIndex = 0;
   late AnimationController _drawerAnimController;
 
-  final List<Widget> _pages = const [
-    DashboardScreen(),
-    CustomersScreen(),
-    InvoicesScreen(),
-    _MoreTab(),
-  ];
-
-  // Only 4 items: 2 left (الرئيسية, العملاء) + center FAB + 2 right (الفواتير, المزيد)
-  static const _bottomBarItems = [
-    CustomBottomBarItem(
-      icon: Icons.home,
-      activeIcon: Icons.home,
-      label: 'الرئيسية',
-    ),
-    CustomBottomBarItem(
-      icon: Icons.people,
-      activeIcon: Icons.people,
-      label: 'العملاء',
-    ),
-    CustomBottomBarItem(
-      icon: Icons.receipt,
-      activeIcon: Icons.receipt,
-      label: 'الفواتير',
-    ),
-    CustomBottomBarItem(
-      icon: Icons.more_vert,
-      activeIcon: Icons.more_vert,
-      label: 'المزيد',
-    ),
-  ];
+  List<_BottomTab> get _bottomTabs {
+    final tabs = <_BottomTab>[
+      const _BottomTab(
+        item: CustomBottomBarItem(
+          icon: Icons.home,
+          activeIcon: Icons.home,
+          label: 'الرئيسية',
+        ),
+        page: DashboardScreen(),
+      ),
+    ];
+    if (_isRouteVisible(AppConstants.customers)) {
+      tabs.add(const _BottomTab(
+        item: CustomBottomBarItem(
+          icon: Icons.people,
+          activeIcon: Icons.people,
+          label: 'العملاء',
+        ),
+        page: CustomersScreen(),
+      ));
+    }
+    if (_isRouteVisible(AppConstants.invoices)) {
+      tabs.add(const _BottomTab(
+        item: CustomBottomBarItem(
+          icon: Icons.receipt,
+          activeIcon: Icons.receipt,
+          label: 'الفواتير',
+        ),
+        page: InvoicesScreen(),
+      ));
+    }
+    tabs.add(const _BottomTab(
+      item: CustomBottomBarItem(
+        icon: Icons.more_vert,
+        activeIcon: Icons.more_vert,
+        label: 'المزيد',
+      ),
+      page: _MoreTab(),
+    ));
+    return tabs;
+  }
 
   // UI-13: Drawer items organized into categorized sections.
   final _drawerSections = const <_DrawerSection>[
@@ -294,7 +305,25 @@ class _MainScaffoldState extends State<MainScaffold>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final service = locator.isRegistered<FeatureVisibilityService>()
+        ? locator<FeatureVisibilityService>()
+        : null;
 
+    if (service == null) {
+      return _buildScaffold(context, theme, isDark);
+    }
+    return AnimatedBuilder(
+      animation: service,
+      builder: (context, _) => _buildScaffold(context, theme, isDark),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final tabs = _bottomTabs;
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,
@@ -338,12 +367,15 @@ class _MainScaffoldState extends State<MainScaffold>
               ],
             ),
       endDrawer: _buildDrawer(theme, isDark),
-      body: LazyIndexedStack(index: _currentIndex, children: _pages),
+      body: LazyIndexedStack(
+        index: _currentIndex.clamp(0, tabs.length - 1).toInt(),
+        children: tabs.map((tab) => tab.page).toList(growable: false),
+      ),
       bottomNavigationBar: CustomBottomBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: _currentIndex.clamp(0, tabs.length - 1).toInt(),
         onTap: (index) => setState(() => _currentIndex = index),
         onFabTap: _showQuickAddSheet,
-        items: _bottomBarItems,
+        items: tabs.map((tab) => tab.item).toList(growable: false),
       ),
     );
   }
@@ -875,21 +907,22 @@ class _MoreTab extends StatelessWidget {
     );
   }
 
-  Widget _visibleFor(String route, Widget child) {
-    if (!locator.isRegistered<FeatureVisibilityService>()) return child;
+  bool _isRouteVisible(String route) {
+    if (!locator.isRegistered<FeatureVisibilityService>()) return true;
     final service = locator<FeatureVisibilityService>();
-    NavigationDefinition? definition;
     try {
-      definition = NavigationCatalog.byRoute(route);
+      final definition = NavigationCatalog.byRoute(route);
+      return service.isVisible(
+        definition.requiredCapabilities,
+        isCore: definition.isCore,
+      );
     } on ArgumentError {
-      return child;
+      return true;
     }
-    return service.isVisible(
-      definition.requiredCapabilities,
-      isCore: definition.isCore,
-    )
-        ? child
-        : const SizedBox.shrink();
+  }
+
+  Widget _visibleFor(String route, Widget child) {
+    return _isRouteVisible(route) ? child : const SizedBox.shrink();
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -1058,4 +1091,12 @@ class _QuickAddOption extends StatelessWidget {
       ),
     );
   }
+}
+
+
+class _BottomTab {
+  const _BottomTab({required this.item, required this.page});
+
+  final CustomBottomBarItem item;
+  final Widget page;
 }
