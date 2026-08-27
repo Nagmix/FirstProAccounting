@@ -2610,6 +2610,8 @@ class InvoiceRepository {
       }
 
       final total = MoneyHelper.readMoney(invoice['total']);
+      final taxAmount = MoneyHelper.readMoney(invoice['tax_amount']);
+      final netRevenue = total - taxAmount;
       final invoiceCurrency = (invoice['currency'] as String?) ?? 'YER';
       final exchangeRate = (invoice['exchange_rate'] as num?)?.toDouble() ?? 1.0;
       final invoiceType = (invoice['type'] as String?) ?? 'sale';
@@ -2671,6 +2673,10 @@ class InvoiceRepository {
             where: 'account_code = ? AND currency = ?',
             whereArgs: [(1100 + codeOffset).toString(), invoiceCurrency],
             limit: 1);
+        final vatPayableAccount = await txn.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(2300 + codeOffset).toString(), invoiceCurrency],
+            limit: 1);
 
         final salesAccountId =
             salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
@@ -2685,6 +2691,9 @@ class InvoiceRepository {
             : null;
         final cashBanksAccountId = cashBanksAccount.isNotEmpty
             ? cashBanksAccount.first['id'] as int
+            : null;
+        final vatPayableAccountId = vatPayableAccount.isNotEmpty
+            ? vatPayableAccount.first['id'] as int
             : null;
 
         // Determine original debit/credit accounts and handle partial payments
@@ -2796,27 +2805,46 @@ class InvoiceRepository {
                   txn, salesAccountId, 0.0, total, now);
             }
           } else {
-            // Normal reversal (full cash or full credit): swap debit/credit
+            // Normal reversal (full cash or full credit): swap debit/credit.
+            // Revenue and VAT are separate ledger accounts in the original sale.
             final originalDebitAccountId = paymentMechanism == 'credit'
                 ? customersAccountId
                 : cashBanksAccountId;
-            if (salesAccountId != null && total > 0) {
+            if (salesAccountId != null && netRevenue > 0) {
               await txn.insert('transactions', {
                 'account_id': salesAccountId,
                 'journal_id': journalId,
-                'debit': MoneyHelper.toCents(total),
+                'debit': MoneyHelper.toCents(netRevenue),
                 'credit': 0,
                 'description': 'إلغاء فاتورة مبيعات - $id',
                 'date': now,
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': toBaseMinorUnits(total),
-                        'reference_type': 'invoice_journal',
-          'reference_id': journalId.toString(),
-});
+                'amount_base': toBaseMinorUnits(netRevenue),
+                'reference_type': 'invoice_journal',
+                'reference_id': journalId.toString(),
+              });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
-                  txn, salesAccountId, total, 0.0, now);
+                  txn, salesAccountId, netRevenue, 0.0, now);
+            }
+            if (vatPayableAccountId != null && taxAmount > 0) {
+              await txn.insert('transactions', {
+                'account_id': vatPayableAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(taxAmount),
+                'credit': 0,
+                'description': 'إلغاء ضريبة مبيعات - $id',
+                'date': now,
+                'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': toBaseMinorUnits(taxAmount),
+                'reference_type': 'invoice_journal',
+                'reference_id': journalId.toString(),
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, vatPayableAccountId, taxAmount, 0.0, now);
             }
             if (originalDebitAccountId != null && total > 0) {
               await txn.insert('transactions', {
