@@ -331,6 +331,77 @@ void main() {
     expect(cashBox['balance'], MoneyHelper.toCents(40));
   });
 
+  test('cancelling a partially settled credit sale reverses only paid cash and stock',
+      () async {
+    await _seedAccounts(db, const ['1100', '1200', '1300', '3100', '3200', '4100']);
+    final cashBoxId = await db.insert('cash_boxes', {
+      'name': 'صندوق إلغاء جزئي',
+      'type': 'cash_box',
+      'currency': 'YER',
+      'balance': 0,
+      'balance_type': 'credit',
+      'is_active': 1,
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
+    final productId = await _createProduct(
+      db,
+      code: 'PARTIAL-CANCEL-001',
+      name: 'صنف إلغاء جزئي',
+      averageCost: 50,
+      costPrice: 50,
+      currentStock: 1,
+    );
+    final invoices = InvoiceRepository(dbHelper);
+    final invoice = _invoice(
+      id: 'SALE-PARTIAL-CANCEL-001',
+      type: 'sale',
+      subtotal: 100,
+      total: 100,
+      paidAmount: 0,
+    )
+      ..['payment_mechanism'] = 'credit'
+      ..['cash_box_id'] = cashBoxId;
+
+    await invoices.saveInvoiceWithJournalEntries(
+      invoice,
+      [_item('SALE-PARTIAL-CANCEL-001', productId, quantity: 1, unitPrice: 100, total: 100, unitCost: 50)],
+      invoiceType: 'sale',
+      paymentMechanism: 'credit',
+      isReturn: false,
+      paidAmount: 0,
+    );
+    await invoices.recordInvoicePayment(
+      invoiceId: 'SALE-PARTIAL-CANCEL-001',
+      amount: 40,
+      cashBoxId: cashBoxId,
+    );
+    await invoices.cancelInvoice('SALE-PARTIAL-CANCEL-001');
+
+    final cashBox = (await db.query(
+      'cash_boxes',
+      where: 'id = ?',
+      whereArgs: [cashBoxId],
+    )).single;
+    final product = await _product(db, productId);
+    final invoiceRow = (await db.query(
+      'invoices',
+      where: 'id = ?',
+      whereArgs: ['SALE-PARTIAL-CANCEL-001'],
+    )).single;
+    expect(invoiceRow['status'], 'cancelled');
+    expect(cashBox['balance'], 0);
+    expect((product['current_stock'] as num).toDouble(), closeTo(1, 0.001));
+    expect(
+      await db.query(
+        'document_reversals',
+        where: 'document_type = ? AND document_id = ?',
+        whereArgs: ['invoice', 'SALE-PARTIAL-CANCEL-001'],
+      ),
+      hasLength(1),
+    );
+  });
+
   test('cancels a posted sale with reversal entries and restores stock', () async {
     await _seedAccounts(db, const ['1100', '1200', '1300', '3100', '3200', '4100']);
     final productId = await _createProduct(
