@@ -18,13 +18,13 @@ void main() {
 
   test('portable restore does not condition rollback on dbPath absence', () {
     final source = File(
-      'lib/core/services/portable_backup_service.dart',
+      'lib/core/services/portable_backup_file_committer.dart',
     ).readAsStringSync();
 
     expect(source, contains('rollbackExists'),
         reason: 'Rollback must be attempted whenever the saved copy exists.');
-    expect(source, contains('await _dbHelper.database'),
-        reason: 'The replacement must be reopened before old files are deleted.');
+    expect(source, contains('onRollbackComplete'),
+        reason: 'The restore service must finish key and database recovery after file rollback.');
   });
 
   test('portable backup authenticates and validates its encrypted payload', () {
