@@ -155,7 +155,7 @@ void main() {
     }
   });
 
-  test('saving typed profile is idempotent and locks base currency after posted data', async () {
+  test('saving typed profile is idempotent and locks base currency after posted data', () async {
     final (db, repository) = await createRepository();
     try {
       final profile = BusinessProfile(
