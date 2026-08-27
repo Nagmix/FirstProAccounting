@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 
 import 'package:firstpro/core/security/db_encryption.dart';
+import 'package:firstpro/core/services/portable_backup_compatibility.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 
 /// Portable, password-protected backup for a local installation.
@@ -161,6 +162,12 @@ class PortableBackupService {
         password: dbKey,
       );
       try {
+        final versionRows = await validationDb.rawQuery('PRAGMA user_version');
+        final schemaVersion = versionRows.isNotEmpty
+            ? (versionRows.first.values.first as num?)?.toInt() ?? 0
+            : 0;
+        PortableBackupCompatibility.validateSchemaVersion(schemaVersion);
+
         final result = await validationDb.rawQuery('PRAGMA integrity_check');
         final integrity = result.isNotEmpty
             ? result.first.values.first.toString().toLowerCase()
