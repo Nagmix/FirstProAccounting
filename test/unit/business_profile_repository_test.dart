@@ -76,6 +76,40 @@ void main() {
     }
   });
 
+  test('saving typed profile synchronizes the default currency marker', () async {
+    final (db, repository) = await createRepository();
+    try {
+      final profile = BusinessProfile(
+        businessName: 'متجر متعدد العملات',
+        phone: null,
+        email: null,
+        address: null,
+        logoPath: null,
+        countryCode: 'YE',
+        baseCurrencyCode: 'USD',
+        locale: 'ar',
+        timezone: 'Asia/Aden',
+        taxMode: 'none',
+        setupStatus: 'completed',
+        setupVersion: 1,
+        source: 'onboarding',
+      );
+
+      await repository.saveProfile(profile);
+
+      final currencies = await db.query(
+        'currencies',
+        columns: ['code', 'is_default'],
+        where: 'code IN (?, ?)',
+        whereArgs: ['YER', 'USD'],
+      );
+      expect(currencies.firstWhere((row) => row['code'] == 'USD')['is_default'], 1);
+      expect(currencies.firstWhere((row) => row['code'] == 'YER')['is_default'], 0);
+    } finally {
+      await db.close();
+    }
+  });
+
   test('saving typed profile is idempotent and locks base currency after posted data', () async {
     final (db, repository) = await createRepository();
     try {

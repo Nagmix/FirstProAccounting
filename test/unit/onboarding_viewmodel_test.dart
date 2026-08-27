@@ -43,7 +43,15 @@ void main() {
       expect(viewModel.needsOnboarding, isTrue);
       expect(viewModel.countryCode, 'YE');
       expect(viewModel.baseCurrencyCode, 'YER');
+      expect(viewModel.taxMode, 'none');
       expect(viewModel.canSave, isFalse);
+
+      viewModel.setCountryCode('YE');
+      viewModel.setBaseCurrencyCode('USD');
+      viewModel.setTaxMode('standard');
+      expect(viewModel.countryCode, 'YE');
+      expect(viewModel.baseCurrencyCode, 'USD');
+      expect(viewModel.taxMode, 'standard');
 
       viewModel.setBusinessName('متجر البداية');
       viewModel.toggleCapability('sell', true);
@@ -56,6 +64,8 @@ void main() {
 
       expect(viewModel.needsOnboarding, isFalse);
       expect((await db.query('business_profile')), hasLength(1));
+      expect((await db.query('business_profile')).single['base_currency_code'], 'USD');
+      expect((await db.query('business_profile')).single['tax_mode'], 'standard');
       expect(
         await CapabilityRepository(DatabaseHelper()).getEnabledCodes(),
         containsAll({'sell', 'service', 'settle'}),
