@@ -42,6 +42,35 @@ void main() {
     expect(repository.lastSetEnabled, isTrue);
   });
 
+  testWidgets('named route table also guards a hidden route', (tester) async {
+    final repository = _FakeCapabilityRepository();
+    final service = FeatureVisibilityService(repository);
+    await service.load();
+    await locator.reset();
+    locator.registerSingleton<FeatureVisibilityService>(service);
+    addTearDown(locator.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        routes: AppRouter.routes,
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => Navigator.of(context).pushNamed(
+              AppConstants.serviceOrders,
+            ),
+            child: const Text('فتح بالاسم'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('فتح بالاسم'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('هذه الوظيفة مخفية حالياً'), findsOneWidget);
+    expect(find.text('إظهار الوظيفة'), findsOneWidget);
+  });
+
   testWidgets('replace also guards a hidden route', (tester) async {
     final repository = _FakeCapabilityRepository();
     final service = FeatureVisibilityService(repository);
