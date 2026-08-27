@@ -70,6 +70,28 @@ class BusinessProfileRepository {
           ? existing.first['created_at'] as String? ?? now
           : now;
 
+      final matchingCurrency = await txn.query(
+        'currencies',
+        columns: ['code'],
+        where: 'code = ?',
+        whereArgs: [profile.baseCurrencyCode],
+        limit: 1,
+      );
+      if (matchingCurrency.isEmpty) {
+        throw ArgumentError.value(
+          profile.baseCurrencyCode,
+          'baseCurrencyCode',
+          'currency does not exist',
+        );
+      }
+      await txn.update('currencies', {'is_default': 0});
+      await txn.update(
+        'currencies',
+        {'is_default': 1},
+        where: 'code = ?',
+        whereArgs: [profile.baseCurrencyCode],
+      );
+
       await txn.insert(
         'business_profile',
         {

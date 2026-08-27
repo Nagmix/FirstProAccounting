@@ -20,6 +20,9 @@ class OnboardingViewModel extends ChangeNotifier {
   bool _needsOnboarding = false;
   String? _errorMessage;
   String _businessName = '';
+  String _countryCode = 'YE';
+  String _baseCurrencyCode = 'YER';
+  String _taxMode = 'none';
 
   BusinessProfile? get profile => _profile;
   bool get isLoading => _isLoading;
@@ -27,8 +30,9 @@ class OnboardingViewModel extends ChangeNotifier {
   bool get needsOnboarding => _needsOnboarding;
   String? get errorMessage => _errorMessage;
   String get businessName => _businessName;
-  String get countryCode => _profile?.countryCode ?? 'YE';
-  String get baseCurrencyCode => _profile?.baseCurrencyCode ?? 'YER';
+  String get countryCode => _countryCode;
+  String get baseCurrencyCode => _baseCurrencyCode;
+  String get taxMode => _taxMode;
   Set<String> get selectedCapabilities => Set.unmodifiable(_selectedCapabilities);
 
   bool get canSave =>
@@ -44,6 +48,9 @@ class OnboardingViewModel extends ChangeNotifier {
     try {
       _profile = await profileRepository.getOrCreateProfile();
       _businessName = _profile?.businessName ?? '';
+      _countryCode = _profile?.countryCode ?? 'YE';
+      _baseCurrencyCode = _profile?.baseCurrencyCode ?? 'YER';
+      _taxMode = _profile?.taxMode ?? 'none';
       _selectedCapabilities
         ..clear()
         ..addAll(await capabilityRepository.getEnabledCodes());
@@ -59,6 +66,32 @@ class OnboardingViewModel extends ChangeNotifier {
 
   void setBusinessName(String value) {
     _businessName = value;
+    notifyListeners();
+  }
+
+  void setCountryCode(String value) {
+    final normalized = value.trim().toUpperCase();
+    if (normalized.length != 2) {
+      throw ArgumentError.value(value, 'value', 'countryCode must be ISO-3166 alpha-2');
+    }
+    _countryCode = normalized;
+    notifyListeners();
+  }
+
+  void setBaseCurrencyCode(String value) {
+    final normalized = value.trim().toUpperCase();
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(value, 'value', 'baseCurrencyCode is required');
+    }
+    _baseCurrencyCode = normalized;
+    notifyListeners();
+  }
+
+  void setTaxMode(String value) {
+    if (value != 'none' && value != 'standard') {
+      throw ArgumentError.value(value, 'value', 'unsupported tax mode');
+    }
+    _taxMode = value;
     notifyListeners();
   }
 
@@ -96,6 +129,9 @@ class OnboardingViewModel extends ChangeNotifier {
       );
       final updated = current.copyWith(
         businessName: _businessName.trim(),
+        countryCode: _countryCode,
+        baseCurrencyCode: _baseCurrencyCode,
+        taxMode: _taxMode,
         setupStatus: 'completed',
         source: 'onboarding',
       );
