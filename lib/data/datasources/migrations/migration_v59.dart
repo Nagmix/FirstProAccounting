@@ -148,5 +148,93 @@ class MigrationV59 {
       'CREATE INDEX IF NOT EXISTS idx_migration_runs_status '
       'ON migration_runs(status)',
     );
+
+    await _backfillLegacySetup(db);
+  }
+
+  static Future<void> _backfillLegacySetup(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    final businessName = await _readSetting(db, 'business_name');
+    final configuredCurrency = await _readSetting(db, 'default_currency');
+    final baseCurrency = await _resolveActiveCurrency(
+      db,
+      configuredCurrency,
+    );
+
+    await db.insert(
+      'business_profile',
+      {
+        'id': 1,
+        'business_name': businessName,
+        'country_code': 'YE',
+        'base_currency_code': baseCurrency,
+        'locale': 'ar',
+        'timezone': 'Asia/Aden',
+        'tax_mode': 'none',
+        'setup_status': 'not_started',
+        'setup_version': 1,
+        'source': 'migration',
+        'created_at': now,
+        'updated_at': now,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+
+    for (final code in const ['backup', 'settings', 'audit']) {
+      await db.insert(
+        'business_capabilities',
+        {
+          'capability_code': code,
+          'enabled': 1,
+          'source': 'migration',
+          'definition_version': 1,
+          'enabled_at': now,
+          'created_at': now,
+          'updated_at': now,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+  }
+
+  static Future<String?> _readSetting(Database db, String key) async {
+    try {
+      final rows = await db.query(
+        'settings',
+        columns: ['value'],
+        where: 'key = ?',
+        whereArgs: [key],
+        limit: 1,
+      );
+      return rows.isEmpty ? null : rows.single['value'] as String?;
+    } on DatabaseException {
+      return null;
+    }
+  }
+
+  static Future<String> _resolveActiveCurrency(
+    Database db,
+    String? configuredCode,
+  ) async {
+    if (configuredCode != null && configuredCode.trim().isNotEmpty) {
+      final configured = await db.query(
+        'currencies',
+        columns: ['code'],
+        where: 'code = ? AND is_active = 1',
+        whereArgs: [configuredCode.trim().toUpperCase()],
+        limit: 1,
+      );
+      if (configured.isNotEmpty) return configured.single['code'] as String;
+    }
+
+    final defaults = await db.query(
+      'currencies',
+      columns: ['code'],
+      where: 'is_default = 1 AND is_active = 1',
+      orderBy: 'id ASC',
+      limit: 1,
+    );
+    if (defaults.isNotEmpty) return defaults.single['code'] as String;
+    return 'YER';
   }
 }
