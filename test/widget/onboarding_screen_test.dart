@@ -8,7 +8,7 @@ import 'package:firstpro/data/models/business_profile_model.dart';
 import 'package:firstpro/ui/screens/onboarding/onboarding_screen.dart';
 
 void main() {
-  testWidgets('onboarding presents simple multi-capability setup and completes',
+  testWidgets('onboarding completes after reviewing preferences',
       (tester) async {
     final profileRepository = _FakeBusinessProfileRepository(
       profile: _migrationProfile(),
@@ -45,24 +45,20 @@ void main() {
     await tester.tap(serviceTile);
     await tester.pump();
 
-    expect(find.text('متابعة'), findsOneWidget);
-    expect(
-      tester
-          .widget<ElevatedButton>(
-            find.widgetWithText(ElevatedButton, 'متابعة'),
-          )
-          .onPressed,
-      isNotNull,
-    );
-
-    final continueButton = find.widgetWithText(ElevatedButton, 'متابعة');
+    final firstNextButton = find.widgetWithText(ElevatedButton, 'التالي');
     await tester.scrollUntilVisible(
-      continueButton,
+      firstNextButton,
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    tester.widget<ElevatedButton>(continueButton).onPressed!();
-    await tester.pump();
+    await tester.tap(firstNextButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'حفظ وبدء الاستخدام'));
+    await tester.pumpAndSettle();
 
     expect(completed, isTrue);
     expect(profileRepository.savedProfile?.businessName, 'متجر البداية');
@@ -104,19 +100,19 @@ void main() {
     );
 
     await tester.tap(firstNextButton);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('البلد والعملة'), findsOneWidget);
     expect(find.text('اليمن'), findsOneWidget);
     expect(find.text('الريال اليمني'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('طريقة الضريبة'), findsOneWidget);
     expect(find.text('بدون ضريبة'), findsOneWidget);
     expect(find.text('ضريبة قياسية'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('مراجعة الإعدادات'), findsOneWidget);
     expect(find.text('متجر البداية'), findsOneWidget);
     expect(find.text('YER'), findsOneWidget);
