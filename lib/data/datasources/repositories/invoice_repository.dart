@@ -1997,6 +1997,14 @@ class InvoiceRepository {
             }
           }
         }
+        final snapshot = taxSnapshot;
+        if (snapshot != null) {
+          await _taxPolicyResolver!.saveSnapshotInTransaction(
+            txn,
+            snapshot,
+            now: now,
+          );
+        }
       });
     } catch (e) {
       // If the error is already a closed-fiscal-year message, pass it through
@@ -3218,13 +3226,6 @@ class InvoiceRepository {
           txn,
           journalId,
         );
-        if (taxSnapshot != null) {
-          await _taxPolicyResolver!.saveSnapshotInTransaction(
-            txn,
-            taxSnapshot!,
-            now: now,
-          );
-        }
       });
       // Log audit event for invoice cancellation
       await _dbHelper.audit.logAuditEvent(
