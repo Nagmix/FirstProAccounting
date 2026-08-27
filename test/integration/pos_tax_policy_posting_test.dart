@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:firstpro/core/di/service_locator.dart';
+import 'package:firstpro/core/utils/money_helper.dart';
+import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
 import 'package:firstpro/core/finance/tax_policy_resolver.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/migrations/schema.dart';
@@ -65,6 +67,43 @@ void main() {
       requiresConfirmation: false,
       isActive: true,
     ));
+    for (final code in const ['1100', '1300', '2300', '3200', '4100']) {
+      final accountType = code.startsWith('4')
+          ? 'REVENUE'
+          : (code.startsWith('2') ? 'LIABILITY' : (code.startsWith('3') ? 'EXPENSE' : 'ASSET'));
+      await db.insert('accounts', {
+        'name_ar': 'حساب $code',
+        'name_en': 'Account $code',
+        'account_code': code,
+        'account_type': accountType,
+        'balance': 0,
+        'currency': 'YER',
+        'balance_type': accountType == 'REVENUE' || accountType == 'LIABILITY' ? 'credit' : 'debit',
+        'is_active': 1,
+        'is_system': 1,
+        'created_at': '2026-08-26T10:00:00.000Z',
+        'updated_at': '2026-08-26T10:00:00.000Z',
+      });
+    }
+    final productId = await db.insert('products', {
+      'item_code': 'POS-TAX-ITEM-1',
+      'name_ar': 'صنف POS ضريبي',
+      'name_en': 'POS taxed item',
+      'cost_price': MoneyHelper.toCents(20),
+      'average_cost': MoneyHelper.toCents(20),
+      'sell_price': MoneyHelper.toCents(1000),
+      'current_stock': 2.0,
+      'track_stock': 1,
+      'product_kind': 'stock',
+      'is_active': 1,
+      'is_sellable': 1,
+      'is_purchasable': 1,
+      'allow_negative': 0,
+      'currency': 'YER',
+      'costing_method': 'weighted_average',
+      'created_at': '2026-08-26T10:00:00.000Z',
+      'updated_at': '2026-08-26T10:00:00.000Z',
+    });
     final cashBoxId = await db.insert('cash_boxes', {
       'name': 'صندوق POS',
       'type': 'cash_box',
@@ -106,6 +145,17 @@ void main() {
       'is_posted': 0,
       'created_at': '2026-08-26T10:00:00.000Z',
     });
+    await db.insert('invoice_items', {
+      'invoice_id': 'POS-TAX-POST-1',
+      'product_id': productId,
+      'product_name': 'صنف POS ضريبي',
+      'quantity': 1.0,
+      'unit_price': MoneyHelper.toCents(1000),
+      'total_price': MoneyHelper.toCents(1000),
+      'unit_cost': MoneyHelper.toCents(20),
+      'base_quantity': 1.0,
+      'conversion_factor': 1.0,
+    });
 
     final service = ShiftService(
       dbHelper,
@@ -122,5 +172,41 @@ void main() {
     expect(snapshot['transport_taxable'], 1);
     expect(snapshot['taxable_transport_minor'], 100);
     expect(snapshot['tax_minor'], 110);
+
+    await InvoiceRepository(dbHelper).cancelInvoice('POS-TAX-POST-1');
+    final reversalRecord = (await db.query(
+      'document_reversals',
+      columns: ['reversal_journal_id'],
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['invoice', 'POS-TAX-POST-1'],
+    )).single;
+    final reversalRows = await db.query(
+      'transactions',
+      where: 'journal_id = ?',
+      whereArgs: [reversalRecord['reversal_journal_id']],
+    );
+    int totalFor(String code, String side) => reversalRows
+        .where((row) => row['account_id'] != null)
+        .where((row) => (side == 'debit' ? row['debit'] : row['credit']) != 0)
+        .fold<int>(0, (sum, row) => sum + ((side == 'debit' ? row['debit'] : row['credit']) as num).toInt());
+    final accountRows = await db.query('accounts', columns: ['id', 'account_code']);
+    int amountForCode(String code, String side) {
+      final accountId = accountRows.singleWhere((row) => row['account_code'] == code)['id'];
+      return reversalRows
+          .where((row) => row['account_id'] == accountId)
+          .fold<int>(0, (sum, row) => sum + ((side == 'debit' ? row['debit'] : row['credit']) as num).toInt());
+    }
+    expect(totalFor('ignored', 'debit'), MoneyHelper.toCents(1230));
+    expect(totalFor('ignored', 'credit'), MoneyHelper.toCents(1230));
+    expect(amountForCode('4100', 'debit'), MoneyHelper.toCents(1100));
+    expect(amountForCode('2300', 'debit'), MoneyHelper.toCents(110));
+    expect(amountForCode('1100', 'credit'), MoneyHelper.toCents(1210));
+    expect((await db.query('products', where: 'id = ?', whereArgs: [productId])).single['current_stock'], 2.0);
+    final snapshotAfter = (await db.query(
+      'document_tax_snapshots',
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['invoice', 'POS-TAX-POST-1'],
+    )).single;
+    expect(snapshotAfter, snapshot);
   });
 }
