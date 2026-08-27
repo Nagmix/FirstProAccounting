@@ -96,8 +96,14 @@ void main() {
     await tester.tap(find.byType(CheckboxListTile).first);
     await tester.pump();
     expect(find.text('الخطوة 1 من 4'), findsOneWidget);
+    final firstNextButton = find.widgetWithText(ElevatedButton, 'التالي');
+    await tester.scrollUntilVisible(
+      firstNextButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.tap(firstNextButton);
     await tester.pump();
     expect(find.text('البلد والعملة'), findsOneWidget);
     expect(find.text('اليمن'), findsOneWidget);
