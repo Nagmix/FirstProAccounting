@@ -2184,6 +2184,9 @@ class InvoiceRepository {
           where: 'id = ?', whereArgs: [invoiceId], limit: 1);
       if (invRows.isEmpty) return 0;
       final inv = invRows.first;
+      if (inv['status'] != 'draft' || inv['is_posted'] == 1) {
+        throw StateError('Only draft invoices can be deleted.');
+      }
       final type = inv['type'] as String? ?? 'sale';
       final isReturn = (inv['is_return'] as int? ?? 0) == 1;
 
@@ -2325,6 +2328,9 @@ class InvoiceRepository {
         where: 'id = ?', whereArgs: [invoiceId], limit: 1);
     if (invoiceRows.isEmpty) return;
     final invoice = invoiceRows.first;
+    if (invoice['status'] == 'cancelled' || invoice['is_posted'] != 1) {
+      throw StateError('Payments are allowed only for posted, active invoices.');
+    }
 
     final currentRemaining = MoneyHelper.readMoney(invoice['remaining']);
     final currentPaid = MoneyHelper.readMoney(invoice['paid_amount']);
