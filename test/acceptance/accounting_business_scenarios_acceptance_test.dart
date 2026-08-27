@@ -383,11 +383,30 @@ void main() {
       where: 'description LIKE ?',
       whereArgs: ['إلغاء فاتورة%SALE-CANCEL-ACCEPT-001'],
     );
+    final reversalRecords = await db.query(
+      'document_reversals',
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['invoice', 'SALE-CANCEL-ACCEPT-001'],
+    );
     expect(row['status'], 'cancelled');
     expect((product['current_stock'] as num).toDouble(), closeTo(5, 0.001));
     expect(original, isNotEmpty);
     expect(reversals, isNotEmpty);
     expect(_debitTotal(reversals), _creditTotal(reversals));
+    expect(reversalRecords, hasLength(1));
+    expect(reversalRecords.single['reason'], isNotEmpty);
+    await expectLater(
+      invoices.cancelInvoice('SALE-CANCEL-ACCEPT-001'),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      await db.query(
+        'document_reversals',
+        where: 'document_type = ? AND document_id = ?',
+        whereArgs: ['invoice', 'SALE-CANCEL-ACCEPT-001'],
+      ),
+      hasLength(1),
+    );
   });
 }
 
