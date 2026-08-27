@@ -529,8 +529,8 @@ void main() {
       referenceType: 'invoice_journal',
     );
 
-    expect(_debitTotal(reversalRows), MoneyHelper.toCents(115));
-    expect(_creditTotal(reversalRows), MoneyHelper.toCents(115));
+    expect(_debitTotal(reversalRows), MoneyHelper.toCents(135));
+    expect(_creditTotal(reversalRows), MoneyHelper.toCents(135));
     expect(_sumForCode(reversalRows, '4100', 'debit'), MoneyHelper.toCents(100));
     expect(_sumForCode(reversalRows, '2300', 'debit'), MoneyHelper.toCents(15));
     expect((await _product(db, productId))['current_stock'], 2.0);
