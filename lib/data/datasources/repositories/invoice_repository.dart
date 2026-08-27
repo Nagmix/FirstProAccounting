@@ -2677,6 +2677,10 @@ class InvoiceRepository {
             where: 'account_code = ? AND currency = ?',
             whereArgs: [(2300 + codeOffset).toString(), invoiceCurrency],
             limit: 1);
+        final vatReceivableAccount = await txn.query('accounts',
+            where: 'account_code = ? AND currency = ?',
+            whereArgs: [(1400 + codeOffset).toString(), invoiceCurrency],
+            limit: 1);
 
         final salesAccountId =
             salesAccount.isNotEmpty ? salesAccount.first['id'] as int : null;
@@ -2694,6 +2698,9 @@ class InvoiceRepository {
             : null;
         final vatPayableAccountId = vatPayableAccount.isNotEmpty
             ? vatPayableAccount.first['id'] as int
+            : null;
+        final vatReceivableAccountId = vatReceivableAccount.isNotEmpty
+            ? vatReceivableAccount.first['id'] as int
             : null;
 
         // Determine original debit/credit accounts and handle partial payments
@@ -2905,23 +2912,41 @@ class InvoiceRepository {
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, suppliersAccountId, remainingAmount, 0.0, now);
             }
-            if (purchasesAccountId != null && total > 0) {
+            if (purchasesAccountId != null && netRevenue > 0) {
               await txn.insert('transactions', {
                 'account_id': purchasesAccountId,
                 'journal_id': journalId,
                 'debit': 0,
-                'credit': MoneyHelper.toCents(total),
-                'description': 'إلغاء فاتورة مشتريات - $id',
+                'credit': MoneyHelper.toCents(netRevenue),
+                'description': 'إلغاء صافي فاتورة مشتريات - $id',
                 'date': now,
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': toBaseMinorUnits(total),
+                'amount_base': toBaseMinorUnits(netRevenue),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
-                  txn, purchasesAccountId, 0.0, total, now);
+                  txn, purchasesAccountId, 0.0, netRevenue, now);
+            }
+            if (vatReceivableAccountId != null && taxAmount > 0) {
+              await txn.insert('transactions', {
+                'account_id': vatReceivableAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(taxAmount),
+                'description': 'إلغاء ضريبة مشتريات - $id',
+                'date': now,
+                'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': toBaseMinorUnits(taxAmount),
+                'reference_type': 'invoice_journal',
+                'reference_id': journalId.toString(),
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, vatReceivableAccountId, 0.0, taxAmount, now);
             }
           } else if (isReturn) {
             // Reverse purchase return: Debit Purchases (original credit), Credit Cash/Supplier (original debit)
@@ -2987,23 +3012,41 @@ class InvoiceRepository {
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, originalCreditAccountId, total, 0.0, now);
             }
-            if (purchasesAccountId != null && total > 0) {
+            if (purchasesAccountId != null && netRevenue > 0) {
               await txn.insert('transactions', {
                 'account_id': purchasesAccountId,
                 'journal_id': journalId,
                 'debit': 0,
-                'credit': MoneyHelper.toCents(total),
-                'description': 'إلغاء فاتورة مشتريات - $id',
+                'credit': MoneyHelper.toCents(netRevenue),
+                'description': 'إلغاء صافي فاتورة مشتريات - $id',
                 'date': now,
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': toBaseMinorUnits(total),
+                'amount_base': toBaseMinorUnits(netRevenue),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
-                  txn, purchasesAccountId, 0.0, total, now);
+                  txn, purchasesAccountId, 0.0, netRevenue, now);
+            }
+            if (vatReceivableAccountId != null && taxAmount > 0) {
+              await txn.insert('transactions', {
+                'account_id': vatReceivableAccountId,
+                'journal_id': journalId,
+                'debit': 0,
+                'credit': MoneyHelper.toCents(taxAmount),
+                'description': 'إلغاء ضريبة مشتريات - $id',
+                'date': now,
+                'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': toBaseMinorUnits(taxAmount),
+                'reference_type': 'invoice_journal',
+                'reference_id': journalId.toString(),
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, vatReceivableAccountId, 0.0, taxAmount, now);
             }
           }
         }
