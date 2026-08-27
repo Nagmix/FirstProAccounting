@@ -325,8 +325,8 @@ void main() {
       where: 'id = ?',
       whereArgs: [cashBoxId],
     )).single;
-    expect(MoneyHelper.readMoney(row['paid_amount']), 0.4);
-    expect(MoneyHelper.readMoney(row['remaining']), 0.6);
+    expect(MoneyHelper.readMoney(row['paid_amount']), 40.0);
+    expect(MoneyHelper.readMoney(row['remaining']), 60.0);
     expect(row['status'], 'partial');
     expect(cashBox['balance'], MoneyHelper.toCents(40));
   });
@@ -334,6 +334,12 @@ void main() {
   test('cancelling a partially settled credit sale reverses only paid cash and stock',
       () async {
     await _seedAccounts(db, const ['1100', '1200', '1300', '3100', '3200', '4100']);
+    final customerId = await db.insert('customers', {
+      'name': 'عميل إلغاء جزئي',
+      'currency': 'YER',
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
     final cashBoxId = await db.insert('cash_boxes', {
       'name': 'صندوق إلغاء جزئي',
       'type': 'cash_box',
@@ -361,6 +367,7 @@ void main() {
       paidAmount: 0,
     )
       ..['payment_mechanism'] = 'credit'
+      ..['customer_id'] = customerId
       ..['cash_box_id'] = cashBoxId;
 
     await invoices.saveInvoiceWithJournalEntries(
