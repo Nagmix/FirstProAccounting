@@ -6,6 +6,7 @@ import 'package:firstpro/core/utils/money_helper.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/repositories/invoice_repository.dart';
 import 'package:firstpro/data/datasources/repositories/reference_data_repository.dart';
+import 'package:firstpro/core/finance/tax_policy_resolver.dart';
 
 /// F-03: Recurring invoice service.
 ///
@@ -35,7 +36,10 @@ class RecurringInvoiceService {
   final DatabaseHelper _dbHelper;
   final InvoiceRepository _invoiceRepo;
   final ReferenceDataRepository _refRepo;
-  RecurringInvoiceService(this._dbHelper, this._invoiceRepo, this._refRepo);
+  final TaxPolicyResolver? _taxPolicyResolver;
+  RecurringInvoiceService(this._dbHelper, this._invoiceRepo, this._refRepo,
+      {TaxPolicyResolver? taxPolicyResolver})
+      : _taxPolicyResolver = taxPolicyResolver;
 
   Future<Database> get _db => _dbHelper.database;
 
@@ -45,6 +49,7 @@ class RecurringInvoiceService {
     required int transportMinorUnits,
     required int taxRateBasisPoints,
     required bool taxInclusive,
+    bool transportTaxable = false,
   }) {
     return const InvoiceTotalsEngine().calculate(
       subtotalMinorUnits: subtotalMinorUnits,
@@ -52,6 +57,7 @@ class RecurringInvoiceService {
       transportMinorUnits: transportMinorUnits,
       taxRateBasisPoints: taxRateBasisPoints,
       taxInclusive: taxInclusive,
+      transportTaxable: transportTaxable,
     );
   }
 
@@ -401,15 +407,36 @@ class RecurringInvoiceService {
     final transportMinorUnits = MoneyHelper.toCents(
       MoneyHelper.readMoney(template['transport_charges']),
     );
-    final taxRateBasisPoints = (template['tax_rate_bps'] as num?)?.toInt() ??
+    final profileRows = _taxPolicyResolver == null
+        ? const <Map<String, dynamic>>[]
+        : await db.query(
+            'business_profile',
+            columns: ['country_code'],
+            where: 'id = 1',
+            limit: 1,
+          );
+    final countryCode = profileRows.isEmpty
+        ? 'YE'
+        : (profileRows.first['country_code'] as String? ?? 'YE');
+    final taxProfile = _taxPolicyResolver == null
+        ? null
+        : await _taxPolicyResolver!.resolveFor(
+            date: runDate,
+            countryCode: countryCode,
+          );
+    final taxRateBasisPoints = taxProfile?.rateBasisPoints ??
+        (template['tax_rate_bps'] as num?)?.toInt() ??
         (((template['vat_rate'] as num?)?.toDouble() ?? 0.0) * 100).round();
+    final taxInclusive = taxProfile == null
+        ? template['tax_inclusive'] == true || template['tax_inclusive'] == 1
+        : taxProfile.calculationMethod == 'inclusive';
     final totals = calculateTemplateTotals(
       subtotalMinorUnits: subtotalMinorUnits,
       discountMinorUnits: discountMinorUnits,
       transportMinorUnits: transportMinorUnits,
       taxRateBasisPoints: taxRateBasisPoints,
-      taxInclusive: template['tax_inclusive'] == true ||
-          template['tax_inclusive'] == 1,
+      taxInclusive: taxInclusive,
+      transportTaxable: taxProfile?.transportTaxable ?? false,
     );
     final subtotal = MoneyHelper.fromCents(totals.subtotalMinorUnits);
     final discountAmount = MoneyHelper.fromCents(totals.discountMinorUnits);
@@ -439,6 +466,7 @@ class RecurringInvoiceService {
       'exchange_rate': template['exchange_rate'] ?? 1.0,
       'notes': template['notes'],
       'is_posted': 1,
+      'tax_inclusive': taxInclusive,
       'created_at': runDate.toIso8601String(),
     };
 

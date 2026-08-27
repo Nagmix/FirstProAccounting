@@ -154,6 +154,7 @@ Future<void> setupLocator() async {
       locator<DatabaseHelper>(),
       locator<InvoiceRepository>(),
       locator<ReferenceDataRepository>(),
+      taxPolicyResolver: locator<TaxPolicyResolver>(),
     ),
   );
   locator.registerLazySingleton<ServiceOrderService>(
