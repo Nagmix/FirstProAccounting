@@ -536,6 +536,55 @@ void main() {
     expect((await _product(db, productId))['current_stock'], 0.0);
   });
 
+  test('cancelling a partially paid taxed sale reverses net revenue and VAT separately', () async {
+    await _seedAccounts(db, const ['1100', '1200', '1300', '2300', '3200', '4100']);
+    final productId = await _createProduct(
+      db,
+      code: 'CANCEL-PARTIAL-TAX-001',
+      name: 'صنف بيع جزئي ضريبي',
+      averageCost: 20,
+      costPrice: 20,
+      currentStock: 2,
+    );
+    final invoices = InvoiceRepository(dbHelper);
+    await invoices.saveInvoiceWithJournalEntries(
+      _invoice(
+        id: 'SALE-CANCEL-PARTIAL-TAX-001',
+        type: 'sale',
+        subtotal: 100,
+        tax: 15,
+        total: 115,
+        paidAmount: 40,
+      ),
+      [_item('SALE-CANCEL-PARTIAL-TAX-001', productId, quantity: 1, unitPrice: 100, total: 100, unitCost: 20)],
+      invoiceType: 'sale',
+      paymentMechanism: 'cash',
+      isReturn: false,
+      paidAmount: 40,
+    );
+
+    await invoices.cancelInvoice('SALE-CANCEL-PARTIAL-TAX-001');
+    final reversal = (await db.query(
+      'document_reversals',
+      columns: ['reversal_journal_id'],
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['invoice', 'SALE-CANCEL-PARTIAL-TAX-001'],
+    )).single;
+    final reversalRows = await _journalRows(
+      db,
+      (reversal['reversal_journal_id'] as num).toInt().toString(),
+      referenceType: 'invoice_journal',
+    );
+
+    expect(_debitTotal(reversalRows), MoneyHelper.toCents(135));
+    expect(_creditTotal(reversalRows), MoneyHelper.toCents(135));
+    expect(_sumForCode(reversalRows, '4100', 'debit'), MoneyHelper.toCents(100));
+    expect(_sumForCode(reversalRows, '2300', 'debit'), MoneyHelper.toCents(15));
+    expect(_sumForCode(reversalRows, '1100', 'credit'), MoneyHelper.toCents(40));
+    expect(_sumForCode(reversalRows, '1200', 'credit'), MoneyHelper.toCents(75));
+    expect((await _product(db, productId))['current_stock'], 2.0);
+  });
+
   test('cancelling a taxed sale reverses VAT separately from revenue', () async {
     await _seedAccounts(db, const ['1100', '1200', '1300', '2300', '3200', '4100']);
     final productId = await _createProduct(
