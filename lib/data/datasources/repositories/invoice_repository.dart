@@ -2671,7 +2671,7 @@ class InvoiceRepository {
         // Check for partial payment (same logic as saveInvoiceWithJournalEntries)
         final paidAmount = MoneyHelper.readMoney(invoice['paid_amount']);
         final remainingAmount = MoneyHelper.readMoney(invoice['remaining']);
-        final isPartialCash = paymentMechanism == 'cash' &&
+        final isPartialCash = cashBoxId != null &&
             paidAmount > 0.005 &&
             remainingAmount > 0.005;
 
