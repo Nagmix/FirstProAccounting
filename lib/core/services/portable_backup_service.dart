@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 
 import 'package:firstpro/core/security/db_encryption.dart';
-import 'package:firstpro/core/services/portable_backup_compatibility.dart';
+import 'package:firstpro/core/services/portable_backup_database_validator.dart';
 import 'package:firstpro/core/services/portable_backup_file_committer.dart';
 import 'package:firstpro/core/services/portable_backup_path_policy.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -151,29 +151,16 @@ class PortableBackupService {
 
     try {
       await File(stagedDatabasePath).writeAsBytes(databaseBytes, flush: true);
-      final validationDb = await sqflite.openDatabase(
-        stagedDatabasePath,
-        version: 1,
-        readOnly: true,
-        password: dbKey,
+      await PortableBackupDatabaseValidator.validate(
+        path: stagedDatabasePath,
+        key: dbKey,
+        openDatabase: (path, key) => sqflite.openDatabase(
+          path,
+          version: 1,
+          readOnly: true,
+          password: key,
+        ),
       );
-      try {
-        final versionRows = await validationDb.rawQuery('PRAGMA user_version');
-        final schemaVersion = versionRows.isNotEmpty
-            ? (versionRows.first.values.first as num?)?.toInt() ?? 0
-            : 0;
-        PortableBackupCompatibility.validateSchemaVersion(schemaVersion);
-
-        final result = await validationDb.rawQuery('PRAGMA integrity_check');
-        final integrity = result.isNotEmpty
-            ? result.first.values.first.toString().toLowerCase()
-            : '';
-        if (integrity != 'ok') {
-          throw const FormatException('قاعدة النسخة المحمولة تالفة');
-        }
-      } finally {
-        await validationDb.close();
-      }
 
       final stagedAttachmentsDir = Directory(stagedAttachmentsPath);
       if (await stagedAttachmentsDir.exists()) {
