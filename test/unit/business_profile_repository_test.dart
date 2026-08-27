@@ -113,7 +113,49 @@ void main() {
     }
   });
 
-  test('saving typed profile is idempotent and locks base currency after posted data', () async {
+  test('saving typed profile rejects an inactive base currency atomically', () async {
+    final (db, repository) = await createRepository();
+    try {
+      await db.update(
+        'currencies',
+        {'is_active': 0},
+        where: 'code = ?',
+        whereArgs: ['USD'],
+      );
+      final profile = BusinessProfile(
+        businessName: 'متجر عملة غير فعالة',
+        phone: null,
+        email: null,
+        address: null,
+        logoPath: null,
+        countryCode: 'YE',
+        baseCurrencyCode: 'USD',
+        locale: 'ar',
+        timezone: 'Asia/Aden',
+        taxMode: 'none',
+        setupStatus: 'completed',
+        setupVersion: 1,
+        source: 'onboarding',
+      );
+
+      await expectLater(
+        repository.saveProfile(profile),
+        throwsA(isA<ArgumentError>()),
+      );
+      final currencies = await db.query(
+        'currencies',
+        columns: ['code', 'is_default', 'is_active'],
+        where: 'code IN (?, ?)',
+        whereArgs: ['YER', 'USD'],
+      );
+      expect(currencies.firstWhere((row) => row['code'] == 'YER')['is_default'], 1);
+      expect(currencies.firstWhere((row) => row['code'] == 'USD')['is_default'], 0);
+    } finally {
+      await db.close();
+    }
+  });
+
+  test('saving typed profile is idempotent and locks base currency after posted data', async () {
     final (db, repository) = await createRepository();
     try {
       final profile = BusinessProfile(
