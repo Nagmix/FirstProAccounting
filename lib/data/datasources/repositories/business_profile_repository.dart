@@ -61,7 +61,7 @@ class BusinessProfileRepository {
     await db.transaction((txn) async {
       final existing = await txn.query(
         'business_profile',
-        columns: ['created_at'],
+        columns: ['created_at', 'base_currency_code'],
         where: 'id = ?',
         whereArgs: [1],
         limit: 1,
@@ -69,12 +69,26 @@ class BusinessProfileRepository {
       final createdAt = existing.isNotEmpty
           ? existing.first['created_at'] as String? ?? now
           : now;
+      final normalizedBaseCurrencyCode =
+          profile.baseCurrencyCode.trim().toUpperCase();
+      final existingBaseCurrencyCode = existing.isNotEmpty
+          ? (existing.first['base_currency_code'] as String?)
+              ?.trim()
+              .toUpperCase()
+          : null;
+      if (existingBaseCurrencyCode != null &&
+          existingBaseCurrencyCode != normalizedBaseCurrencyCode &&
+          await _hasPostedFinancialData(txn)) {
+        throw StateError(
+          'Base currency cannot be changed after financial data has been posted',
+        );
+      }
 
       final matchingCurrency = await txn.query(
         'currencies',
         columns: ['code'],
         where: 'code = ? AND is_active = 1',
-        whereArgs: [profile.baseCurrencyCode.trim().toUpperCase()],
+        whereArgs: [normalizedBaseCurrencyCode],
         limit: 1,
       );
       if (matchingCurrency.isEmpty) {
@@ -89,7 +103,7 @@ class BusinessProfileRepository {
         'currencies',
         {'is_default': 1},
         where: 'code = ?',
-        whereArgs: [profile.baseCurrencyCode],
+        whereArgs: [normalizedBaseCurrencyCode],
       );
 
       await txn.insert(
@@ -102,7 +116,7 @@ class BusinessProfileRepository {
           'address': profile.address,
           'logo_path': profile.logoPath,
           'country_code': profile.countryCode,
-          'base_currency_code': profile.baseCurrencyCode,
+          'base_currency_code': normalizedBaseCurrencyCode,
           'locale': profile.locale,
           'timezone': profile.timezone,
           'tax_mode': profile.taxMode,
@@ -120,12 +134,20 @@ class BusinessProfileRepository {
       await _writeLegacySetting(txn, 'business_email', profile.email, now);
       await _writeLegacySetting(txn, 'business_address', profile.address, now);
       await _writeLegacySetting(txn, 'business_logo_path', profile.logoPath, now);
-      await _writeLegacySetting(txn, 'default_currency', profile.baseCurrencyCode, now);
+      await _writeLegacySetting(
+        txn,
+        'default_currency',
+        normalizedBaseCurrencyCode,
+        now,
+      );
     });
   }
 
   Future<bool> hasPostedFinancialData() async {
-    final db = await _db;
+    return _hasPostedFinancialData(await _db);
+  }
+
+  Future<bool> _hasPostedFinancialData(DatabaseExecutor db) async {
     final postedInvoices = await db.rawQuery(
       'SELECT 1 FROM invoices WHERE is_posted = 1 LIMIT 1',
     );
