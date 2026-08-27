@@ -54,6 +54,7 @@ void main() {
           throw StateError('simulated restore failure');
         },
         onRollback: () async {},
+        onRollbackComplete: (databaseWasRestored) async {},
       ),
       throwsA(isA<StateError>()),
     );

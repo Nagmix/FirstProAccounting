@@ -140,19 +140,13 @@ class PortableBackupService {
     final currentKey = await DbEncryption.getOrGenerateKey();
     final rollbackPath = '$dbPath.restore.backup';
     final stagedDatabasePath = '$dbPath.restore.tmp';
-    final rollbackSidecarPaths = <String>[
-      '$dbPath-wal.restore.backup',
-      '$dbPath-shm.restore.backup',
-    ];
-    final liveSidecarPaths = <String>['$dbPath-wal', '$dbPath-shm'];
     final documentsDir = await getApplicationDocumentsDirectory();
     final stagedAttachmentsPath =
         '${p.join(documentsDir.path, 'attachments')}.restore.tmp';
     final attachmentsRoot = p.join(documentsDir.path, 'attachments');
     final attachmentsRollbackPath = '$attachmentsRoot.restore.backup';
-    var databaseRollbackPrepared = false;
-    var attachmentsRollbackPrepared = false;
     var keyChanged = false;
+    var commitStarted = false;
 
     try {
       await File(stagedDatabasePath).writeAsBytes(databaseBytes, flush: true);
@@ -199,89 +193,38 @@ class PortableBackupService {
         await target.writeAsBytes(entry.content as List<int>, flush: true);
       }
 
-      await _dbHelper.resetInstance();
-      final currentFile = File(dbPath);
-      if (await currentFile.exists()) {
-        await currentFile.copy(rollbackPath);
-        databaseRollbackPrepared = true;
-      }
-      for (var i = 0; i < liveSidecarPaths.length; i++) {
-        final live = File(liveSidecarPaths[i]);
-        if (await live.exists()) {
-          await live.copy(rollbackSidecarPaths[i]);
-        }
-      }
-
-      if (await currentFile.exists()) await currentFile.delete();
-      for (final sidecar in liveSidecarPaths) {
-        final file = File(sidecar);
-        if (await file.exists()) await file.delete();
-      }
-      await File(stagedDatabasePath).rename(dbPath);
-      await DbEncryption.setKey(dbKey);
-      keyChanged = true;
-
-      final liveAttachmentsDir = Directory(attachmentsRoot);
-      final stagedDir = Directory(stagedAttachmentsPath);
-      final attachmentsRollbackDir = Directory(attachmentsRollbackPath);
-      if (await attachmentsRollbackDir.exists()) {
-        await attachmentsRollbackDir.delete(recursive: true);
-      }
-      if (await liveAttachmentsDir.exists()) {
-        await liveAttachmentsDir.rename(attachmentsRollbackPath);
-        attachmentsRollbackPrepared = true;
-      }
-      await stagedDir.rename(attachmentsRoot);
-
-      await _dbHelper.database;
-      final rollback = File(rollbackPath);
-      if (await rollback.exists()) await rollback.delete();
-      for (final sidecar in rollbackSidecarPaths) {
-        final file = File(sidecar);
-        if (await file.exists()) await file.delete();
-      }
-      if (await attachmentsRollbackDir.exists()) {
-        await attachmentsRollbackDir.delete(recursive: true);
-      }
+      final committer = PortableBackupFileCommitter(
+        databasePath: dbPath,
+        stagedDatabasePath: stagedDatabasePath,
+        rollbackPath: rollbackPath,
+        attachmentsPath: attachmentsRoot,
+        stagedAttachmentsPath: stagedAttachmentsPath,
+        attachmentsRollbackPath: attachmentsRollbackPath,
+      );
+      commitStarted = true;
+      await committer.commit(
+        afterDatabaseSwap: () async {
+          await DbEncryption.setKey(dbKey);
+          keyChanged = true;
+          await _dbHelper.database;
+        },
+        onRollback: () async {
+          await _dbHelper.resetInstance();
+        },
+        onRollbackComplete: (databaseWasRestored) async {
+          if (keyChanged) await DbEncryption.setKey(currentKey);
+          if (databaseWasRestored) await _dbHelper.database;
+        },
+      );
     } catch (_) {
-      await _dbHelper.resetInstance();
-      final staged = File(stagedDatabasePath);
-      if (await staged.exists()) await staged.delete();
-
-      final current = File(dbPath);
-      final rollback = File(rollbackPath);
-      final rollbackExists = databaseRollbackPrepared && await rollback.exists();
-      if (rollbackExists) {
-        if (await current.exists()) await current.delete();
-        await rollback.rename(dbPath);
-        for (var i = 0; i < liveSidecarPaths.length; i++) {
-          final rollbackSidecar = File(rollbackSidecarPaths[i]);
-          final liveSidecar = File(liveSidecarPaths[i]);
-          if (await rollbackSidecar.exists()) {
-            if (await liveSidecar.exists()) await liveSidecar.delete();
-            await rollbackSidecar.rename(liveSidecar.path);
-          } else if (await liveSidecar.exists()) {
-            await liveSidecar.delete();
-          }
+      if (!commitStarted) {
+        final staged = File(stagedDatabasePath);
+        if (await staged.exists()) await staged.delete();
+        final stagedAttachmentsDir = Directory(stagedAttachmentsPath);
+        if (await stagedAttachmentsDir.exists()) {
+          await stagedAttachmentsDir.delete(recursive: true);
         }
       }
-
-      final liveAttachmentsDir = Directory(attachmentsRoot);
-      final stagedDir = Directory(stagedAttachmentsPath);
-      if (await stagedDir.exists()) {
-        await stagedDir.delete(recursive: true);
-      }
-      final attachmentsRollbackDir = Directory(attachmentsRollbackPath);
-      final restoreRollback = attachmentsRollbackPrepared &&
-          await attachmentsRollbackDir.exists();
-      if (restoreRollback) {
-        if (await liveAttachmentsDir.exists()) {
-          await liveAttachmentsDir.delete(recursive: true);
-        }
-        await attachmentsRollbackDir.rename(attachmentsRoot);
-      }
-      if (keyChanged) await DbEncryption.setKey(currentKey);
-      if (rollbackExists) await _dbHelper.database;
       rethrow;
     }
   }
