@@ -100,7 +100,7 @@ void main() {
       'cost_price': MoneyHelper.toCents(20),
       'average_cost': MoneyHelper.toCents(20),
       'sell_price': MoneyHelper.toCents(1000),
-      'current_stock': 2.0,
+      'current_stock': 1.0,
       'track_stock': 1,
       'product_kind': 'stock',
       'is_active': 1,
@@ -163,6 +163,15 @@ void main() {
       'unit_cost': 20,
       'base_quantity': 1.0,
       'conversion_factor': 1.0,
+    });
+    await db.insert('stock_movements', {
+      'product_id': productId,
+      'movement_type': 'sale',
+      'quantity': -1.0,
+      'reference_type': 'pos',
+      'reference_id': 'POS-TAX-POST-1',
+      'unit_cost': 20,
+      'created_at': '2026-08-26T10:00:00.000Z',
     });
 
     final service = ShiftService(
