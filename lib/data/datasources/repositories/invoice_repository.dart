@@ -9,6 +9,7 @@ import 'package:firstpro/data/models/invoice_model.dart';
 import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 import 'package:firstpro/data/models/product_model.dart';
 import 'package:firstpro/data/models/document_tax_snapshot_model.dart';
+import 'package:firstpro/data/models/document_reversal_model.dart';
 import 'package:firstpro/core/finance/tax_policy_resolver.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
@@ -2567,9 +2568,18 @@ class InvoiceRepository {
       if (invoiceRows.isEmpty) return;
       final invoice = invoiceRows.first;
 
-      // Already cancelled — nothing to do
-      if ((invoice['status'] as String?) == 'cancelled') return;
-
+      if ((invoice['status'] as String?) == 'cancelled') {
+        throw StateError('الفاتورة ملغاة مسبقاً');
+      }
+      final existingReversal = await db.query(
+        'document_reversals',
+        where: 'document_type = ? AND document_id = ?',
+        whereArgs: ['invoice', id],
+        limit: 1,
+      );
+      if (existingReversal.isNotEmpty) {
+        throw StateError('الفاتورة ملغاة مسبقاً');
+      }
       // Check if the invoice date falls in a closed fiscal year
       final invoiceDate =
           invoice['date'] as String? ?? invoice['created_at'] as String;
@@ -2600,6 +2610,16 @@ class InvoiceRepository {
           await locator<BaseCurrencyService>().getOffsetForCurrency(invoiceCurrency);
 
       await db.transaction((txn) async {
+        final duplicateCheck = await txn.query(
+          'document_reversals',
+          where: 'document_type = ? AND document_id = ?',
+          whereArgs: ['invoice', id],
+          limit: 1,
+        );
+        if (duplicateCheck.isNotEmpty) {
+          throw StateError('الفاتورة ملغاة مسبقاً');
+        }
+
         // 1. Set status to cancelled
         await txn.update('invoices', {'status': 'cancelled'},
             where: 'id = ?', whereArgs: [id]);
@@ -3226,6 +3246,18 @@ class InvoiceRepository {
           txn,
           journalId,
         );
+        await txn.insert(
+          'document_reversals',
+          DocumentReversalModel(
+            documentType: 'invoice',
+            documentId: id,
+            originalJournalId: (invoice['journal_id'] as num?)?.toInt(),
+            reversalJournalId: journalId,
+            reason: 'إلغاء الفاتورة',
+            cancelledAt: now,
+            source: 'invoice_repository',
+          ).toMap(),
+        );
       });
       // Log audit event for invoice cancellation
       await _dbHelper.audit.logAuditEvent(
@@ -3240,7 +3272,9 @@ class InvoiceRepository {
     } catch (e) {
       // If the error is already a closed-fiscal-year message, pass it through
       final msg = e.toString();
-      if (msg.contains('سنة مالية مغلقة') || msg.contains('فترة مغلقة')) {
+      if (e is StateError ||
+          msg.contains('سنة مالية مغلقة') ||
+          msg.contains('فترة مغلقة')) {
         rethrow;
       }
       // Log the error for audit trail
