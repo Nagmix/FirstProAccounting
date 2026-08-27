@@ -158,9 +158,9 @@ void main() {
       'product_id': productId,
       'product_name': 'صنف POS ضريبي',
       'quantity': 1.0,
-      'unit_price': MoneyHelper.toCents(1000),
-      'total_price': MoneyHelper.toCents(1000),
-      'unit_cost': MoneyHelper.toCents(20),
+      'unit_price': 1000,
+      'total_price': 1000,
+      'unit_cost': 20,
       'base_quantity': 1.0,
       'conversion_factor': 1.0,
     });
@@ -204,11 +204,11 @@ void main() {
           .where((row) => row['account_id'] == accountId)
           .fold<int>(0, (sum, row) => sum + ((side == 'debit' ? row['debit'] : row['credit']) as num).toInt());
     }
-    expect(totalFor('ignored', 'debit'), MoneyHelper.toCents(1230));
-    expect(totalFor('ignored', 'credit'), MoneyHelper.toCents(1230));
-    expect(amountForCode('4100', 'debit'), MoneyHelper.toCents(1100));
-    expect(amountForCode('2300', 'debit'), MoneyHelper.toCents(110));
-    expect(amountForCode('1100', 'credit'), MoneyHelper.toCents(1210));
+    expect(totalFor('ignored', 'debit'), 1230);
+    expect(totalFor('ignored', 'credit'), 1230);
+    expect(amountForCode('4100', 'debit'), 1100);
+    expect(amountForCode('2300', 'debit'), 110);
+    expect(amountForCode('1100', 'credit'), 1210);
     expect((await db.query('products', where: 'id = ?', whereArgs: [productId])).single['current_stock'], 2.0);
     final snapshotAfter = (await db.query(
       'document_tax_snapshots',
