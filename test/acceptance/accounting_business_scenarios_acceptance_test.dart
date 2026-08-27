@@ -327,6 +327,8 @@ void main() {
     )).single;
     expect(MoneyHelper.readMoney(row['paid_amount']), 40.0);
     expect(MoneyHelper.readMoney(row['remaining']), 60.0);
+    expect(row['paid_amount'], MoneyHelper.toCents(40));
+    expect(row['remaining'], MoneyHelper.toCents(60));
     expect(row['status'], 'partial');
     expect(cashBox['balance'], MoneyHelper.toCents(40));
   });
