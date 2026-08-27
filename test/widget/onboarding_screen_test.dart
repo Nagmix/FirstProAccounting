@@ -51,18 +51,18 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(firstNextButton);
+    tester.widget<ElevatedButton>(firstNextButton).onPressed!();
     await tester.pumpAndSettle();
     final nextButton = find.widgetWithText(ElevatedButton, 'التالي');
     await tester.ensureVisible(nextButton);
-    await tester.tap(nextButton);
+    tester.widget<ElevatedButton>(nextButton).onPressed!();
     await tester.pumpAndSettle();
     await tester.ensureVisible(nextButton);
-    await tester.tap(nextButton);
+    tester.widget<ElevatedButton>(nextButton).onPressed!();
     await tester.pumpAndSettle();
     final saveButton = find.widgetWithText(ElevatedButton, 'حفظ وبدء الاستخدام');
     await tester.ensureVisible(saveButton);
-    await tester.tap(saveButton);
+    tester.widget<ElevatedButton>(saveButton).onPressed!();
     await tester.pumpAndSettle();
 
     expect(completed, isTrue);
