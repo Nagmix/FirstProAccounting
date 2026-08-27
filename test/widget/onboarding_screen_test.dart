@@ -71,6 +71,53 @@ void main() {
     expect(capabilityRepository.savedCodes, contains('service'));
   });
 
+  testWidgets('onboarding guides trader through preferences before review',
+      (tester) async {
+    final profileRepository = _FakeBusinessProfileRepository(
+      profile: _migrationProfile(),
+    );
+    final viewModel = OnboardingViewModel(
+      profileRepository: profileRepository,
+      capabilityRepository: _FakeCapabilityRepository(),
+    );
+
+    await viewModel.load();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OnboardingScreen(
+          viewModel: viewModel,
+          loadOnInit: false,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'متجر البداية');
+    await tester.tap(find.byType(CheckboxListTile).first);
+    await tester.pump();
+    expect(find.text('الخطوة 1 من 4'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.pump();
+    expect(find.text('البلد والعملة'), findsOneWidget);
+    expect(find.text('اليمن'), findsOneWidget);
+    expect(find.text('الريال اليمني'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.pump();
+    expect(find.text('طريقة الضريبة'), findsOneWidget);
+    expect(find.text('بدون ضريبة'), findsOneWidget);
+    expect(find.text('ضريبة قياسية'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.pump();
+    expect(find.text('مراجعة الإعدادات'), findsOneWidget);
+    expect(find.text('متجر البداية'), findsOneWidget);
+    expect(find.text('YER'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'حفظ وبدء الاستخدام'),
+        findsOneWidget);
+  });
+
   testWidgets('onboarding shows retry state when loading fails', (tester) async {
     final viewModel = OnboardingViewModel(
       profileRepository: _FakeBusinessProfileRepository(
