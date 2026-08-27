@@ -3355,7 +3355,9 @@ class InvoiceRepository {
               ? (prodRow.first['allow_negative'] as int?) == 1
               : false;
 
-          if (invoiceType == 'sale' || invoiceType == 'pos') {
+          if (invoiceType == 'sale' ||
+              invoiceType == 'pos' ||
+              invoiceType == 'sale_return') {
             if (!isReturn) {
               // Was decremented, now restore
               await txn.rawUpdate(
