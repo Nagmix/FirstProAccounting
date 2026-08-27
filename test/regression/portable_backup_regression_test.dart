@@ -12,13 +12,13 @@ void main() {
         reason: 'Attachments must be prepared outside the live directory.');
     expect(source, contains('attachmentsRollbackPath'),
         reason: 'The live attachments directory needs a rollback path.');
-    expect(source, contains('restoreRollback'),
-        reason: 'A failed post-replacement restore must restore the old database.');
+    expect(source, contains('restoreAttachments'),
+        reason: 'A failed post-replacement restore must restore old attachments.');
   });
 
   test('portable restore does not condition rollback on dbPath absence', () {
     final source = File(
-      'lib/core/services/portable_backup_file_committer.dart',
+      'lib/core/services/portable_backup_service.dart',
     ).readAsStringSync();
 
     expect(source, contains('rollbackExists'),
