@@ -89,9 +89,24 @@ class OrderRepository {
 
   Future<int> deleteQuotation(String id) async {
     final db = await _db;
-    await db
-        .delete('quotation_items', where: 'quotation_id = ?', whereArgs: [id]);
-    return await db.delete('quotations', where: 'id = ?', whereArgs: [id]);
+    return db.transaction((txn) async {
+      final rows = await txn.query(
+        'quotations',
+        columns: ['status'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isNotEmpty && rows.single['status'] != 'draft') {
+        throw StateError('Only draft quotations can be deleted.');
+      }
+      await txn.delete(
+        'quotation_items',
+        where: 'quotation_id = ?',
+        whereArgs: [id],
+      );
+      return txn.delete('quotations', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   Future<String> getNextQuotationNumber() async {
@@ -168,9 +183,24 @@ class OrderRepository {
 
   Future<int> deletePurchaseOrder(String id) async {
     final db = await _db;
-    await db.delete('purchase_order_items',
-        where: 'purchase_order_id = ?', whereArgs: [id]);
-    return await db.delete('purchase_orders', where: 'id = ?', whereArgs: [id]);
+    return db.transaction((txn) async {
+      final rows = await txn.query(
+        'purchase_orders',
+        columns: ['status'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isNotEmpty && rows.single['status'] != 'draft') {
+        throw StateError('Only draft purchase orders can be deleted.');
+      }
+      await txn.delete(
+        'purchase_order_items',
+        where: 'purchase_order_id = ?',
+        whereArgs: [id],
+      );
+      return txn.delete('purchase_orders', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   Future<String> getNextPurchaseOrderNumber() async {
@@ -247,9 +277,24 @@ class OrderRepository {
 
   Future<int> deleteSalesOrder(String id) async {
     final db = await _db;
-    await db.delete('sales_order_items',
-        where: 'sales_order_id = ?', whereArgs: [id]);
-    return await db.delete('sales_orders', where: 'id = ?', whereArgs: [id]);
+    return db.transaction((txn) async {
+      final rows = await txn.query(
+        'sales_orders',
+        columns: ['status'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isNotEmpty && rows.single['status'] != 'draft') {
+        throw StateError('Only draft sales orders can be deleted.');
+      }
+      await txn.delete(
+        'sales_order_items',
+        where: 'sales_order_id = ?',
+        whereArgs: [id],
+      );
+      return txn.delete('sales_orders', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   Future<String> getNextSalesOrderNumber() async {
