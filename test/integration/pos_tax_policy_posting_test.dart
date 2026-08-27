@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/finance/tax_policy_resolver.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/migrations/schema.dart';
 import 'package:firstpro/data/datasources/repositories/tax_policy_repository.dart';
+import 'package:firstpro/data/datasources/services/base_currency_service.dart';
 import 'package:firstpro/data/datasources/services/shift_service.dart';
 import 'package:firstpro/data/models/tax_profile_model.dart';
 
@@ -17,6 +19,7 @@ void main() {
   });
 
   setUp(() async {
+    await locator.reset();
     db = await openDatabase(
       inMemoryDatabasePath,
       version: 59,
@@ -27,9 +30,11 @@ void main() {
     );
     DatabaseHelper.useTestDatabase(db);
     dbHelper = DatabaseHelper();
+    locator.registerSingleton<BaseCurrencyService>(BaseCurrencyService(dbHelper));
   });
 
   tearDown(() async {
+    await locator.reset();
     DatabaseHelper.clearTestDatabase();
     await db.close();
   });
