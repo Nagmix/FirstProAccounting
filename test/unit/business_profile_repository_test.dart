@@ -28,7 +28,7 @@ void main() {
     DatabaseHelper.clearTestDatabase();
   });
 
-  test('empty v59 database returns safe Yemen defaults without creating a row', () async {
+  test('fresh v59 database contains safe Yemen migration defaults', () async {
     final (db, repository) = await createRepository();
     try {
       final profile = await repository.getOrCreateProfile();
@@ -39,15 +39,18 @@ void main() {
       expect(profile.timezone, 'Asia/Aden');
       expect(profile.taxMode, 'none');
       expect(profile.setupStatus, 'not_started');
-      expect(await db.query('business_profile'), isEmpty);
+      final rows = await db.query('business_profile');
+      expect(rows, hasLength(1));
+      expect(rows.single['source'], 'migration');
     } finally {
       await db.close();
     }
   });
 
-  test('legacy settings hydrate typed profile when the v59 row is absent', () async {
+  test('legacy settings hydrate typed profile when the typed row is absent', () async {
     final (db, repository) = await createRepository();
     try {
+      await db.delete('business_profile');
       await db.insert('settings', {
         'key': 'business_name',
         'value': 'متجر الاختبار',

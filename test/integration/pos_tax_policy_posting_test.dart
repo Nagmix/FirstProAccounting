@@ -40,8 +40,8 @@ void main() {
   });
 
   test('posting deferred POS invoice stores policy tax snapshot', () async {
-    await db.insert('business_profile', {
-      'id': 1,
+    await db.update('business_profile', {
+      'business_name': null,
       'country_code': 'XX',
       'base_currency_code': 'YER',
       'locale': 'ar',
@@ -52,7 +52,7 @@ void main() {
       'source': 'test',
       'created_at': '2026-08-26T10:00:00.000Z',
       'updated_at': '2026-08-26T10:00:00.000Z',
-    });
+    }, where: 'id = ?', whereArgs: [1]);
     final policies = TaxPolicyRepository(dbHelper);
     await policies.save(TaxProfile(
       countryCode: 'XX',

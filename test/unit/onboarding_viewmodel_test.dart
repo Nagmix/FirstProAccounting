@@ -78,6 +78,7 @@ void main() {
   test('legacy database is not blocked by onboarding after upgrade', () async {
     final (db, viewModel) = await createViewModel();
     try {
+      await db.delete('business_profile');
       await db.insert('settings', {
         'key': 'business_name',
         'value': 'بيانات قديمة',

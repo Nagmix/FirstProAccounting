@@ -183,8 +183,8 @@ void main() {
     try {
       await MigrationV59.migrate(db);
 
-      await db.insert('business_profile', {
-        'id': 1,
+      await db.update('business_profile', {
+        'business_name': null,
         'country_code': 'YE',
         'base_currency_code': 'YER',
         'locale': 'ar',
@@ -195,7 +195,7 @@ void main() {
         'source': 'migration',
         'created_at': '2026-08-26T00:00:00.000Z',
         'updated_at': '2026-08-26T00:00:00.000Z',
-      });
+      }, where: 'id = ?', whereArgs: [1]);
 
       expect(
         () => db.insert('business_profile', {
