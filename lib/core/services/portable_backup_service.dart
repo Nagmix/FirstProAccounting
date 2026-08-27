@@ -12,6 +12,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 
 import 'package:firstpro/core/security/db_encryption.dart';
 import 'package:firstpro/core/services/portable_backup_compatibility.dart';
+import 'package:firstpro/core/services/portable_backup_file_committer.dart';
 import 'package:firstpro/core/services/portable_backup_path_policy.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 
