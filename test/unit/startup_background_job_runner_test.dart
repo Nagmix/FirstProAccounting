@@ -9,8 +9,12 @@ void main() {
     final runner = StartupBackgroundJobRunner(
       loadProfile: () async => _profile(setupStatus: 'not_started'),
       isReferenceDataReady: () async => true,
-      inventoryScan: () async => inventoryRuns++,
-      recurringProcessing: () async => recurringRuns++,
+      inventoryScan: () async {
+        inventoryRuns++;
+      },
+      recurringProcessing: () async {
+        recurringRuns++;
+      },
     );
 
     expect(await runner.runIfReady(), isFalse);
@@ -25,8 +29,12 @@ void main() {
     final runner = StartupBackgroundJobRunner(
       loadProfile: () async => _profile(setupStatus: 'completed'),
       isReferenceDataReady: () async => false,
-      inventoryScan: () async => inventoryRuns++,
-      recurringProcessing: () async => recurringRuns++,
+      inventoryScan: () async {
+        inventoryRuns++;
+      },
+      recurringProcessing: () async {
+        recurringRuns++;
+      },
     );
 
     expect(await runner.runIfReady(), isFalse);
@@ -41,8 +49,12 @@ void main() {
     final runner = StartupBackgroundJobRunner(
       loadProfile: () async => _profile(setupStatus: 'completed'),
       isReferenceDataReady: () async => true,
-      inventoryScan: () async => inventoryRuns++,
-      recurringProcessing: () async => recurringRuns++,
+      inventoryScan: () async {
+        inventoryRuns++;
+      },
+      recurringProcessing: () async {
+        recurringRuns++;
+      },
     );
 
     expect(await runner.runIfReady(), isTrue);

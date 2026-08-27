@@ -16,6 +16,10 @@ class CurrencyConstants {
 
   static List<String> _currencyOptions = ['YER', 'SAR', 'USD'];
   static String _defaultCurrencyCode = 'YER';
+  static bool _referenceDataReady = false;
+
+  /// Whether currency reference data was loaded successfully from SQLite.
+  static bool get isReferenceDataReady => _referenceDataReady;
 
   /// Public getter for currency info.
   static Map<String, Map<String, String>> get currencyInfo => _currencyInfo;
@@ -41,6 +45,7 @@ class CurrencyConstants {
 
   /// Initialize and refresh currency data from the database.
   static Future<void> refresh() async {
+    _referenceDataReady = false;
     try {
       final refData = locator<ReferenceDataRepository>();
       final currencies = await refData.getAllCurrencies();
@@ -72,6 +77,7 @@ class CurrencyConstants {
         _currencyOptions = newOptions;
         _defaultCurrencyCode =
             newInfo.containsKey(defaultCode) ? defaultCode! : newOptions.first;
+        _referenceDataReady = true;
       }
     } catch (e) {
       // Fallback to defaults if DB fails

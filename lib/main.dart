@@ -12,6 +12,7 @@ import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/core/license/license_provider.dart';
 import 'package:firstpro/core/license/license_models.dart';
 import 'package:firstpro/core/platform/onboarding_viewmodel.dart';
+import 'package:firstpro/core/platform/startup_background_job_runner.dart';
 import 'package:firstpro/core/platform/feature_visibility_service.dart';
 import 'package:firstpro/core/theme/app_theme.dart';
 import 'package:firstpro/core/theme/theme_provider.dart';
@@ -124,16 +125,9 @@ class _FirstProAppState extends State<FirstProApp> {
             onTimeout: () {},
           );
 
-      // F-05 + F-06: scan inventory for low-stock and expiry alerts.
-      // Run in the background (fire-and-forget) — must NOT block the
-      // splash transition. Errors are caught and printed (non-critical).
-      // The scan is idempotent: only NEW alerts are inserted.
-      _runInventoryAlertScan();
-
-      // F-03: process due recurring invoices. Generate real invoices
-      // for any template whose next_run_date <= today. Fire-and-forget
-      // (non-blocking). Errors are caught and printed (non-critical).
-      _runRecurringInvoiceProcessing();
+      // Background jobs must not run until setup is complete and reference
+      // data has been loaded from SQLite.
+      _startBackgroundJobs();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('FirstProApp._startInit: $e');
@@ -148,41 +142,19 @@ class _FirstProAppState extends State<FirstProApp> {
     }
   }
 
-  /// F-05 + F-06: run the inventory alert scan in the background.
-  ///
-  /// Fire-and-forget — does NOT block the splash transition. The scan
-  /// is idempotent (only inserts NEW alerts; skips ones that already
-  /// exist as unread). Errors are caught and printed (non-critical:
-  /// alert generation must never prevent the app from launching).
-  void _runInventoryAlertScan() {
-    Future(() async {
-      try {
-        final service = locator<InventoryAlertService>();
-        await service.scanAndGenerateAlerts();
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('FirstProApp._runInventoryAlertScan: $e');
-        }
-      }
-    });
-  }
-
-  /// F-03: process due recurring invoices in the background.
-  ///
-  /// Fire-and-forget — generates real invoices for any template whose
-  /// next_run_date <= today. Errors are caught and printed (non-critical:
-  /// recurring generation must never prevent the app from launching).
-  void _runRecurringInvoiceProcessing() {
-    Future(() async {
-      try {
-        final service = locator<RecurringInvoiceService>();
-        await service.processDueTemplates();
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('FirstProApp._runRecurringInvoiceProcessing: $e');
-        }
-      }
-    });
+  void _startBackgroundJobs() {
+    final runner = StartupBackgroundJobRunner(
+      loadProfile: () => locator<OnboardingViewModel>()
+          .profileRepository
+          .getOrCreateProfile(),
+      isReferenceDataReady: () async =>
+          CurrencyConstants.isReferenceDataReady,
+      inventoryScan: () => locator<InventoryAlertService>()
+          .scanAndGenerateAlerts(),
+      recurringProcessing: () => locator<RecurringInvoiceService>()
+          .processDueTemplates(),
+    );
+    unawaited(runner.runIfReady());
   }
 
   /// Load PIN state from secure storage (with DB fallback migration).
