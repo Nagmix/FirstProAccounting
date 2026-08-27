@@ -73,8 +73,8 @@ class BusinessProfileRepository {
       final matchingCurrency = await txn.query(
         'currencies',
         columns: ['code'],
-        where: 'code = ?',
-        whereArgs: [profile.baseCurrencyCode],
+        where: 'code = ? AND is_active = 1',
+        whereArgs: [profile.baseCurrencyCode.trim().toUpperCase()],
         limit: 1,
       );
       if (matchingCurrency.isEmpty) {
