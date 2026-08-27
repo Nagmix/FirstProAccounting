@@ -8,12 +8,16 @@ import 'package:firstpro/core/utils/journal_id_helper.dart';
 import 'package:firstpro/core/di/service_locator.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 import 'package:firstpro/data/datasources/services/base_currency_service.dart';
+import 'package:firstpro/core/finance/tax_policy_resolver.dart';
+import 'package:firstpro/data/models/document_tax_snapshot_model.dart';
 import 'package:firstpro/data/models/inventory_cost_layer_model.dart';
 import 'package:firstpro/data/models/product_model.dart';
 
 class ShiftService {
   final DatabaseHelper _dbHelper;
-  ShiftService(this._dbHelper);
+  final TaxPolicyResolver? _taxPolicyResolver;
+  ShiftService(this._dbHelper, {TaxPolicyResolver? taxPolicyResolver})
+      : _taxPolicyResolver = taxPolicyResolver;
 
   Future<Database> get _db => _dbHelper.database;
 
@@ -176,7 +180,64 @@ class ShiftService {
       final isPartialCash = paymentMechanism == 'cash' &&
           effectivePaid > 0.005 &&
           effectivePaid < total - 0.005;
-
+      final invoiceDate = invoice['created_at'] as String? ?? now;
+      DocumentTaxSnapshot? taxSnapshot;
+      if (_taxPolicyResolver != null) {
+        final profileRows = await db.query(
+          'business_profile',
+          columns: ['country_code'],
+          where: 'id = 1',
+          limit: 1,
+        );
+        final countryCode = profileRows.isEmpty
+            ? 'YE'
+            : (profileRows.first['country_code'] as String? ?? 'YE');
+        final taxProfile = await _taxPolicyResolver!.resolveFor(
+          date: DateTime.parse(invoiceDate),
+          countryCode: countryCode,
+        );
+        if (taxProfile != null) {
+          final subtotal = MoneyHelper.readMoney(invoice['subtotal']);
+          final discount = MoneyHelper.readMoney(invoice['discount_amount']);
+          final transport = MoneyHelper.readMoney(invoice['transport_charges']);
+          final policyTotals = _taxPolicyResolver!.calculateTotals(
+            profile: taxProfile,
+            subtotalMinorUnits: MoneyHelper.toCents(subtotal),
+            discountMinorUnits: MoneyHelper.toCents(discount),
+            transportMinorUnits: MoneyHelper.toCents(transport),
+            taxInclusive: invoice['tax_inclusive'] == true ||
+                invoice['tax_inclusive'] == 1,
+          );
+          if ((taxAmount - MoneyHelper.fromCents(policyTotals.taxMinorUnits)).abs() >
+                  0.005 ||
+              (total - MoneyHelper.fromCents(policyTotals.totalMinorUnits)).abs() >
+                  0.005) {
+            throw ArgumentError(
+              'إجمالي فاتورة POS لا يتطابق مع سياسة الضريبة المؤرخة',
+            );
+          }
+          taxSnapshot = DocumentTaxSnapshot(
+            documentType: isReturn ? 'credit_note' : 'invoice',
+            documentId: invoiceId,
+            taxProfileId: taxProfile.id,
+            countryCode: taxProfile.countryCode,
+            regimeCode: taxProfile.regimeCode,
+            rateBasisPoints: taxProfile.rateBasisPoints,
+            calculationMethod: taxProfile.calculationMethod,
+            transportTaxable: taxProfile.transportTaxable,
+            taxableSubtotalMinor: MoneyHelper.toCents(subtotal - discount),
+            taxableTransportMinor: taxProfile.transportTaxable
+                ? MoneyHelper.toCents(transport)
+                : 0,
+            discountMinor: MoneyHelper.toCents(discount),
+            taxMinor: policyTotals.taxMinorUnits,
+            roundingMode: 'half_up',
+            source: 'shift_posting',
+          );
+        }
+      }
+      final codeOffset = await locator<BaseCurrencyService>()
+          .getOffsetForCurrency(invoiceCurrency);
       await db.transaction((txn) async {
         final journalId = generateUniqueJournalId();
 
@@ -187,9 +248,6 @@ class ShiftService {
               exchangeRateMicros: CurrencyEngine.rateToMicros(exchangeRate),
             );
 
-        // تحديد إزاحة كود الحساب حسب العملة
-        final codeOffset = await locator<BaseCurrencyService>()
-            .getOffsetForCurrency(invoiceCurrency);
 
         // جلب معرفات الحسابات (دفعة واحدة — H-10)
         final accountCodes = [
@@ -1073,6 +1131,14 @@ class ShiftService {
         // تحديث حالة الفاتورة إلى مرحلة
         await txn.update('invoices', {'is_posted': 1},
             where: 'id = ?', whereArgs: [invoiceId]);
+        final snapshot = taxSnapshot;
+        if (snapshot != null) {
+          await _taxPolicyResolver!.saveSnapshotInTransaction(
+            txn,
+            snapshot,
+            now: now,
+          );
+        }
       });
 
       postedCount++;

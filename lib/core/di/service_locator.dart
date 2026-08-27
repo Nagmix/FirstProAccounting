@@ -123,7 +123,10 @@ Future<void> setupLocator() async {
     () => StockService(locator<DatabaseHelper>()),
   );
   locator.registerLazySingleton<ShiftService>(
-    () => ShiftService(locator<DatabaseHelper>()),
+    () => ShiftService(
+      locator<DatabaseHelper>(),
+      taxPolicyResolver: locator<TaxPolicyResolver>(),
+    ),
   );
   locator.registerLazySingleton<ReportService>(
     () => ReportService(locator<DatabaseHelper>()),
