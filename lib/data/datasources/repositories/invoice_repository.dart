@@ -2343,8 +2343,10 @@ class InvoiceRepository {
       await txn.update(
         'invoices',
         {
-          'paid_amount': newPaid,
-          'remaining': newRemaining > 0 ? newRemaining : 0.0,
+          'paid_amount': MoneyHelper.toCents(newPaid),
+          'remaining': MoneyHelper.toCents(
+            newRemaining > 0 ? newRemaining : 0.0,
+          ),
           'status': newStatus,
         },
         where: 'id = ?',
