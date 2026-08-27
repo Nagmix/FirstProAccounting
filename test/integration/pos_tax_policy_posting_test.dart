@@ -68,6 +68,14 @@ void main() {
       isActive: true,
     ));
     for (final code in const ['1100', '1300', '2300', '3200', '4100']) {
+      final existing = await db.query(
+        'accounts',
+        columns: ['id'],
+        where: 'account_code = ? AND currency = ?',
+        whereArgs: [code, 'YER'],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) continue;
       final accountType = code.startsWith('4')
           ? 'REVENUE'
           : (code.startsWith('2') ? 'LIABILITY' : (code.startsWith('3') ? 'EXPENSE' : 'ASSET'));
