@@ -53,11 +53,16 @@ void main() {
     );
     await tester.tap(firstNextButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    final nextButton = find.widgetWithText(ElevatedButton, 'التالي');
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ElevatedButton, 'حفظ وبدء الاستخدام'));
+    final saveButton = find.widgetWithText(ElevatedButton, 'حفظ وبدء الاستخدام');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
     await tester.pumpAndSettle();
 
     expect(completed, isTrue);
@@ -105,17 +110,20 @@ void main() {
     expect(find.text('اليمن'), findsOneWidget);
     expect(find.text('الريال اليمني'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    final nextButton = find.widgetWithText(ElevatedButton, 'التالي');
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
     await tester.pumpAndSettle();
     expect(find.text('طريقة الضريبة'), findsOneWidget);
     expect(find.text('بدون ضريبة'), findsOneWidget);
     expect(find.text('ضريبة قياسية'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'التالي'));
+    await tester.ensureVisible(nextButton);
+    await tester.tap(nextButton);
     await tester.pumpAndSettle();
     expect(find.text('مراجعة الإعدادات'), findsOneWidget);
     expect(find.text('متجر البداية'), findsOneWidget);
-    expect(find.text('YER'), findsOneWidget);
+    expect(find.text('الريال اليمني (YER)'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'حفظ وبدء الاستخدام'),
         findsOneWidget);
   });
