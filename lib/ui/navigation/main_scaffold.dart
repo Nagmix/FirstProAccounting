@@ -7,7 +7,6 @@ import 'package:firstpro/core/theme/app_colors.dart';
 import 'package:firstpro/core/theme/design_system.dart';
 import 'package:firstpro/ui/navigation/app_router.dart';
 import 'package:firstpro/ui/navigation/navigation_catalog.dart';
-import 'package:firstpro/ui/navigation/navigation_definition.dart';
 import 'package:firstpro/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:firstpro/ui/screens/customers/customers_screen.dart';
 import 'package:firstpro/ui/screens/invoices/invoices_screen.dart';
@@ -667,6 +666,20 @@ class _MainScaffoldState extends State<MainScaffold>
         ),
       ),
     );
+  }
+
+  bool _isRouteVisible(String route) {
+    if (!locator.isRegistered<FeatureVisibilityService>()) return true;
+    final service = locator<FeatureVisibilityService>();
+    try {
+      final definition = NavigationCatalog.byRoute(route);
+      return service.isVisible(
+        definition.requiredCapabilities,
+        isCore: definition.isCore,
+      );
+    } on ArgumentError {
+      return true;
+    }
   }
 
   void _openDrawer(BuildContext context) {
