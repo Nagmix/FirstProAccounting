@@ -2752,23 +2752,41 @@ class InvoiceRepository {
               await _dbHelper.journal.updateAccountBalanceWithJournal(
                   txn, customersAccountId, 0.0, remainingAmount, now);
             }
-            if (salesAccountId != null && total > 0) {
+            if (salesAccountId != null && netRevenue > 0) {
               await txn.insert('transactions', {
                 'account_id': salesAccountId,
                 'journal_id': journalId,
-                'debit': MoneyHelper.toCents(total),
+                'debit': MoneyHelper.toCents(netRevenue),
                 'credit': 0,
-                'description': 'إلغاء فاتورة مبيعات - $id',
+                'description': 'إلغاء صافي فاتورة مبيعات - $id',
                 'date': now,
                 'created_at': now,
                 'currency_code': invoiceCurrency,
                 'exchange_rate': exchangeRate,
-                'amount_base': toBaseMinorUnits(total),
+                'amount_base': toBaseMinorUnits(netRevenue),
                         'reference_type': 'invoice_journal',
           'reference_id': journalId.toString(),
 });
               await _dbHelper.journal.updateAccountBalanceWithJournal(
-                  txn, salesAccountId, total, 0.0, now);
+                  txn, salesAccountId, netRevenue, 0.0, now);
+            }
+            if (vatPayableAccountId != null && taxAmount > 0) {
+              await txn.insert('transactions', {
+                'account_id': vatPayableAccountId,
+                'journal_id': journalId,
+                'debit': MoneyHelper.toCents(taxAmount),
+                'credit': 0,
+                'description': 'إلغاء ضريبة مبيعات - $id',
+                'date': now,
+                'created_at': now,
+                'currency_code': invoiceCurrency,
+                'exchange_rate': exchangeRate,
+                'amount_base': toBaseMinorUnits(taxAmount),
+                'reference_type': 'invoice_journal',
+                'reference_id': journalId.toString(),
+              });
+              await _dbHelper.journal.updateAccountBalanceWithJournal(
+                  txn, vatPayableAccountId, taxAmount, 0.0, now);
             }
           } else if (isReturn) {
             // Reverse sale return: Debit Customer/Cash (original credit), Credit Sales (original debit)
