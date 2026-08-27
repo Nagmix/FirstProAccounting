@@ -30,6 +30,26 @@ void main() {
     expect(tappedRoutes, contains(AppConstants.newSaleInvoice));
   });
 
+  testWidgets('dashboard action panel exposes all-functions navigation',
+      (tester) async {
+    var showAllTapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DashboardActionsPanel(
+            actions: ActionCatalog.prioritizedActions({'sell'}, limit: 2),
+            onAction: (_) {},
+            onShowAll: () => showAllTapped = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('كل الوظائف'), findsOneWidget);
+    await tester.tap(find.text('كل الوظائف'));
+    expect(showAllTapped, isTrue);
+  });
+
   testWidgets('dashboard action panel stays usable with one action',
       (tester) async {
     final actions = ActionCatalog.prioritizedActions({'service'}, limit: 1);
