@@ -12,6 +12,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart' as sqflite;
 
 import 'package:firstpro/core/security/db_encryption.dart';
 import 'package:firstpro/core/services/portable_backup_compatibility.dart';
+import 'package:firstpro/core/services/portable_backup_path_policy.dart';
 import 'package:firstpro/data/datasources/database_helper.dart';
 
 /// Portable, password-protected backup for a local installation.
@@ -188,16 +189,12 @@ class PortableBackupService {
         if (!entry.isFile ||
             entry.name == 'database.db' ||
             entry.name == 'db_key.txt') continue;
-        final attachmentPrefix = 'attachments${p.separator}';
-        if (!entry.name.startsWith(attachmentPrefix)) continue;
-        final relativeAttachment = entry.name.substring(attachmentPrefix.length);
-        final target = File(p.normalize(
-          p.join(stagedAttachmentsPath, relativeAttachment),
-        ));
-        final stagedRoot = p.normalize(stagedAttachmentsPath);
-        if (!p.isWithin(stagedRoot, target.path)) {
-          throw const FormatException('مسار مرفق غير آمن داخل النسخة');
-        }
+        final targetPath = PortableBackupPathPolicy.resolveAttachmentPath(
+          archiveEntryName: entry.name,
+          stagedAttachmentsPath: stagedAttachmentsPath,
+        );
+        if (targetPath == null) continue;
+        final target = File(targetPath);
         await target.parent.create(recursive: true);
         await target.writeAsBytes(entry.content as List<int>, flush: true);
       }
