@@ -719,7 +719,7 @@ void main() {
     expect((await _product(db, productId))['current_stock'], 1.0);
   });
 
-  test('cancelling a taxed sale reverses VAT separately from revenue',
+  test('cancelling a taxed sale reverses VAT separately from revenue', () async {
     await _seedAccounts(db, const ['1100', '1200', '1300', '2300', '3200', '4100']);
     final productId = await _createProduct(
       db,
