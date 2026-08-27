@@ -36,8 +36,11 @@ void main() {
     expect(source, contains('Hmac(sha256, aesKey)'));
     expect(source, contains('_constantTimeEquals'));
     expect(source, contains('_validatePassword(password)'));
-    expect(source, contains('integrity_check'));
-    expect(source, contains('FormatException'));
+    final validatorSource = File(
+      'lib/core/services/portable_backup_database_validator.dart',
+    ).readAsStringSync();
+    expect(validatorSource, contains('integrity_check'));
+    expect(validatorSource, contains('FormatException'));
   });
 
   test('settings screen exposes portable backup and restore actions', () {
