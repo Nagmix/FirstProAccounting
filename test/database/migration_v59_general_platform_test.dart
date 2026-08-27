@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firstpro/data/datasources/migrations/migration_runner.dart';
 import 'package:firstpro/data/datasources/migrations/migration_v59.dart';
 import 'package:firstpro/data/datasources/migrations/schema.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -9,14 +12,54 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
+  Future<String> createV58Fixture() async {
+    final path = '${Directory.systemTemp.path}/firstpro_v58_'
+        '${DateTime.now().microsecondsSinceEpoch}.db';
+    await databaseFactory.deleteDatabase(path);
+    final db = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 58,
+        onCreate: (database, version) async {
+          await database.execute('''
+            CREATE TABLE settings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              key TEXT NOT NULL UNIQUE,
+              value TEXT,
+              updated_at TEXT
+            )
+          ''');
+          await database.execute('''
+            CREATE TABLE currencies (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              code TEXT NOT NULL UNIQUE,
+              name_ar TEXT NOT NULL,
+              name_en TEXT NOT NULL,
+              symbol TEXT NOT NULL,
+              is_default INTEGER NOT NULL DEFAULT 0,
+              is_active INTEGER NOT NULL DEFAULT 1
+            )
+          ''');
+          await database.insert('currencies', {
+            'code': 'YER',
+            'name_ar': 'الريال اليمني',
+            'name_en': 'Yemeni Rial',
+            'symbol': 'ر.ي',
+            'is_default': 1,
+            'is_active': 1,
+          });
+        },
+      ),
+    );
+    await db.close();
+    return path;
+  }
+
   Future<Database> openV58Database() async {
-    return openDatabase(
-      inMemoryDatabasePath,
-      version: 58,
-      onCreate: (database, version) => DatabaseSchema.onCreate(database, version),
-      onConfigure: (database) async {
-        await database.execute('PRAGMA foreign_keys = ON');
-      },
+    final path = await createV58Fixture();
+    return databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(version: 58),
     );
   }
 
@@ -65,13 +108,15 @@ void main() {
     }
   });
 
-  test('v59 migration is idempotent and keeps profile empty', () async {
+  test('v59 migration is idempotent and backfills profile once', () async {
     final db = await openV58Database();
     try {
       await MigrationV59.migrate(db);
       await MigrationV59.migrate(db);
 
-      expect(await db.query('business_profile'), isEmpty);
+      final profiles = await db.query('business_profile');
+      expect(profiles, hasLength(1));
+      expect(profiles.single['source'], 'migration');
       expect(
         (await db.rawQuery(
           "SELECT COUNT(*) AS count FROM sqlite_master "
@@ -81,6 +126,55 @@ void main() {
       );
     } finally {
       await db.close();
+    }
+  });
+
+  test('v58 to v59 upgrade backfills legacy profile and core capabilities',
+      () async {
+    final path = await createV58Fixture();
+    final v58 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(version: 58),
+    );
+    await v58.insert('settings', {
+      'key': 'business_name',
+      'value': 'مخبز الاختبار',
+      'updated_at': '2026-08-26T00:00:00.000Z',
+    });
+    await v58.insert('settings', {
+      'key': 'default_currency',
+      'value': 'YER',
+      'updated_at': '2026-08-26T00:00:00.000Z',
+    });
+    await v58.close();
+
+    final db = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 59,
+        onUpgrade: MigrationRunner.onUpgrade,
+      ),
+    );
+    try {
+      final profile = (await db.query('business_profile')).single;
+      expect(profile['business_name'], 'مخبز الاختبار');
+      expect(profile['country_code'], 'YE');
+      expect(profile['base_currency_code'], 'YER');
+      expect(profile['setup_status'], 'not_started');
+      expect(profile['source'], 'migration');
+
+      final coreCapabilities = await db.query(
+        'business_capabilities',
+        columns: ['capability_code'],
+        where: 'enabled = 1',
+      );
+      expect(
+        coreCapabilities.map((row) => row['capability_code']).toSet(),
+        containsAll({'backup', 'settings', 'audit'}),
+      );
+    } finally {
+      await db.close();
+      await databaseFactory.deleteDatabase(path);
     }
   });
 
