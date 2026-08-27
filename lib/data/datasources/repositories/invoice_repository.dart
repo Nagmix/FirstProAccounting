@@ -2117,8 +2117,26 @@ class InvoiceRepository {
   /// Does NOT reverse journal entries — use [cancelInvoice] for full reversal.
   Future<int> deleteInvoice(String id) async {
     final db = await _db;
-    return await db.update('invoices', {'status': 'cancelled'},
-        where: 'id = ?', whereArgs: [id]);
+    return db.transaction((txn) async {
+      final rows = await txn.query(
+        'invoices',
+        columns: ['status', 'is_posted'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isEmpty) return 0;
+      final row = rows.single;
+      if (row['status'] != 'draft' || row['is_posted'] == 1) {
+        throw StateError('Only draft invoices can be deleted.');
+      }
+      return txn.update(
+        'invoices',
+        {'status': 'cancelled'},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   /// Delete an invoice and all its related records (CASCADE behavior).
