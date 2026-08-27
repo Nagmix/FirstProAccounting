@@ -192,4 +192,51 @@ void main() {
       await db.close();
     }
   });
+
+  test('saving typed profile rejects changing base currency after posted data atomically', () async {
+    final (db, repository) = await createRepository();
+    try {
+      final original = BusinessProfile(
+        businessName: 'متجر ثابت العملة',
+        phone: null,
+        email: null,
+        address: null,
+        logoPath: null,
+        countryCode: 'YE',
+        baseCurrencyCode: 'YER',
+        locale: 'ar',
+        timezone: 'Asia/Aden',
+        taxMode: 'none',
+        setupStatus: 'completed',
+        setupVersion: 1,
+        source: 'onboarding',
+      );
+      await repository.saveProfile(original);
+      await db.insert('invoices', {
+        'id': 'POSTED-2',
+        'type': 'sale',
+        'is_posted': 1,
+        'created_at': '2026-08-26T00:00:00.000Z',
+      });
+
+      final changed = original.copyWith(baseCurrencyCode: 'USD');
+      await expectLater(
+        repository.saveProfile(changed),
+        throwsA(isA<StateError>()),
+      );
+
+      final saved = await repository.getOrCreateProfile();
+      expect(saved.baseCurrencyCode, 'YER');
+      final currencies = await db.query(
+        'currencies',
+        columns: ['code', 'is_default'],
+        where: 'code IN (?, ?)',
+        whereArgs: ['YER', 'USD'],
+      );
+      expect(currencies.firstWhere((row) => row['code'] == 'YER')['is_default'], 1);
+      expect(currencies.firstWhere((row) => row['code'] == 'USD')['is_default'], 0);
+    } finally {
+      await db.close();
+    }
+  });
 }
