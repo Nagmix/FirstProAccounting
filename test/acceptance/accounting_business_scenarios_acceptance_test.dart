@@ -603,7 +603,123 @@ void main() {
     expect((await _product(db, productId))['current_stock'], 2.0);
   });
 
-  test('cancelling a taxed sale reverses VAT separately from revenue', () async {
+  test('cancelling a taxed sale return reverses net sales and VAT separately', () async {
+    await _seedAccounts(db, const ['1100', '1200', '1300', '2300', '3200', '4100']);
+    final cashBoxId = await db.insert('cash_boxes', {
+      'name': 'صندوق مرتجع مبيعات ضريبي',
+      'type': 'cash_box',
+      'currency': 'YER',
+      'balance': 0,
+      'balance_type': 'credit',
+      'is_active': 1,
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
+    final productId = await _createProduct(
+      db,
+      code: 'CANCEL-SALE-RETURN-TAX-001',
+      name: 'صنف مرتجع مبيعات ضريبي',
+      averageCost: 20,
+      costPrice: 20,
+      currentStock: 0,
+    );
+    final invoice = _invoice(
+      id: 'SALE-RETURN-CANCEL-TAX-001',
+      type: 'sale_return',
+      subtotal: 100,
+      tax: 15,
+      total: 115,
+      paidAmount: 115,
+      isReturn: true,
+    )
+      ..['cash_box_id'] = cashBoxId;
+    final invoices = InvoiceRepository(dbHelper);
+    await invoices.saveInvoiceWithJournalEntries(
+      invoice,
+      [_item('SALE-RETURN-CANCEL-TAX-001', productId, quantity: 1, unitPrice: 100, total: 100, unitCost: 20)],
+      invoiceType: 'sale_return',
+      paymentMechanism: 'cash',
+      isReturn: true,
+      paidAmount: 115,
+    );
+
+    await invoices.cancelInvoice('SALE-RETURN-CANCEL-TAX-001');
+    final reversal = (await db.query(
+      'document_reversals',
+      columns: ['reversal_journal_id'],
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['invoice', 'SALE-RETURN-CANCEL-TAX-001'],
+    )).single;
+    final reversalRows = await _journalRows(
+      db,
+      (reversal['reversal_journal_id'] as num).toInt().toString(),
+      referenceType: 'invoice_journal',
+    );
+    expect(_debitTotal(reversalRows), MoneyHelper.toCents(135));
+    expect(_creditTotal(reversalRows), MoneyHelper.toCents(135));
+    expect(_sumForCode(reversalRows, '4100', 'debit'), MoneyHelper.toCents(100));
+    expect(_sumForCode(reversalRows, '2300', 'debit'), MoneyHelper.toCents(15));
+    expect((await _product(db, productId))['current_stock'], 0.0);
+  });
+
+  test('cancelling a taxed purchase return reverses net purchases and VAT separately', () async {
+    await _seedAccounts(db, const ['1100', '1300', '1400', '2100', '3100']);
+    final cashBoxId = await db.insert('cash_boxes', {
+      'name': 'صندوق مرتجع مشتريات ضريبي',
+      'type': 'cash_box',
+      'currency': 'YER',
+      'balance': 0,
+      'balance_type': 'credit',
+      'is_active': 1,
+      'created_at': _timestamp,
+      'updated_at': _timestamp,
+    });
+    final productId = await _createProduct(
+      db,
+      code: 'CANCEL-PURCHASE-RETURN-TAX-001',
+      name: 'صنف مرتجع مشتريات ضريبي',
+      averageCost: 20,
+      costPrice: 20,
+      currentStock: 1,
+    );
+    final invoices = InvoiceRepository(dbHelper);
+    await invoices.saveInvoiceWithJournalEntries(
+      _invoice(
+        id: 'PURCHASE-RETURN-CANCEL-TAX-001',
+        type: 'purchase_return',
+        subtotal: 100,
+        tax: 15,
+        total: 115,
+        paidAmount: 115,
+        isReturn: true,
+      )..['cash_box_id'] = cashBoxId,
+      [_item('PURCHASE-RETURN-CANCEL-TAX-001', productId, quantity: 1, unitPrice: 100, total: 100, unitCost: 20)],
+      invoiceType: 'purchase_return',
+      paymentMechanism: 'cash',
+      isReturn: true,
+      paidAmount: 115,
+    );
+
+    await invoices.cancelInvoice('PURCHASE-RETURN-CANCEL-TAX-001');
+    final reversal = (await db.query(
+      'document_reversals',
+      columns: ['reversal_journal_id'],
+      where: 'document_type = ? AND document_id = ?',
+      whereArgs: ['invoice', 'PURCHASE-RETURN-CANCEL-TAX-001'],
+    )).single;
+    final reversalRows = await _journalRows(
+      db,
+      (reversal['reversal_journal_id'] as num).toInt().toString(),
+      referenceType: 'invoice_journal',
+    );
+    expect(_debitTotal(reversalRows), MoneyHelper.toCents(115));
+    expect(_creditTotal(reversalRows), MoneyHelper.toCents(115));
+    expect(_sumForCode(reversalRows, '3100', 'debit'), MoneyHelper.toCents(100));
+    expect(_sumForCode(reversalRows, '1400', 'debit'), MoneyHelper.toCents(15));
+    expect((await _product(db, productId))['current_stock'], 1.0);
+  });
+
+  test('cancelling a taxed sale reverses VAT separately from revenue',
     await _seedAccounts(db, const ['1100', '1200', '1300', '2300', '3200', '4100']);
     final productId = await _createProduct(
       db,
