@@ -24,4 +24,24 @@ void main() {
     expect(totals.taxMinorUnits, 50);
     expect(totals.totalMinorUnits, 1075);
   });
+
+  test('recurring template totals can include taxable transport', () {
+    final service = RecurringInvoiceService(
+      DatabaseHelper(),
+      InvoiceRepository(DatabaseHelper()),
+      ReferenceDataRepository(DatabaseHelper()),
+    );
+
+    final totals = service.calculateTemplateTotals(
+      subtotalMinorUnits: 1000,
+      discountMinorUnits: 0,
+      transportMinorUnits: 100,
+      taxRateBasisPoints: 1000,
+      taxInclusive: false,
+      transportTaxable: true,
+    );
+
+    expect(totals.taxMinorUnits, 110);
+    expect(totals.totalMinorUnits, 1210);
+  });
 }
