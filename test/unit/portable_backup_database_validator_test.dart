@@ -61,4 +61,3 @@ Future<sqflite.Database> _openWithFfi(String path, String key) {
     options: OpenDatabaseOptions(readOnly: true),
   );
 }
-
