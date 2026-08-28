@@ -2,7 +2,7 @@
 
 **التاريخ:** 27–28 أغسطس 2026
 **الفرع:** `main`
-**آخر commit موثق:** `5540b21 docs: record final continuation audit status`
+**آخر commit موثق:** `267ed5c chore: keep validator test formatting clean`
 **حالة الشجرة:** نظيفة ومتزامنة مع `origin/main`
 
 ## النتيجة التنفيذية
@@ -42,7 +42,7 @@
 
 ## تحقق GitHub Actions النهائي
 
-آخر تحقق كامل كان للـHEAD `5540b213a7c7f2fadf616c2b26d27bbab5c8127a` عبر run [`33127292912`](https://github.com/Nagmix/FirstProAccounting/actions/runs/33127292912). النتيجة `success`، وسجل التشغيل يثبت **966 اختباراً ناجحاً**، مع نجاح التحليل والبناء والتوقيع ورفع artifacts.
+آخر تحقق كامل كان للـHEAD `267ed5c` عبر run [`33128139588`](https://github.com/Nagmix/FirstProAccounting/actions/runs/33128139588). النتيجة `success`، وسجل التشغيل يثبت **966 اختباراً ناجحاً**، مع نجاح التحليل والبناء والتوقيع ورفع artifacts.
 
 | خطوة CI | النتيجة |
 |---|---|
@@ -107,7 +107,7 @@
 
 ## مراجع CI والمشروع
 
-- [GitHub Actions run 33127292912 — final HEAD](https://github.com/Nagmix/FirstProAccounting/actions/runs/33127292912)
+- [GitHub Actions run 33128139588 — final HEAD](https://github.com/Nagmix/FirstProAccounting/actions/runs/33128139588)
 - [GitHub Actions run 33125540660 — POS deferred posting/cancellation verification](https://github.com/Nagmix/FirstProAccounting/actions/runs/33125540660)
 - [GitHub Actions run 33124268074 — payment and legacy delete guards](https://github.com/Nagmix/FirstProAccounting/actions/runs/33124268074)
 - [GitHub Actions run 33122668629 — purchase VAT cancellation](https://github.com/Nagmix/FirstProAccounting/actions/runs/33122668629)
